@@ -1,0 +1,9 @@
+{
+	"servers": {
+		"my-mcp-server-bee16a10": {
+			"url": " http://localhost:5175/",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

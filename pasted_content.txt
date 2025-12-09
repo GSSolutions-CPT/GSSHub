@@ -1,0 +1,260 @@
+System Prompt / Specification — Business Management & Job Flow Application
+
+Overview
+
+Integrated platform for managing leads, quoting, jobs, invoicing, financials, scheduling, client portal, and AI-assisted operations. It supports your process: Customer → Quote → Job Execution → Invoice → Reporting.
+
+Entities & Data Models
+Entity	Key Fields	Relationships / Notes
+Client	id (UUID), name, company, email, phone, address, created_at, metadata	One-to-many: quotations, invoices, jobs, contracts
+Product / Service	id, name, code, category, retail_price, cost_price, description, image_url, metadata	Used in QuotationLine / InvoiceLine
+Quotation / Invoice	id, client_id, status, date_created, valid_until, total_amount, VAT (if applicable), trade_subtotal (sum of cost × qty), profit_estimate	Quotation → Invoice conversion; lines linked
+QuotationLine / InvoiceLine	id, parent_id, product_id, quantity, unit_price, line_total, cost_price	Associate products to quotes/invoices
+Job / WorkOrder	id, quotation_id, client_id, assigned_technician(s), scheduled_datetime, status, notes, client_signature, completion_notes	Job links to quotation and client; generates invoice at completion
+Expense	id, type (job or general), related_invoice_id (nullable), amount, description, date	Job expenses tie to invoice; general expenses are overhead
+ActivityLog	id, timestamp, type, description, related_entity, metadata	For recent activity feed and audit trail
+CalendarEvent	id, event_type, title, datetime, related_entity_id	For CalendarView
+Template	id, name, template_type (quotation / invoice), template_data	Reusable templates for documents
+RecurringContract	id, client_id, description, frequency, next_billing_date, active_flag	For service / maintenance contracts
+Feature Modules & Priorities
+
+(M = Must Have, S = Should Have, N = Nice to Have)
+
+DashboardView
+
+KPIs: monthly revenue, estimated profit, new clients, overdue invoices (M)
+
+Six-month income vs. expense chart (M)
+
+Recent activity feed (M)
+
+AI financial summary via Gemini (S)
+
+ClientsView (CRM)
+
+Client list / search / sort (M)
+
+Detail page: client info + history (M)
+
+Manual client entry (M)
+
+AI text extraction (paste block → auto fill) (S)
+
+AI business card OCR scanner (N)
+
+ProductsView
+
+Product list/search/sort (M)
+
+Add / edit product form (M)
+
+AI-generated product descriptions (S)
+
+Bulk add from spreadsheet-style text (S)
+
+AI PDF import for catalogs (N)
+
+CreateSaleView
+
+Toggle between quotation / invoice mode (M)
+
+Interactive item list with quantities, pricing (M)
+
+Display cost and profit estimates (M)
+
+Attach photos, drawings, product images (quotes) (S)
+
+Save / load templates (S)
+
+AI-based quote generation (natural language input) (S)
+
+AI upsell suggestions (N)
+
+SalesView
+
+Tabbed interface: quotations / invoices (M)
+
+Document cards with status, totals, client, etc. (M)
+
+Actions: Edit, View PDF, Client Link, Convert to Invoice (M)
+
+AI follow-up and reminder emails (S)
+
+JobsView (Work Orders / Job Cards)
+
+Create job from approved quotation (M)
+
+Assign technician(s), schedule time, notes (M)
+
+Status workflow: Pending → In Progress → Completed (M)
+
+Job card (printable / online) with client sign-off area (S)
+
+On completion: capture signature & notes, auto-generate invoice (M)
+
+FinancialsView
+
+Job-level profitability breakdown (revenue, cost, net) (M)
+
+Expense logging: job expenses + general overhead (M)
+
+PDF & Excel reports over selectable ranges (S)
+
+AI forecasting (next 3 months) (N)
+
+AI anomaly detection (flag unusual spikes/drops) (N)
+
+CalendarView
+
+Auto-plot events from quotes, invoices, jobs, reminders (M)
+
+Custom event add/edit/delete (M)
+
+Day-detail modal view of events (M)
+
+AI scheduling (natural language) (N)
+
+ClientPortal (Client-Facing Interface)
+
+Secure branded portal to view documents (M)
+
+Download PDFs, approve/decline quotes, upload proof of payment (M)
+
+Digital signature for invoices when needed (S)
+
+Integrated payment links (Stripe / PayFast / local) (S)
+
+Status tracker: Quote → Job Scheduled → Job Completed → Invoice Paid (S)
+
+Recurring Contracts & Service Agreements
+
+Ability to define recurring service or maintenance agreements (S)
+
+Auto-generate invoices & reminders per contract schedule (S)
+
+Track contract status (active / expired) (S)
+
+Mobile / Field Technician App
+
+Technicians view assigned jobs with details and directions (S)
+
+Capture site photos and notes in field (S)
+
+Offline mode with sync when connectivity returns (N)
+
+Geolocation, Routing & Mapping
+
+Map view of clients/jobs (N)
+
+Route optimization when multiple field jobs in one day (N)
+
+Role-Based Permissions & Audit Trails
+
+Role categories: admin, manager, technician, accountant (M)
+
+Change logging (who changed what, when) (M)
+
+Ability to suspend user accounts (S)
+
+Security & Compliance
+
+Multi-factor authentication (S)
+
+TLS encryption in transit and at rest (M)
+
+Least-privilege access control (M)
+
+API key management & rotation (S)
+
+Data backup and disaster recovery plan (M)
+
+Periodic security audit & vulnerability scanning (S)
+
+Compliance with data protection / privacy laws (local) (M)
+
+Integration & Extensibility
+
+Accounting software integrations (Xero, QuickBooks) (S)
+
+Payment gateway support (Stripe, PayFast, other local) (M)
+
+Webhooks / public API for external systems (S)
+
+Import / export (CSV, Excel, JSON) for core data (M)
+
+Alerts & Notifications
+
+Alerts for overdue invoices, upcoming jobs, contract expirations (M)
+
+In-app and email notification support (M)
+
+Thresholds configurable by user (S)
+
+Localization, Currency & Tax Logic
+
+Support multiple currencies if needed (S)
+
+Tax / VAT logic (you are not tax registered) → ability to disable VAT field (M)
+
+Localization: date formats, number formatting, language (S)
+
+Performance & Analytics
+
+Monitor system performance (latency, errors) (S)
+
+Analytics dashboards: KPI trends, usage stats (S)
+
+Client Feedback & Reviews
+
+After job completion, prompt client rating / feedback (S)
+
+Store feedback under client history (S)
+
+Dispute & Adjustment Handling
+
+Support credit notes, refunds, invoice adjustments (S)
+
+Workflow for dispute resolution (S)
+
+Audit Export & Compliance Reporting
+
+Export audit logs for accounting / legal review (S)
+
+Generate compliance or regulatory reports (S)
+
+Integration & Workflows
+
+Quote → Job → Invoice
+Approved quotations feed into JobsView. When a job is marked complete with sign-off, the system auto-issues an invoice.
+
+Recurring Contracts
+Contracts generate invoices and reminders per defined intervals.
+
+Activity Logging
+All significant actions (create, edit, status change, payment, signature) write to ActivityLog, powering Recent Activity Feed and audit trails.
+
+Calendar Sync & Alerts
+Jobs, invoice due dates, reminders, contract renewals map to CalendarEvents and trigger notifications.
+
+Role & Permissions Enforcement
+Enforce access rules in UI / API based on user roles.
+
+AI Integration Layer
+A modular connection to Gemini (or equivalent) used for:
+
+Financial summary analysis
+
+Text extraction / OCR
+
+Email drafting (follow-ups, reminders)
+
+Upsell suggestions
+
+Forecasting & anomaly detection
+
+Import / Export & Integration
+Core entities support import/export (JSON/CSV/Excel).
+APIs & webhooks expose data to accounting or external tools.
+
+Security, Compliance & Data Safeguards
+Use encryption, backups, role gating, audits, MFA. Comply with local data laws.

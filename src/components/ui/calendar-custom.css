@@ -1,0 +1,68 @@
+/* Custom overrides for react-big-calendar to match Shadcn Theme */
+
+.rbc-calendar {
+    font-family: inherit;
+}
+
+.rbc-toolbar button {
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: var(--radius);
+}
+
+.rbc-toolbar button:active,
+.rbc-toolbar button.rbc-active {
+    background-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    box-shadow: none !important;
+}
+
+.rbc-toolbar button:hover {
+    background-color: hsl(var(--accent));
+}
+
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view {
+    border: 1px solid hsl(var(--border)) !important;
+    background-color: hsl(var(--background));
+}
+
+.rbc-header {
+    border-bottom: 1px solid hsl(var(--border)) !important;
+    padding: 8px 0 !important;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+}
+
+.rbc-off-range-bg {
+    background-color: hsl(var(--muted) / 0.3) !important;
+}
+
+.rbc-day-bg+.rbc-day-bg {
+    border-left: 1px solid hsl(var(--border)) !important;
+}
+
+.rbc-month-row+.rbc-month-row {
+    border-top: 1px solid hsl(var(--border)) !important;
+}
+
+.rbc-date-cell {
+    padding: 8px !important;
+    color: hsl(var(--foreground));
+    font-size: 0.875rem;
+}
+
+.rbc-event {
+    padding: 2px 5px !important;
+    font-size: 0.75rem !important;
+}
+
+/* Dark Mode Specifics (Assumes .dark class on body/html) */
+.dark .rbc-off-range-bg {
+    background-color: hsl(var(--muted) / 0.1) !important;
+}
+
+.dark .rbc-today {
+    background-color: hsl(var(--accent) / 0.2) !important;
+}
