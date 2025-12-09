@@ -8,10 +8,12 @@ import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Downlo
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
+import { useCurrency } from '@/lib/use-currency.jsx'
 
 
 export default function Sales() {
   const navigate = useNavigate()
+  const { formatCurrency } = useCurrency()
   const [quotations, setQuotations] = useState([])
   const [invoices, setInvoices] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -198,14 +200,14 @@ export default function Sales() {
             </div>
             <div className="flex items-center gap-2 text-lg font-semibold text-green-600">
               <Banknote className="h-5 w-5" />
-              <span>R{parseFloat(sale.total_amount).toFixed(2)}</span>
+              <span>{formatCurrency(sale.total_amount)}</span>
             </div>
           </div>
 
           {sale.profit_estimate && (
             <div className="text-sm text-muted-foreground">
               Est. Profit: <span className="text-green-600 font-medium">
-                R{parseFloat(sale.profit_estimate).toFixed(2)}
+                {formatCurrency(sale.profit_estimate)}
               </span>
             </div>
           )}

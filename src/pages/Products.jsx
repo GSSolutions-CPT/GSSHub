@@ -7,8 +7,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Plus, Search, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useCurrency } from '@/lib/use-currency.jsx'
 
 export default function Products() {
+  const { formatCurrency } = useCurrency()
   const [products, setProducts] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -207,13 +209,13 @@ export default function Products() {
                   <div>
                     <p className="text-xs text-muted-foreground">Retail Price</p>
                     <p className="text-lg font-semibold text-green-600">
-                      R{parseFloat(product.retail_price).toFixed(2)}
+                      {formatCurrency(product.retail_price)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Cost Price</p>
                     <p className="text-lg font-semibold">
-                      R{parseFloat(product.cost_price).toFixed(2)}
+                      {formatCurrency(product.cost_price)}
                     </p>
                   </div>
                 </div>

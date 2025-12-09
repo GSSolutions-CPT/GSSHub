@@ -9,12 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Upload, Download, Database, FileSpreadsheet, Users, Package, Receipt, Briefcase, Moon, Sun, UserPlus, Trash2, Wallet, Coins } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useTheme } from '@/lib/use-theme.jsx'
+import { useCurrency } from '@/lib/use-currency.jsx'
 import { Switch } from '@/components/ui/switch'
 
 export default function Settings() {
   const [importing, setImporting] = useState(false)
   const [exporting, setExporting] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { currency, updateCurrency } = useCurrency()
   const [users, setUsers] = useState([])
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
   const [newUser, setNewUser] = useState({ email: '', role: 'technician', password: '' })
@@ -664,11 +666,8 @@ export default function Settings() {
           <div className="flex items-center gap-4">
             <Label>System Currency</Label>
             <Select
-              defaultValue={localStorage.getItem('currency') || 'ZAR'}
-              onValueChange={(value) => {
-                localStorage.setItem('currency', value)
-                window.location.reload() // Reload to apply changes globally if needed, or just let components read it
-              }}
+              value={currency}
+              onValueChange={updateCurrency}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue />
@@ -682,7 +681,7 @@ export default function Settings() {
             </Select>
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            * Reload page to apply changes everywhere.
+            * Changes are applied immediately across the application.
           </p>
         </CardContent>
       </Card>

@@ -12,10 +12,12 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import { useCurrency } from '@/lib/use-currency.jsx';
 
 const DEFAULT_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
 export default function FinancialCharts({ monthlyData, expenseBreakdown, colors = DEFAULT_COLORS }) {
+  const { formatCurrency } = useCurrency();
   const resolvedColors = colors.length ? colors : DEFAULT_COLORS;
   const hasMonthlyData = Array.isArray(monthlyData) && monthlyData.length > 0;
   const hasExpenseData =
@@ -66,7 +68,7 @@ export default function FinancialCharts({ monthlyData, expenseBreakdown, colors 
                     data={expenseBreakdown}
                     cx="50%"
                     labelLine={false}
-                    label={({ name, value }) => `${name}: R${value.toFixed(0)}`}
+                    label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"

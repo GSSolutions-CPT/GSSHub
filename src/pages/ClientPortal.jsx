@@ -7,8 +7,10 @@ import { FileText, Receipt, Briefcase, Download, CheckCircle, XCircle, Upload, F
 import { supabase } from '@/lib/supabase'
 import { useSearchParams } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
+import { useCurrency } from '@/lib/use-currency.jsx'
 
 export default function ClientPortal() {
+  const { formatCurrency } = useCurrency()
   const [searchParams] = useSearchParams()
   const clientId = searchParams.get('client')
   const accessToken = searchParams.get('token')
@@ -290,7 +292,7 @@ export default function ClientPortal() {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Total Amount:</span>
                         <span className="text-2xl font-bold text-green-600">
-                          R{parseFloat(quotation.total_amount).toFixed(2)}
+                          {formatCurrency(quotation.total_amount)}
                         </span>
                       </div>
 
@@ -374,7 +376,7 @@ export default function ClientPortal() {
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted-foreground">Amount Due:</span>
                         <span className="text-2xl font-bold text-green-600">
-                          R{parseFloat(invoice.total_amount).toFixed(2)}
+                          {formatCurrency(invoice.total_amount)}
                         </span>
                       </div>
 

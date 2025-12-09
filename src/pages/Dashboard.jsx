@@ -2,10 +2,12 @@ import { useState, useEffect, Suspense, lazy } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Banknote, TrendingUp, Users, AlertCircle, Activity } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useCurrency } from '@/lib/use-currency.jsx'
 
 const FinancialCharts = lazy(() => import('./FinancialCharts.jsx'))
 
 export default function Dashboard() {
+  const { formatCurrency } = useCurrency()
   const [metrics, setMetrics] = useState({
     monthlyRevenue: 0,
     monthlyProfit: 0,
@@ -128,7 +130,7 @@ export default function Dashboard() {
             <Banknote className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R{metrics.monthlyRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{formatCurrency(metrics.monthlyRevenue)}</div>
             <p className="text-xs text-muted-foreground">
               +20.1% from last month
             </p>
@@ -140,7 +142,7 @@ export default function Dashboard() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R{metrics.monthlyProfit.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{formatCurrency(metrics.monthlyProfit)}</div>
             <p className="text-xs text-muted-foreground">
               +15% from last month
             </p>
