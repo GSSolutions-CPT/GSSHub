@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, Search, Package } from 'lucide-react'
+import { Plus, Search, Package, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useCurrency } from '@/lib/use-currency.jsx'
 
@@ -14,6 +14,7 @@ export default function Products() {
   const [products, setProducts] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -45,28 +46,81 @@ export default function Products() {
     e.preventDefault()
 
     try {
-      const { error } = await supabase
-        .from('products')
-        .insert([{
-          ...formData,
-          retail_price: parseFloat(formData.retail_price),
-          cost_price: parseFloat(formData.cost_price)
+      if (editingProduct) {
+        // Update existing product
+        const { error } = await supabase
+          .from('products')
+          .update({
+            ...formData,
+            retail_price: parseFloat(formData.retail_price),
+            cost_price: parseFloat(formData.cost_price)
+          })
+          .eq('id', editingProduct.id)
+
+        if (error) throw error
+
+        await supabase.from('activity_log').insert([{
+          type: 'Product Updated',
+          description: `Product updated: ${formData.name}`,
+          related_entity_id: editingProduct.id,
+          related_entity_type: 'product'
         }])
+      } else {
+        // Create new product
+        const { error } = await supabase
+          .from('products')
+          .insert([{
+            ...formData,
+            retail_price: parseFloat(formData.retail_price),
+            cost_price: parseFloat(formData.cost_price)
+          }])
 
-      if (error) throw error
+        if (error) throw error
 
-      // Log activity
-      await supabase.from('activity_log').insert([{
-        type: 'Product Created',
-        description: `New product added: ${formData.name}`,
-        related_entity_type: 'product'
-      }])
+        await supabase.from('activity_log').insert([{
+          type: 'Product Created',
+          description: `New product added: ${formData.name}`,
+          related_entity_type: 'product'
+        }])
+      }
 
       setIsDialogOpen(false)
+      setEditingProduct(null)
       setFormData({ name: '', code: '', category: '', retail_price: '', cost_price: '', description: '' })
       fetchProducts()
     } catch (error) {
-      console.error('Error creating product:', error)
+      console.error('Error saving product:', error)
+    }
+  }
+
+  const handleEdit = (product) => {
+    setEditingProduct(product)
+    setFormData({
+      name: product.name,
+      code: product.code || '',
+      category: product.category || '',
+      retail_price: product.retail_price,
+      cost_price: product.cost_price,
+      description: product.description || ''
+    })
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this product?')) return
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      fetchProducts()
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      alert('Error deleting product')
     }
   }
 
@@ -95,7 +149,16 @@ export default function Products() {
           />
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open)
+            if (!open) {
+              setEditingProduct(null)
+              setFormData({ name: '', code: '', category: '', retail_price: '', cost_price: '', description: '' })
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -104,7 +167,7 @@ export default function Products() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
+              <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
               <DialogDescription>
                 Enter the product information below
               </DialogDescription>
@@ -176,7 +239,7 @@ export default function Products() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">Add Product</Button>
+                <Button type="submit">{editingProduct ? 'Update Product' : 'Add Product'}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -219,11 +282,21 @@ export default function Products() {
                     </p>
                   </div>
                 </div>
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">Profit Margin</p>
-                  <p className="text-sm font-medium text-blue-600">
-                    {calculateMargin(product.retail_price, product.cost_price)}%
-                  </p>
+                <div className="pt-2 border-t flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Profit Margin</p>
+                    <p className="text-sm font-medium text-blue-600">
+                      {calculateMargin(product.retail_price, product.cost_price)}%
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(product.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>

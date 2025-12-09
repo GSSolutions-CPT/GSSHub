@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Search, Briefcase, Calendar as CalendarIcon, User, Clock, LayoutGrid, List as ListIcon, Kanban } from 'lucide-react'
+import { Plus, Search, Briefcase, Calendar as CalendarIcon, User, Clock, LayoutGrid, List as ListIcon, Kanban, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 // Lazy load heavy components
@@ -22,6 +22,7 @@ export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingJob, setEditingJob] = useState(null)
   const [viewMode, setViewMode] = useState('list') // list, board, calendar
   const [formData, setFormData] = useState({
     client_id: '',
@@ -90,34 +91,57 @@ export default function Jobs() {
     try {
       const technicians = formData.assigned_technicians.split(',').map(t => t.trim())
 
-      const { error } = await supabase
-        .from('jobs')
-        .insert([{
-          ...formData,
-          assigned_technicians: technicians,
-          quotation_id: formData.quotation_id || null
-        }])
+      if (editingJob) {
+        // Update existing job
+        const { error } = await supabase
+          .from('jobs')
+          .update({
+            ...formData,
+            assigned_technicians: technicians,
+            quotation_id: formData.quotation_id || null
+          })
+          .eq('id', editingJob.id)
 
-      if (error) throw error
+        if (error) throw error
 
-      // Log activity
-      await supabase.from('activity_log').insert([{
-        type: 'Job Created',
-        description: `New job created for client`,
-        related_entity_type: 'job'
-      }])
-
-      // Create calendar event
-      if (formData.scheduled_datetime) {
-        await supabase.from('calendar_events').insert([{
-          event_type: 'Job',
-          title: `Job scheduled`,
-          datetime: formData.scheduled_datetime,
+        await supabase.from('activity_log').insert([{
+          type: 'Job Updated',
+          description: `Job updated for client`,
+          related_entity_id: editingJob.id,
           related_entity_type: 'job'
         }])
+      } else {
+        // Create new job
+        const { error } = await supabase
+          .from('jobs')
+          .insert([{
+            ...formData,
+            assigned_technicians: technicians,
+            quotation_id: formData.quotation_id || null
+          }])
+
+        if (error) throw error
+
+        // Log activity
+        await supabase.from('activity_log').insert([{
+          type: 'Job Created',
+          description: `New job created for client`,
+          related_entity_type: 'job'
+        }])
+
+        // Create calendar event
+        if (formData.scheduled_datetime) {
+          await supabase.from('calendar_events').insert([{
+            event_type: 'Job',
+            title: `Job scheduled`,
+            datetime: formData.scheduled_datetime,
+            related_entity_type: 'job'
+          }])
+        }
       }
 
       setIsDialogOpen(false)
+      setEditingJob(null)
       setFormData({
         client_id: '',
         quotation_id: '',
@@ -128,7 +152,38 @@ export default function Jobs() {
       })
       fetchJobs()
     } catch (error) {
-      console.error('Error creating job:', error)
+      console.error('Error saving job:', error)
+    }
+  }
+
+  const handleEdit = (job) => {
+    setEditingJob(job)
+    setFormData({
+      client_id: job.client_id,
+      quotation_id: job.quotation_id || '',
+      assigned_technicians: job.assigned_technicians ? job.assigned_technicians.join(', ') : '',
+      scheduled_datetime: job.scheduled_datetime || '',
+      notes: job.notes || '',
+      status: job.status
+    })
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this job?')) return
+
+    try {
+      const { error } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      fetchJobs()
+    } catch (error) {
+      console.error('Error deleting job:', error)
+      alert('Error deleting job')
     }
   }
 
@@ -226,7 +281,23 @@ export default function Jobs() {
             </TabsList>
           </Tabs>
 
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open)
+              if (!open) {
+                setEditingJob(null)
+                setFormData({
+                  client_id: '',
+                  quotation_id: '',
+                  assigned_technicians: '',
+                  scheduled_datetime: '',
+                  notes: '',
+                  status: 'Pending'
+                })
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -235,7 +306,7 @@ export default function Jobs() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
-                <DialogTitle>Create New Job</DialogTitle>
+                <DialogTitle>{editingJob ? 'Edit Job' : 'Create New Job'}</DialogTitle>
                 <DialogDescription>
                   Schedule a new job or work order
                 </DialogDescription>
@@ -322,7 +393,7 @@ export default function Jobs() {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">Create Job</Button>
+                  <Button type="submit">{editingJob ? 'Update Job' : 'Create Job'}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -347,9 +418,19 @@ export default function Jobs() {
                         <CardDescription>{job.clients.company}</CardDescription>
                       )}
                     </div>
-                    <Badge className={`${getStatusColor(job.status)} text-white`}>
-                      {job.status}
-                    </Badge>
+                    <div className="flex gap-2">
+                      <Badge className={`${getStatusColor(job.status)} text-white`}>
+                        {job.status}
+                      </Badge>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(job)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDelete(job.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>

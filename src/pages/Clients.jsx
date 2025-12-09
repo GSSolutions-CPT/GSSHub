@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, Search, Mail, Phone, Building2, MapPin, ExternalLink, Copy, Users } from 'lucide-react'
+import { Plus, Search, Mail, Phone, Building2, MapPin, ExternalLink, Copy, Users, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 export default function Clients() {
   const [clients, setClients] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -41,24 +42,72 @@ export default function Clients() {
     e.preventDefault()
 
     try {
-      const { error } = await supabase
-        .from('clients')
-        .insert([formData])
+      if (editingClient) {
+        // Update existing client
+        const { error } = await supabase
+          .from('clients')
+          .update(formData)
+          .eq('id', editingClient.id)
 
-      if (error) throw error
+        if (error) throw error
 
-      // Log activity
-      await supabase.from('activity_log').insert([{
-        type: 'Client Created',
-        description: `New client added: ${formData.name}`,
-        related_entity_type: 'client'
-      }])
+        await supabase.from('activity_log').insert([{
+          type: 'Client Updated',
+          description: `Client updated: ${formData.name}`,
+          related_entity_id: editingClient.id,
+          related_entity_type: 'client'
+        }])
+      } else {
+        // Create new client
+        const { error } = await supabase
+          .from('clients')
+          .insert([formData])
+
+        if (error) throw error
+
+        await supabase.from('activity_log').insert([{
+          type: 'Client Created',
+          description: `New client added: ${formData.name}`,
+          related_entity_type: 'client'
+        }])
+      }
 
       setIsDialogOpen(false)
+      setEditingClient(null)
       setFormData({ name: '', company: '', email: '', phone: '', address: '' })
       fetchClients()
     } catch (error) {
-      console.error('Error creating client:', error)
+      console.error('Error saving client:', error)
+    }
+  }
+
+  const handleEdit = (client) => {
+    setEditingClient(client)
+    setFormData({
+      name: client.name,
+      company: client.company || '',
+      email: client.email || '',
+      phone: client.phone || '',
+      address: client.address || ''
+    })
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this client? This will implicitly delete all their sales and jobs!')) return
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      fetchClients()
+    } catch (error) {
+      console.error('Error deleting client:', error)
+      alert('Error deleting client: They might have related data.')
     }
   }
 
@@ -82,7 +131,16 @@ export default function Clients() {
           />
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open)
+            if (!open) {
+              setEditingClient(null)
+              setFormData({ name: '', company: '', email: '', phone: '', address: '' })
+            }
+          }}
+        >
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -91,7 +149,7 @@ export default function Clients() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Add New Client</DialogTitle>
+              <DialogTitle>{editingClient ? 'Edit Client' : 'Add New Client'}</DialogTitle>
               <DialogDescription>
                 Enter the client's information below
               </DialogDescription>
@@ -145,7 +203,7 @@ export default function Clients() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">Add Client</Button>
+                <Button type="submit">{editingClient ? 'Update Client' : 'Add Client'}</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -157,13 +215,25 @@ export default function Clients() {
         {filteredClients.map((client) => (
           <Card key={client.id} className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader>
-              <CardTitle className="text-lg">{client.name}</CardTitle>
-              {client.company && (
-                <CardDescription className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  {client.company}
-                </CardDescription>
-              )}
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-lg">{client.name}</CardTitle>
+                  {client.company && (
+                    <CardDescription className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      {client.company}
+                    </CardDescription>
+                  )}
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(client)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(client.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm">

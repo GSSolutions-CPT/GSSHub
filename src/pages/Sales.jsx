@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Download } from 'lucide-react'
+import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Download, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
@@ -163,6 +163,29 @@ export default function Sales() {
     }
   }
 
+  const handleDelete = async (id, type) => {
+    if (!confirm(`Are you sure you want to delete this ${type}? This cannot be undone.`)) return
+
+    try {
+      const table = type === 'quotation' ? 'quotations' : 'invoices'
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      if (type === 'quotation') {
+        fetchQuotations()
+      } else {
+        fetchInvoices()
+      }
+    } catch (error) {
+      console.error('Error deleting sale:', error)
+      alert('Error deleting item. Ensure no other records depend on it.')
+    }
+  }
+
   const filteredQuotations = quotations.filter(q =>
     q.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     q.clients?.company?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -235,6 +258,19 @@ export default function Sales() {
               <Download className="mr-2 h-4 w-4" />
               Download PDF
             </Button>
+
+            {(sale.status === 'Draft' || sale.status === 'Cancelled' || sale.status === 'Rejected') && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full text-destructive hover:bg-destructive/10"
+                onClick={() => handleDelete(sale.id, type)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete {type === 'quotation' ? 'Quote' : 'Invoice'}
+              </Button>
+            )}
+
             <div className="flex gap-2">
               {type === 'quotation' && sale.status === 'Draft' && (
                 <>
