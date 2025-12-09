@@ -10,9 +10,11 @@ import { Plus, Trash2, FileText, Receipt } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { SmartEstimator } from '@/components/SmartEstimator'
+import { useCurrency } from '@/lib/use-currency'
 
 export default function CreateSale() {
   const navigate = useNavigate()
+  const { formatCurrency } = useCurrency()
   const [mode, setMode] = useState('quotation') // 'quotation' or 'invoice'
   const [clients, setClients] = useState([])
   const [products, setProducts] = useState([])
@@ -131,7 +133,9 @@ export default function CreateSale() {
 
       // Create quotation or invoice
       const table = mode === 'quotation' ? 'quotations' : 'invoices'
-      const payload = {
+
+      // Base payload
+      const basePayload = {
         client_id: formData.client_id,
         status: 'Draft',
         date_created: new Date().toISOString(),
@@ -141,11 +145,11 @@ export default function CreateSale() {
         profit_estimate: totals.profit
       }
 
-      if (mode === 'quotation') {
-        payload.valid_until = formData.valid_until || null
-      } else {
-        payload.due_date = formData.due_date || null
-      }
+      // Add specific fields based on mode
+      const payload = mode === 'quotation'
+        ? { ...basePayload, valid_until: formData.valid_until || null }
+        : { ...basePayload, due_date: formData.due_date || null }
+
 
       const { data: saleData, error: saleError } = await supabase
         .from(table)
@@ -310,7 +314,7 @@ export default function CreateSale() {
                         <SelectItem value="custom">Custom Item / Labour</SelectItem>
                         {products.map((product) => (
                           <SelectItem key={product.id} value={product.id}>
-                            {product.name} - R{parseFloat(product.retail_price).toFixed(2)}
+                            {product.name} - {formatCurrency(product.retail_price)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -346,7 +350,7 @@ export default function CreateSale() {
                     <Label>Line Total</Label>
                     <Input
                       type="text"
-                      value={`R${(item.quantity * item.unit_price).toFixed(2)}`}
+                      value={formatCurrency(item.quantity * item.unit_price)}
                       disabled
                       className="bg-muted"
                     />
@@ -376,26 +380,26 @@ export default function CreateSale() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>R{totals.subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(totals.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm text-muted-foreground">
                 <span>Cost (Trade Subtotal):</span>
-                <span>R{totals.tradeSubtotal.toFixed(2)}</span>
+                <span>{formatCurrency(totals.tradeSubtotal)}</span>
               </div>
               <div className="flex justify-between text-sm text-green-600 font-medium">
                 <span>Estimated Profit:</span>
-                <span>R{totals.profit.toFixed(2)}</span>
+                <span>{formatCurrency(totals.profit)}</span>
               </div>
               {formData.vat_applicable && (
                 <div className="flex justify-between text-sm">
                   <span>VAT (15%):</span>
-                  <span>R{totals.vat.toFixed(2)}</span>
+                  <span>{formatCurrency(totals.vat)}</span>
                 </div>
               )}
               <Separator />
               <div className="flex justify-between text-lg font-bold">
                 <span>Total:</span>
-                <span>R{totals.total.toFixed(2)}</span>
+                <span>{formatCurrency(totals.total)}</span>
               </div>
             </div>
           </CardContent>
