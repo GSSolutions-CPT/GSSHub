@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Trash2, FileText, Receipt } from 'lucide-react'
+import { Plus, Trash2, FileText, Receipt, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { SmartEstimator } from '@/components/SmartEstimator'
@@ -192,6 +192,15 @@ export default function CreateSale() {
               <CardDescription>Generate a quotation or invoice</CardDescription>
             </div>
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/products')}
+                title="Manage Products"
+              >
+                <Package className="mr-2 h-4 w-4" />
+                Manage Products
+              </Button>
               <div className="flex items-center gap-2">
                 <FileText className={`h-5 w-5 ${mode === 'quotation' ? 'text-primary' : 'text-muted-foreground'}`} />
                 <span className={mode === 'quotation' ? 'font-semibold' : 'text-muted-foreground'}>
