@@ -6,15 +6,17 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Trash2, FileText, Receipt, Package } from 'lucide-react'
+import { Plus, Trash2, FileText, Receipt, Package, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { SmartEstimator } from '@/components/SmartEstimator'
 import { useCurrency } from '@/lib/use-currency'
+import { toast } from 'sonner'
 
 export default function CreateSale() {
   const navigate = useNavigate()
   const { formatCurrency } = useCurrency()
+  const [isLoading, setIsLoading] = useState(false)
   const [mode, setMode] = useState('quotation') // 'quotation' or 'invoice'
   const [clients, setClients] = useState([])
   const [products, setProducts] = useState([])
@@ -124,9 +126,11 @@ export default function CreateSale() {
     e.preventDefault()
 
     if (!formData.client_id || lineItems.length === 0) {
-      alert('Please select a client and add at least one line item')
+      toast.error('Please select a client and add at least one line item')
       return
     }
+
+    setIsLoading(true)
 
     try {
       const totals = calculateTotals()
@@ -160,6 +164,20 @@ export default function CreateSale() {
 
       const saleId = saleData[0].id
 
+      // Create line items
+      const lines = lineItems.map(item => ({
+        [`${mode}_id`]: saleId,
+        product_id: item.product_id || null, // Allow null for custom items
+        description: item.description, // Ensure description is saved
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        cost_price: item.cost_price,
+        line_total: item.quantity * item.unit_price
+      }))
+
+      const { error: linesError } = await supabase
+        .from(`${mode}_lines`)
+        .insert(lines)
 
       if (linesError) throw linesError
 
@@ -171,11 +189,13 @@ export default function CreateSale() {
         related_entity_type: mode
       }])
 
-      alert(`${mode === 'quotation' ? 'Quotation' : 'Invoice'} created successfully!`)
+      toast.success(`${mode === 'quotation' ? 'Quotation' : 'Invoice'} created successfully!`)
       navigate('/sales')
     } catch (error) {
       console.error('Error creating sale:', error)
-      alert(`Error creating sale: ${error.message}`)
+      toast.error(`Error creating sale: ${error.message}`)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -419,7 +439,8 @@ export default function CreateSale() {
           <Button type="button" variant="outline" onClick={() => navigate('/sales')}>
             Cancel
           </Button>
-          <Button type="submit">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create {mode === 'quotation' ? 'Quotation' : 'Invoice'}
           </Button>
         </div>

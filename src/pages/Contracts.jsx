@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Plus, FileText, Calendar, Banknote, RefreshCw, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 export default function Contracts() {
   const [contracts, setContracts] = useState([])
@@ -114,10 +115,10 @@ export default function Contracts() {
         active: true
       })
       fetchContracts()
-      alert('Contract created successfully!')
+      toast.success('Contract created successfully!')
     } catch (error) {
       console.error('Error creating contract:', error)
-      alert('Error creating contract. Please try again.')
+      toast.error('Error creating contract. Please try again.')
     }
   }
 
@@ -198,10 +199,10 @@ export default function Contracts() {
       }])
 
       fetchContracts()
-      alert('Invoice generated successfully!')
+      toast.success('Invoice generated successfully!')
     } catch (error) {
       console.error('Error generating invoice:', error)
-      alert('Error generating invoice. Please try again.')
+      toast.error('Error generating invoice. Please try again.')
     }
   }
 

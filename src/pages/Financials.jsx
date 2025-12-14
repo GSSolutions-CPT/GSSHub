@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Banknote, TrendingUp, TrendingDown, Receipt } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 const FinancialCharts = lazy(() => import('./FinancialCharts.jsx'))
 
@@ -105,7 +106,6 @@ export default function Financials() {
         related_entity_type: 'expense'
       }])
 
-      setIsDialogOpen(false)
       setFormData({
         type: 'general',
         job_id: '',
@@ -114,8 +114,10 @@ export default function Financials() {
         date: new Date().toISOString().split('T')[0]
       })
       fetchExpenses()
+      toast.success('Expense recorded successfully')
     } catch (error) {
       console.error('Error creating expense:', error)
+      toast.error('Failed to record expense')
     }
   }
 

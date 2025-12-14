@@ -14,7 +14,6 @@ const CreateSale = lazy(() => import('./pages/CreateSale.jsx'))
 const Sales = lazy(() => import('./pages/Sales.jsx'))
 const Jobs = lazy(() => import('./pages/Jobs.jsx'))
 const Financials = lazy(() => import('./pages/Financials.jsx'))
-const Calendar = lazy(() => import('./pages/Calendar.jsx'))
 const ClientPortal = lazy(() => import('./pages/ClientPortal.jsx'))
 const Contracts = lazy(() => import('./pages/Contracts.jsx'))
 const Settings = lazy(() => import('./pages/Settings.jsx'))
@@ -46,7 +45,6 @@ function App() {
                 <Route path="jobs" element={<Jobs />} />
                 <Route path="contracts" element={<Contracts />} />
                 <Route path="financials" element={<Financials />} />
-                <Route path="calendar" element={<Calendar />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
             </Routes>

@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Download, Trash2 } from 'lucide-react'
+import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Download, Trash2, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
 import { useCurrency } from '@/lib/use-currency.jsx'
+import { toast } from 'sonner'
 
 
 export default function Sales() {
@@ -58,6 +59,7 @@ export default function Sales() {
   }
 
   const updateStatus = async (type, id, newStatus) => {
+    const toastId = toast.loading(`Updating ${type} status...`)
     try {
       const table = type === 'quotation' ? 'quotations' : 'invoices'
       const { error } = await supabase
@@ -80,12 +82,15 @@ export default function Sales() {
       } else {
         fetchInvoices()
       }
+      toast.success(`${type === 'quotation' ? 'Quotation' : 'Invoice'} marked as ${newStatus}`, { id: toastId })
     } catch (error) {
       console.error('Error updating status:', error)
+      toast.error('Failed to update status', { id: toastId })
     }
   }
 
   const convertToInvoice = async (quotation) => {
+    const toastId = toast.loading('Converting quotation to invoice...')
     try {
       // Create invoice from quotation
       const { data: invoiceData, error: invoiceError } = await supabase
@@ -140,12 +145,12 @@ export default function Sales() {
         related_entity_type: 'quotation'
       }])
 
-      alert('Quotation converted to invoice successfully!')
+      toast.success('Quotation converted to invoice successfully!', { id: toastId })
       fetchQuotations()
       fetchInvoices()
     } catch (error) {
       console.error('Error converting to invoice:', error)
-      alert('Error converting quotation. Please try again.')
+      toast.error('Error converting quotation. Please try again.', { id: toastId })
     }
   }
 
@@ -166,6 +171,8 @@ export default function Sales() {
   const handleDelete = async (id, type) => {
     if (!confirm(`Are you sure you want to delete this ${type}? This cannot be undone.`)) return
 
+    const toastId = toast.loading(`Deleting ${type}...`)
+
     try {
       const table = type === 'quotation' ? 'quotations' : 'invoices'
       const { error } = await supabase
@@ -180,9 +187,38 @@ export default function Sales() {
       } else {
         fetchInvoices()
       }
+      toast.success(`${type === 'quotation' ? 'Quotation' : 'Invoice'} deleted successfully`, { id: toastId })
     } catch (error) {
       console.error('Error deleting sale:', error)
-      alert('Error deleting item. Ensure no other records depend on it.')
+      toast.error('Error deleting item. Ensure no other records depend on it.', { id: toastId })
+    }
+  }
+
+  const handleDownloadPDF = async (sale, type) => {
+    const toastId = toast.loading('Generating PDF...')
+    try {
+      // Fetch line items
+      const table = type === 'quotation' ? 'quotation_lines' : 'invoice_lines'
+      const idColumn = type === 'quotation' ? 'quotation_id' : 'invoice_id'
+
+      const { data: lines, error } = await supabase
+        .from(table)
+        .select('*')
+        .eq(idColumn, sale.id)
+
+      if (error) throw error
+
+      const fullData = { ...sale, lines: lines || [] }
+
+      if (type === 'quotation') {
+        generateQuotePDF(fullData)
+      } else {
+        generateInvoicePDF(fullData)
+      }
+      toast.success('PDF Downloaded', { id: toastId })
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Failed to generate PDF', { id: toastId })
     }
   }
 
@@ -253,7 +289,7 @@ export default function Sales() {
               size="sm"
               variant="outline"
               className="w-full"
-              onClick={() => type === 'quotation' ? generateQuotePDF(sale) : generateInvoicePDF(sale)}
+              onClick={() => handleDownloadPDF(sale, type)}
             >
               <Download className="mr-2 h-4 w-4" />
               Download PDF
@@ -355,12 +391,16 @@ export default function Sales() {
         </Button>
       </div>
 
-      {/* Tabs for Quotations and Invoices */}
+      {/* Tabs for Quotations, Proforma, and Invoices */}
       <Tabs defaultValue="quotations" className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-xl grid-cols-3">
           <TabsTrigger value="quotations">
             <FileText className="mr-2 h-4 w-4" />
-            Quotations ({quotations.length})
+            Quotations ({quotations.filter(q => ['Draft', 'Sent', 'Rejected'].includes(q.status)).length})
+          </TabsTrigger>
+          <TabsTrigger value="proforma">
+            <FileText className="mr-2 h-4 w-4 text-orange-500" />
+            Proforma ({quotations.filter(q => ['Accepted', 'Approved'].includes(q.status)).length})
           </TabsTrigger>
           <TabsTrigger value="invoices">
             <Receipt className="mr-2 h-4 w-4" />
@@ -370,14 +410,34 @@ export default function Sales() {
 
         <TabsContent value="quotations" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredQuotations.map((quotation) => renderSaleCard(quotation, 'quotation'))}
+            {filteredQuotations
+              .filter(q => ['Draft', 'Sent', 'Rejected', 'Cancelled'].includes(q.status))
+              .map((quotation) => renderSaleCard(quotation, 'quotation'))}
           </div>
-          {filteredQuotations.length === 0 && (
+          {filteredQuotations.filter(q => ['Draft', 'Sent', 'Rejected', 'Cancelled'].includes(q.status)).length === 0 && (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <FileText className="h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">
-                  {searchTerm ? 'No quotations found' : 'No quotations yet. Create your first quotation to get started.'}
+                  {searchTerm ? 'No quotations found' : 'No active quotations.'}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="proforma" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredQuotations
+              .filter(q => ['Accepted', 'Approved'].includes(q.status))
+              .map((quotation) => renderSaleCard(quotation, 'quotation'))}
+          </div>
+          {filteredQuotations.filter(q => ['Accepted', 'Approved'].includes(q.status)).length === 0 && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <FileText className="h-12 w-12 text-orange-200 mb-4" />
+                <p className="text-muted-foreground">
+                  No Proforma Invoices (Accepted Quotes) yet.
                 </p>
               </CardContent>
             </Card>

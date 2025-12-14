@@ -5,15 +5,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, Search, Package, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Package, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useCurrency } from '@/lib/use-currency.jsx'
+import { toast } from 'sonner'
+import { ImportProductsDialog } from '@/components/ImportProductsDialog'
 
 export default function Products() {
   const { formatCurrency } = useCurrency()
   const [products, setProducts] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
@@ -44,6 +47,7 @@ export default function Products() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setIsLoading(true)
 
     try {
       if (editingProduct) {
@@ -65,6 +69,7 @@ export default function Products() {
           related_entity_id: editingProduct.id,
           related_entity_type: 'product'
         }])
+        toast.success('Product updated successfully')
       } else {
         // Create new product
         const { error } = await supabase
@@ -82,6 +87,7 @@ export default function Products() {
           description: `New product added: ${formData.name}`,
           related_entity_type: 'product'
         }])
+        toast.success('Product created successfully')
       }
 
       setIsDialogOpen(false)
@@ -90,6 +96,9 @@ export default function Products() {
       fetchProducts()
     } catch (error) {
       console.error('Error saving product:', error)
+      toast.error('Failed to save product')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -107,7 +116,10 @@ export default function Products() {
   }
 
   const handleDelete = async (id) => {
+    // We can use a toast promise or just immediate delete for better UX, but sticking to confirm for safety
     if (!confirm('Are you sure you want to delete this product?')) return
+
+    const toastId = toast.loading('Deleting product...')
 
     try {
       const { error } = await supabase
@@ -117,10 +129,11 @@ export default function Products() {
 
       if (error) throw error
 
+      toast.success('Product deleted successfully', { id: toastId })
       fetchProducts()
     } catch (error) {
       console.error('Error deleting product:', error)
-      alert('Error deleting product')
+      toast.error('Error deleting product', { id: toastId })
     }
   }
 
@@ -149,101 +162,107 @@ export default function Products() {
           />
         </div>
 
-        <Dialog
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            setIsDialogOpen(open)
-            if (!open) {
-              setEditingProduct(null)
-              setFormData({ name: '', code: '', category: '', retail_price: '', cost_price: '', description: '' })
-            }
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
-              <DialogDescription>
-                Enter the product information below
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Product Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+        <div className="flex gap-2">
+          <ImportProductsDialog onImportSuccess={fetchProducts} />
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open)
+              if (!open) {
+                setEditingProduct(null)
+                setFormData({ name: '', code: '', category: '', retail_price: '', cost_price: '', description: '' })
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+                <DialogDescription>
+                  Enter the product information below
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="code">Product Code</Label>
+                    <Label htmlFor="name">Product Name *</Label>
                     <Input
-                      id="code"
-                      value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Input
-                      id="category"
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="retail_price">Retail Price *</Label>
-                    <Input
-                      id="retail_price"
-                      type="number"
-                      step="0.01"
-                      value={formData.retail_price}
-                      onChange={(e) => setFormData({ ...formData, retail_price: e.target.value })}
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="code">Product Code</Label>
+                      <Input
+                        id="code"
+                        value={formData.code}
+                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="category">Category</Label>
+                      <Input
+                        id="category"
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="retail_price">Retail Price *</Label>
+                      <Input
+                        id="retail_price"
+                        type="number"
+                        step="0.01"
+                        value={formData.retail_price}
+                        onChange={(e) => setFormData({ ...formData, retail_price: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="cost_price">Cost Price *</Label>
+                      <Input
+                        id="cost_price"
+                        type="number"
+                        step="0.01"
+                        value={formData.cost_price}
+                        onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="cost_price">Cost Price *</Label>
-                    <Input
-                      id="cost_price"
-                      type="number"
-                      step="0.01"
-                      value={formData.cost_price}
-                      onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
-                      required
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={3}
                     />
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">{editingProduct ? 'Update Product' : 'Add Product'}</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {editingProduct ? 'Update Product' : 'Add Product'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Products Grid */}
@@ -317,4 +336,3 @@ export default function Products() {
     </div>
   )
 }
-

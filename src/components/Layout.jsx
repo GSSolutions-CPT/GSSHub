@@ -23,7 +23,6 @@ const navItems = [
   { path: '/jobs', label: 'Jobs', icon: Briefcase },
   { path: '/contracts', label: 'Contracts', icon: FileSignature },
   { path: '/financials', label: 'Financials', icon: Banknote },
-  { path: '/calendar', label: 'Calendar', icon: CalendarIcon },
   { path: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 

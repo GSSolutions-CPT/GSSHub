@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Search, Briefcase, Calendar as CalendarIcon, User, Clock, LayoutGrid, List as ListIcon, Kanban, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Briefcase, Calendar as CalendarIcon, User, Clock, LayoutGrid, List as ListIcon, Kanban, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
+import { generateOutlookLink } from '@/lib/calendar-utils'
 
 // Lazy load heavy components
 const JobBoard = lazy(() => import('./jobs/JobBoard'))
@@ -22,6 +24,7 @@ export default function Jobs() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [editingJob, setEditingJob] = useState(null)
   const [viewMode, setViewMode] = useState('list') // list, board, calendar
   const [formData, setFormData] = useState({
@@ -87,6 +90,7 @@ export default function Jobs() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setIsLoading(true)
 
     try {
       const technicians = formData.assigned_technicians.split(',').map(t => t.trim())
@@ -110,6 +114,7 @@ export default function Jobs() {
           related_entity_id: editingJob.id,
           related_entity_type: 'job'
         }])
+        toast.success('Job updated successfully')
       } else {
         // Create new job
         const { error } = await supabase
@@ -138,6 +143,7 @@ export default function Jobs() {
             related_entity_type: 'job'
           }])
         }
+        toast.success('Job created successfully')
       }
 
       setIsDialogOpen(false)
@@ -153,6 +159,9 @@ export default function Jobs() {
       fetchJobs()
     } catch (error) {
       console.error('Error saving job:', error)
+      toast.error('Failed to save job')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -172,6 +181,8 @@ export default function Jobs() {
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this job?')) return
 
+    const toastId = toast.loading('Deleting job...')
+
     try {
       const { error } = await supabase
         .from('jobs')
@@ -180,10 +191,11 @@ export default function Jobs() {
 
       if (error) throw error
 
+      toast.success('Job deleted successfully', { id: toastId })
       fetchJobs()
     } catch (error) {
       console.error('Error deleting job:', error)
-      alert('Error deleting job')
+      toast.error('Error deleting job', { id: toastId })
     }
   }
 
@@ -206,6 +218,70 @@ export default function Jobs() {
         related_entity_id: jobId,
         related_entity_type: 'job'
       }])
+
+      // --- Custom Workflow: Auto-Generate Invoice on Completion ---
+      if (newStatus === 'Completed') {
+        const job = jobs.find(j => j.id === jobId)
+        if (job && job.quotation_id) {
+          if (confirm('Job completed! Do you want to generate a Tax Invoice from the linked quotation?')) {
+            const toastId = toast.loading('Generating invoice...')
+            try {
+              // 1. Fetch Quote Details
+              const { data: quote, error: quoteError } = await supabase
+                .from('quotations')
+                .select('*, quotation_lines(*)')
+                .eq('id', job.quotation_id)
+                .single()
+
+              if (quoteError) throw quoteError
+
+              // 2. Create Invoice
+              const { data: invoiceData, error: invoiceError } = await supabase
+                .from('invoices')
+                .insert([{
+                  client_id: quote.client_id,
+                  quotation_id: quote.id,
+                  status: 'Draft', // Draft so they can check it first
+                  date_created: new Date().toISOString(),
+                  due_date: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(), // 7 days default
+                  total_amount: quote.total_amount,
+                  vat_applicable: quote.vat_applicable,
+                  trade_subtotal: quote.trade_subtotal,
+                  profit_estimate: quote.profit_estimate,
+                  metadata: { ...quote.metadata, generated_from_job: jobId }
+                }])
+                .select()
+                .single()
+
+              if (invoiceError) throw invoiceError
+
+              // 3. Create Invoice Lines
+              if (quote.quotation_lines && quote.quotation_lines.length > 0) {
+                const invoiceLines = quote.quotation_lines.map(line => ({
+                  invoice_id: invoiceData.id,
+                  product_id: line.product_id,
+                  quantity: line.quantity,
+                  unit_price: line.unit_price,
+                  line_total: line.line_total,
+                  cost_price: line.cost_price || 0
+                }))
+
+                const { error: linesError } = await supabase
+                  .from('invoice_lines')
+                  .insert(invoiceLines)
+
+                if (linesError) throw linesError
+              }
+
+              toast.success('Tax Invoice generated successfully!', { id: toastId })
+            } catch (invError) {
+              console.error('Invoice generation failed:', invError)
+              toast.error('Failed to generate invoice', { id: toastId })
+            }
+          }
+        }
+      }
+      // -------------------------------------------------------------
 
       fetchJobs()
     } catch (error) {
@@ -232,6 +308,17 @@ export default function Jobs() {
       case 'Cancelled': return 'bg-red-500'
       default: return 'bg-gray-500'
     }
+  }
+
+  const openOutlook = (job) => {
+    const link = generateOutlookLink({
+      title: `${job.clients?.name} - ${job.status}`,
+      start: job.scheduled_datetime ? new Date(job.scheduled_datetime) : new Date(),
+      end: job.scheduled_datetime ? new Date(new Date(job.scheduled_datetime).getTime() + 60 * 60 * 1000) : new Date(new Date().getTime() + 60 * 60 * 1000),
+      description: job.notes || '',
+      location: job.clients?.address || ''
+    })
+    window.open(link, '_blank')
   }
 
   return (
@@ -393,7 +480,10 @@ export default function Jobs() {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">{editingJob ? 'Update Job' : 'Create Job'}</Button>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {editingJob ? 'Update Job' : 'Create Job'}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -423,6 +513,9 @@ export default function Jobs() {
                         {job.status}
                       </Badge>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" title="Add to Outlook" onClick={() => openOutlook(job)}>
+                          <CalendarIcon className="h-3 w-3" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(job)}>
                           <Pencil className="h-3 w-3" />
                         </Button>
@@ -502,7 +595,7 @@ export default function Jobs() {
         )}
 
         {viewMode === 'calendar' && (
-          <JobCalendar jobs={filteredJobs} />
+          <JobCalendar />
         )}
       </Suspense>
 

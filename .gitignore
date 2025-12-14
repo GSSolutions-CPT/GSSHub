@@ -14,3 +14,5 @@ dist
 # System files
 .DS_Store
 Thumbs.db
+
+vite.config.js.timestamp-*

@@ -4,13 +4,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, Search, Mail, Phone, Building2, MapPin, ExternalLink, Copy, Users, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Mail, Phone, Building2, MapPin, ExternalLink, Copy, Users, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 export default function Clients() {
   const [clients, setClients] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [editingClient, setEditingClient] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
@@ -40,6 +42,7 @@ export default function Clients() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setIsLoading(true)
 
     try {
       if (editingClient) {
@@ -57,6 +60,7 @@ export default function Clients() {
           related_entity_id: editingClient.id,
           related_entity_type: 'client'
         }])
+        toast.success('Client updated successfully')
       } else {
         // Create new client
         const { error } = await supabase
@@ -70,6 +74,7 @@ export default function Clients() {
           description: `New client added: ${formData.name}`,
           related_entity_type: 'client'
         }])
+        toast.success('Client created successfully')
       }
 
       setIsDialogOpen(false)
@@ -78,6 +83,9 @@ export default function Clients() {
       fetchClients()
     } catch (error) {
       console.error('Error saving client:', error)
+      toast.error('Failed to save client')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -96,6 +104,8 @@ export default function Clients() {
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this client? This will implicitly delete all their sales and jobs!')) return
 
+    const toastId = toast.loading('Deleting client...')
+
     try {
       const { error } = await supabase
         .from('clients')
@@ -104,10 +114,11 @@ export default function Clients() {
 
       if (error) throw error
 
+      toast.success('Client deleted successfully', { id: toastId })
       fetchClients()
     } catch (error) {
       console.error('Error deleting client:', error)
-      alert('Error deleting client: They might have related data.')
+      toast.error('Error deleting client: They might have related data.', { id: toastId })
     }
   }
 
@@ -203,7 +214,10 @@ export default function Clients() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">{editingClient ? 'Update Client' : 'Add Client'}</Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editingClient ? 'Update Client' : 'Add Client'}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -266,7 +280,7 @@ export default function Clients() {
                     onClick={() => {
                       const portalLink = `${window.location.origin}/portal?client=${client.id}&token=secure_token_${client.id}`
                       navigator.clipboard.writeText(portalLink)
-                      alert('Portal link copied to clipboard!')
+                      toast.success('Portal link copied to clipboard!')
                     }}
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
