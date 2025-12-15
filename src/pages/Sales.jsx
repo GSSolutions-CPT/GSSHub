@@ -341,6 +341,18 @@ export default function Sales() {
               Download PDF
             </Button>
 
+            {sale.payment_proof && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => downloadProof(sale.payment_proof, `PaymentProof_${sale.id.substring(0, 6)}`)}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Proof
+              </Button>
+            )}
+
             {(sale.status === 'Draft' || sale.status === 'Cancelled' || sale.status === 'Rejected') && (
               <Button
                 size="sm"
