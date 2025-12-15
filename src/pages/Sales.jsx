@@ -47,12 +47,19 @@ export default function Sales() {
         .from('invoices')
         .select(`
           *,
-          clients (name, company, email, address)
+          clients (name, company, email, address),
+          quotations (payment_proof)
         `)
         .order('date_created', { ascending: false })
 
+      // Flatten payment_proof from quotation into invoice object for easy access
+      const processedData = (data || []).map(inv => ({
+        ...inv,
+        payment_proof: inv.quotations?.payment_proof || null
+      }))
+
       if (error) throw error
-      setInvoices(data || [])
+      setInvoices(processedData)
     } catch (error) {
       console.error('Error fetching invoices:', error)
     }

@@ -60,12 +60,21 @@ export default function ClientPortal() {
       // Fetch invoices
       const { data: invoicesData, error: invoicesError } = await supabase
         .from('invoices')
-        .select('*')
+        .select(`
+          *,
+          quotations (payment_proof)
+        `)
         .eq('client_id', clientId)
         .order('date_created', { ascending: false })
 
+      // Flatten payment_proof
+      const processedInvoices = (invoicesData || []).map(inv => ({
+        ...inv,
+        payment_proof: inv.quotations?.payment_proof || null
+      }))
+
       if (invoicesError) throw invoicesError
-      setInvoices(invoicesData || [])
+      setInvoices(processedInvoices)
 
       // Fetch jobs
       const { data: jobsData, error: jobsError } = await supabase
@@ -367,9 +376,21 @@ export default function ClientPortal() {
                       <span className="text-muted-foreground">Due:</span>
                       <span className="text-xl font-bold">{formatCurrency(invoice.total_amount)}</span>
                     </div>
-                    <Button variant="outline" className="w-full" onClick={() => generateInvoicePDF({ ...invoice, clients: client })}>
-                      <Download className="mr-2 h-4 w-4" /> Download Invoice
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <Button variant="outline" className="w-full" onClick={() => generateInvoicePDF({ ...invoice, clients: client })}>
+                        <Download className="mr-2 h-4 w-4" /> Download Invoice
+                      </Button>
+
+                      {invoice.payment_proof && (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => downloadProof(invoice.payment_proof, `PaymentProof_${invoice.id.substring(0, 6)}`)}
+                        >
+                          <Download className="mr-2 h-4 w-4" /> Download Proof of Payment
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
