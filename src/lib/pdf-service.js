@@ -349,25 +349,41 @@ const generatePDF = async (docType, data) => {
             doc.text('Attached below is the proof of payment provided by the client.', 14, 32)
 
             // Render Image
-            // Render Image
+            // Render Image or PDF Placeholder
             try {
-                let format = 'PNG'; // Default
-                if (data.payment_proof.startsWith('data:image/')) {
-                    const mimeType = data.payment_proof.split(';')[0].split(':')[1];
-                    if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
-                        format = 'JPEG';
+                // Check if it's a PDF
+                if (data.payment_proof.startsWith('data:application/pdf')) {
+                    // Render PDF Placeholder
+                    doc.setFillColor(240, 240, 240)
+                    doc.setDrawColor(200, 200, 200)
+                    doc.rect(14, 40, 180, 60, 'FD')
+
+                    doc.setFontSize(14)
+                    doc.setTextColor(...COLORS.NAVY)
+                    doc.text('PDF DOCUMENT', 105, 65, { align: 'center' })
+
+                    doc.setFontSize(10)
+                    doc.setTextColor(...COLORS.GRAY_TEXT)
+                    doc.text('The payment proof is a PDF document.', 105, 75, { align: 'center' })
+                    doc.text('Please view the original file in the Sales Dashboard.', 105, 80, { align: 'center' })
+                } else {
+                    // It's likely an image (PNG/JPEG/etc)
+                    let format = 'PNG'; // Default
+                    if (data.payment_proof.startsWith('data:image/')) {
+                        const mimeType = data.payment_proof.split(';')[0].split(':')[1];
+                        if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
+                            format = 'JPEG';
+                        }
                     }
+                    // Fit max width 180, max height 200. "0" for height maintains aspect ratio in jsPDF
+                    doc.addImage(data.payment_proof, format, 14, 40, 180, 0)
                 }
-                // Fit max width 180, max height 200. "0" for height maintains aspect ratio in jsPDF
-                doc.addImage(data.payment_proof, format, 14, 40, 180, 0)
             } catch (e) {
                 console.error("Error rendering payment proof:", e)
                 doc.setTextColor(255, 0, 0)
                 doc.setFontSize(10)
-                doc.text(`Error rendering image: ${e.message}`, 14, 50)
+                doc.text(`Error rendering evidence: ${e.message}`, 14, 50)
             }
-
-            addFooter(doc, 3, 3)
         }
 
         // Save
