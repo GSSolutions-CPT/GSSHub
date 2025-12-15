@@ -101,24 +101,38 @@ export default function Sales() {
 
       if (error) throw error
 
+      // Log activity
       await supabase.from('activity_log').insert([{
-        type: 'Payment Verified',
-        description: `Admin verified payment for quotation #${quotation.id.substring(0, 6)}`,
+        type: 'Payment Accepted',
+        description: `Admin approved payment for quotation #${quotation.id.substring(0, 6)}`,
         related_entity_id: quotation.id,
         related_entity_type: 'quotation'
       }])
 
-      toast.success('Payment verified! Redirecting to Job creation...', { id: toastId })
       fetchQuotations()
+      toast.success('Payment accepted! Redirecting to jobs...', { id: toastId })
 
-      // Redirect to Jobs page or open Job Modal (For now, we'll navigate to Jobs with state)
-      // In a real flow, you might pass the quotation ID to pre-fill the job form.
-      navigate('/jobs', { state: { createFromQuote: quotation } })
+      // Redirect to Jobs with create intent
+      navigate('/jobs', {
+        state: {
+          createFromQuote: true,
+          quoteData: quotation
+        }
+      })
 
     } catch (error) {
       console.error('Error confirming payment:', error)
       toast.error('Failed to confirm payment', { id: toastId })
     }
+  }
+
+  const downloadProof = (dataUrl, filename) => {
+    const link = document.createElement('a')
+    link.href = dataUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   const convertToInvoice = async (quotation) => {
@@ -494,6 +508,15 @@ export default function Sales() {
                       ) : (
                         <a href={quotation.payment_proof} target="_blank" rel="noopener noreferrer" className="text-primary underline">View Proof</a>
                       )}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-2"
+                        onClick={() => downloadProof(quotation.payment_proof, `PaymentProof_${quotation.id.substring(0, 6)}`)}
+                      >
+                        <Download className="mr-2 h-4 w-4" /> Download Proof
+                      </Button>
                     </div>
                   )}
 

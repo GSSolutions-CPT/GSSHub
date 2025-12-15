@@ -109,6 +109,15 @@ export default function ClientPortal() {
     setStep(2)
   }
 
+  const downloadProof = (dataUrl, filename) => {
+    const link = document.createElement('a')
+    link.href = dataUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   const handleProofUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -317,10 +326,23 @@ export default function ClientPortal() {
                       <p>Deposit Required: <strong>{formatCurrency(quotation.total_amount * 0.75)}</strong></p>
                     </div>
 
-                    <Button className="w-full" onClick={() => generateQuotePDF({ ...quotation, clients: client })}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Proforma Invoice
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <Button className="w-full" onClick={() => generateQuotePDF({ ...quotation, clients: client })}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Proforma Invoice
+                      </Button>
+
+                      {quotation.payment_proof && (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => downloadProof(quotation.payment_proof, `PaymentProof_${quotation.id.substring(0, 6)}`)}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download Proof of Payment
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
