@@ -329,7 +329,36 @@ const generatePDF = async (docType, data) => {
             }
         }
 
-        addFooter(doc, 2, 2)
+        addFooter(doc, 2, data.payment_proof ? 3 : 2)
+
+        // --- PAGE 3: PAYMENT PROOF (If Exists) ---
+        if (data.payment_proof) {
+            doc.addPage()
+
+            // Header
+            doc.setDrawColor(...COLORS.NAVY)
+            doc.setLineWidth(1.5)
+            doc.line(0, 5, 220, 5)
+
+            doc.setFontSize(16)
+            doc.setTextColor(...COLORS.NAVY)
+            doc.text('PAYMENT PROOF', 14, 25)
+
+            doc.setFontSize(10)
+            doc.setTextColor(...COLORS.GRAY_TEXT)
+            doc.text('Attached below is the proof of payment provided by the client.', 14, 32)
+
+            // Render Image
+            try {
+                // Assuming base64 image
+                // Fit max width 180, max height 200
+                doc.addImage(data.payment_proof, 'PNG', 14, 40, 180, 0)
+            } catch (e) {
+                doc.text('Error rendering payment proof image', 14, 50)
+            }
+
+            addFooter(doc, 3, 3)
+        }
 
         // Save
         doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)

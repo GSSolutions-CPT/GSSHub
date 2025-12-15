@@ -90,6 +90,7 @@ export const TabsContent = React.forwardRef(
           className
         )}
         hidden={hidden}
+        style={hidden ? { display: 'none' } : undefined}
         role="tabpanel"
         {...props}
       />

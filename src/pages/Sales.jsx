@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Download, Trash2, Loader2 } from 'lucide-react'
+import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Download, Trash2, Loader2, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
@@ -30,7 +30,7 @@ export default function Sales() {
         .from('quotations')
         .select(`
           *,
-          clients (name, company)
+          clients (name, company, email, address)
         `)
         .order('date_created', { ascending: false })
 
@@ -47,7 +47,7 @@ export default function Sales() {
         .from('invoices')
         .select(`
           *,
-          clients (name, company)
+          clients (name, company, email, address)
         `)
         .order('date_created', { ascending: false })
 
@@ -86,6 +86,38 @@ export default function Sales() {
     } catch (error) {
       console.error('Error updating status:', error)
       toast.error('Failed to update status', { id: toastId })
+    }
+  }
+
+  const handleConfirmPayment = async (quotation) => {
+    // 1. Mark Quotation as Accepted
+    // 2. Redirect to Job Booking with data pre-filled
+    const toastId = toast.loading('Confirming payment...')
+    try {
+      const { error } = await supabase
+        .from('quotations')
+        .update({ status: 'Accepted' })
+        .eq('id', quotation.id)
+
+      if (error) throw error
+
+      await supabase.from('activity_log').insert([{
+        type: 'Payment Verified',
+        description: `Admin verified payment for quotation #${quotation.id.substring(0, 6)}`,
+        related_entity_id: quotation.id,
+        related_entity_type: 'quotation'
+      }])
+
+      toast.success('Payment verified! Redirecting to Job creation...', { id: toastId })
+      fetchQuotations()
+
+      // Redirect to Jobs page or open Job Modal (For now, we'll navigate to Jobs with state)
+      // In a real flow, you might pass the quotation ID to pre-fill the job form.
+      navigate('/jobs', { state: { createFromQuote: quotation } })
+
+    } catch (error) {
+      console.error('Error confirming payment:', error)
+      toast.error('Failed to confirm payment', { id: toastId })
     }
   }
 
@@ -393,70 +425,117 @@ export default function Sales() {
 
       {/* Tabs for Quotations, Proforma, and Invoices */}
       <Tabs defaultValue="quotations" className="space-y-6">
-        <TabsList className="grid w-full max-w-xl grid-cols-3">
-          <TabsTrigger value="quotations">
-            <FileText className="mr-2 h-4 w-4" />
-            Quotations ({quotations.filter(q => ['Draft', 'Sent', 'Rejected'].includes(q.status)).length})
+        <TabsList>
+          <TabsTrigger value="quotations">Quotes</TabsTrigger>
+          <TabsTrigger value="pending" className="relative">
+            Pending Review
+            {quotations.filter(q => q.status === 'Pending Review').length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+            )}
           </TabsTrigger>
-          <TabsTrigger value="proforma">
-            <FileText className="mr-2 h-4 w-4 text-orange-500" />
-            Proforma ({quotations.filter(q => ['Accepted', 'Approved'].includes(q.status)).length})
-          </TabsTrigger>
-          <TabsTrigger value="invoices">
-            <Receipt className="mr-2 h-4 w-4" />
-            Invoices ({invoices.length})
-          </TabsTrigger>
+          <TabsTrigger value="proforma">Proforma</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="quotations" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredQuotations
-              .filter(q => ['Draft', 'Sent', 'Rejected', 'Cancelled'].includes(q.status))
-              .map((quotation) => renderSaleCard(quotation, 'quotation'))}
-          </div>
-          {filteredQuotations.filter(q => ['Draft', 'Sent', 'Rejected', 'Cancelled'].includes(q.status)).length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? 'No quotations found' : 'No active quotations.'}
-                </p>
-              </CardContent>
-            </Card>
+        <TabsContent value="quotations" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredQuotations
+            .filter(q => q.status === 'Draft' || q.status === 'Sent' || q.status === 'Rejected' || q.status === 'Cancelled')
+            .map((quotation) => renderSaleCard(quotation, 'quotation'))}
+          {filteredQuotations.filter(q => q.status === 'Draft' || q.status === 'Sent' || q.status === 'Rejected' || q.status === 'Cancelled').length === 0 && (
+            <div className="col-span-full text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No open quotations found.</p>
+            </div>
           )}
         </TabsContent>
 
-        <TabsContent value="proforma" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredQuotations
-              .filter(q => ['Accepted', 'Approved'].includes(q.status))
-              .map((quotation) => renderSaleCard(quotation, 'quotation'))}
-          </div>
-          {filteredQuotations.filter(q => ['Accepted', 'Approved'].includes(q.status)).length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-orange-200 mb-4" />
-                <p className="text-muted-foreground">
-                  No Proforma Invoices (Accepted Quotes) yet.
-                </p>
-              </CardContent>
-            </Card>
+        <TabsContent value="pending" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredQuotations
+            .filter(q => q.status === 'Pending Review')
+            .map((quotation) => (
+              <Card key={quotation.id} className="border-l-4 border-l-yellow-500 shadow-md">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>#{quotation.id.substring(0, 6)}</CardTitle>
+                      <CardDescription>{quotation.clients?.name}</CardDescription>
+                    </div>
+                    <Badge className="bg-yellow-500">Action Required</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center bg-muted p-2 rounded">
+                    <span className="text-muted-foreground text-sm">Amount:</span>
+                    <span className="font-bold">{formatCurrency(quotation.total_amount)}</span>
+                  </div>
+
+                  {/* Debug Info - Remove after fixing */}
+                  <p className="text-xs text-red-500">
+                    Debug: {quotation.payment_proof ? `Data exists (${quotation.payment_proof.length} chars)` : 'No Data'}
+                    <br />
+                    Start: {quotation.payment_proof ? quotation.payment_proof.substring(0, 20) : 'N/A'}
+                  </p>
+
+                  {quotation.payment_proof && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground">Proof of Payment</p>
+
+                      {quotation.payment_proof.startsWith('data:') ? (
+                        <div className="relative h-32 w-full rounded-md overflow-hidden border bg-black/5 cursor-pointer group" onClick={() => window.open(quotation.payment_proof)}>
+                          <img src={quotation.payment_proof} alt="Proof" className="object-contain w-full h-full" />
+
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white text-xs">Click to Zoom</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <a href={quotation.payment_proof} target="_blank" rel="noopener noreferrer" className="text-primary underline">View Proof</a>
+                      )}
+                    </div>
+                  )}
+
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button size="sm" onClick={() => handleConfirmPayment(quotation)}>
+                      <CheckCircle className="mr-2 h-4 w-4" /> Approve & Book
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => updateStatus('quotation', quotation.id, 'Rejected')}>
+                      Reject
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          {filteredQuotations.filter(q => q.status === 'Pending Review').length === 0 && (
+            <div className="col-span-full text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+              <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No pending reviews. All clear!</p>
+            </div>
           )}
         </TabsContent>
 
-        <TabsContent value="invoices" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredInvoices.map((invoice) => renderSaleCard(invoice, 'invoice'))}
-          </div>
+        <TabsContent value="proforma" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredQuotations
+            .filter(q => q.status === 'Accepted' || q.status === 'Approved')
+            .map((quotation) => renderSaleCard(quotation, 'quotation'))}
+          {filteredQuotations.filter(q => q.status === 'Accepted' || q.status === 'Approved').length === 0 && (
+            <div className="col-span-full text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No accepted proforma invoices found.</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="invoices" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredInvoices.map((invoice) => renderSaleCard(invoice, 'invoice'))}
           {filteredInvoices.length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? 'No invoices found' : 'No invoices yet. Create your first invoice to get started.'}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="col-span-full text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+              <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No invoices found.</p>
+            </div>
           )}
         </TabsContent>
       </Tabs>

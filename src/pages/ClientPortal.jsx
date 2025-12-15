@@ -94,19 +94,50 @@ export default function ClientPortal() {
     setSignature(dataUrl)
   }
 
-  const submitAcceptance = async () => {
+  /* 
+   * NEW WORKFLOW: 
+   * 1. Validate Signature
+   * 2. Move to Step 2 (Payment Upload)
+   * 3. Do NOT update DB yet. DB Update happens after Payment Upload in Step 2.
+   */
+  const submitAcceptance = () => {
     if (!signature) {
       toast.error('Please sign the document first.')
       return
     }
+    // Proceed to Payment Step
+    setStep(2)
+  }
 
-    const toastId = toast.loading('Processing acceptance...')
+  const handleProofUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const base64String = event.target.result
+      await submitFinalAcceptance(base64String)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const submitFinalAcceptance = async (paymentProofBase64) => {
+    const toastId = toast.loading('Submitting acceptance and payment proof...')
     try {
+      // Validate inputs
+      if (!paymentProofBase64) {
+        throw new Error('Payment proof is required')
+      }
+      if (!signature) {
+        throw new Error('Signature is required')
+      }
+
       const { error } = await supabase
         .from('quotations')
         .update({
-          status: 'Accepted',
+          status: 'Pending Review',
           client_signature: signature,
+          payment_proof: paymentProofBase64,
           accepted_at: new Date().toISOString()
         })
         .eq('id', acceptingQuote.id)
@@ -114,19 +145,18 @@ export default function ClientPortal() {
       if (error) throw error
 
       await supabase.from('activity_log').insert([{
-        type: 'Quotation Accepted',
-        description: `Client signed and accepted quotation #${acceptingQuote.id.substring(0, 6)}`,
+        type: 'Quotation Pending Review',
+        description: `Client signed and uploaded proof for quotation #${acceptingQuote.id.substring(0, 6)}`,
         related_entity_id: acceptingQuote.id,
         related_entity_type: 'quotation'
       }])
 
-      // Move to Payment/Success Step
-      setStep(2)
+      setStep(3) // Move to Success/Review Message
       fetchClientData()
-      toast.success('Quotation accepted successfully!', { id: toastId })
+      toast.success('Submitted for review!', { id: toastId })
     } catch (error) {
-      console.error('Error accepting quote:', error)
-      toast.error('Failed to accept quotation', { id: toastId })
+      console.error('Error submitting final acceptance:', error)
+      toast.error(`Failed to submit: ${error.message}`, { id: toastId })
     }
   }
 
@@ -239,7 +269,7 @@ export default function ClientPortal() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => generateQuotePDF(quotation)}>
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => generateQuotePDF({ ...quotation, clients: client })}>
                         <Download className="mr-2 h-4 w-4" />
                         Quote PDF
                       </Button>
@@ -287,7 +317,7 @@ export default function ClientPortal() {
                       <p>Deposit Required: <strong>{formatCurrency(quotation.total_amount * 0.75)}</strong></p>
                     </div>
 
-                    <Button className="w-full" onClick={() => generateQuotePDF(quotation)}>
+                    <Button className="w-full" onClick={() => generateQuotePDF({ ...quotation, clients: client })}>
                       <Download className="mr-2 h-4 w-4" />
                       Download Proforma Invoice
                     </Button>
@@ -315,7 +345,7 @@ export default function ClientPortal() {
                       <span className="text-muted-foreground">Due:</span>
                       <span className="text-xl font-bold">{formatCurrency(invoice.total_amount)}</span>
                     </div>
-                    <Button variant="outline" className="w-full" onClick={() => generateInvoicePDF(invoice)}>
+                    <Button variant="outline" className="w-full" onClick={() => generateInvoicePDF({ ...invoice, clients: client })}>
                       <Download className="mr-2 h-4 w-4" /> Download Invoice
                     </Button>
                   </CardContent>
@@ -358,22 +388,52 @@ export default function ClientPortal() {
           )}
 
           {step === 2 && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
-                <p className="font-semibold">Banking Details (FNB/RMB)</p>
-                <p>Account: 63182000223</p>
-                <p>Branch: 250655</p>
-                <p>Ref: {acceptingQuote?.id.substring(0, 6)}</p>
+                <p className="font-semibold text-lg">Banking Details</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <span className="text-muted-foreground">Bank:</span> <span>FNB / RMB</span>
+                  <span className="text-muted-foreground">Account:</span> <span>63182000223</span>
+                  <span className="text-muted-foreground">Branch:</span> <span>250655</span>
+                  <span className="text-muted-foreground">Ref:</span> <span className="font-mono bg-white px-1 rounded border">{acceptingQuote?.id.substring(0, 6)}</span>
+                </div>
               </div>
-              <p className="text-sm">
-                Please make a 75% deposit ({formatCurrency((acceptingQuote?.total_amount || 0) * 0.75)}) to secure your booking.
-              </p>
+
+              <div className="text-center space-y-4">
+                <p className="text-sm">
+                  Please make a <strong>75% deposit ({formatCurrency((acceptingQuote?.total_amount || 0) * 0.75)})</strong> to secure your booking.
+                </p>
+                <div className="border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-colors">
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm font-medium">Upload Proof of Payment</p>
+                  <p className="text-xs text-muted-foreground">Required to finalize acceptance</p>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    onChange={handleProofUpload}
+                  />
+                </div>
+              </div>
+
               <DialogFooter>
-                <Button onClick={() => setStep(0)}>Done</Button>
-                <Button variant="outline" onClick={() => generateQuotePDF(acceptingQuote)}>
-                  Download Proforma
-                </Button>
+                <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
               </DialogFooter>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="text-center py-8 space-y-4">
+              <div className="flex justify-center">
+                <CheckCircle className="h-16 w-16 text-green-500" />
+              </div>
+              <h3 className="text-xl font-semibold">Submission Received!</h3>
+              <p className="text-muted-foreground">
+                Thank you! We have received your signature and payment proof.
+                <br />
+                Our team will review your submission shortly. Once approved, you will receive a confirmation and your Proforma Invoice.
+              </p>
+              <Button onClick={() => setStep(0)}>Close</Button>
             </div>
           )}
         </DialogContent>
