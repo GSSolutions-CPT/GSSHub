@@ -349,12 +349,22 @@ const generatePDF = async (docType, data) => {
             doc.text('Attached below is the proof of payment provided by the client.', 14, 32)
 
             // Render Image
+            // Render Image
             try {
-                // Assuming base64 image
-                // Fit max width 180, max height 200
-                doc.addImage(data.payment_proof, 'PNG', 14, 40, 180, 0)
+                let format = 'PNG'; // Default
+                if (data.payment_proof.startsWith('data:image/')) {
+                    const mimeType = data.payment_proof.split(';')[0].split(':')[1];
+                    if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
+                        format = 'JPEG';
+                    }
+                }
+                // Fit max width 180, max height 200. "0" for height maintains aspect ratio in jsPDF
+                doc.addImage(data.payment_proof, format, 14, 40, 180, 0)
             } catch (e) {
-                doc.text('Error rendering payment proof image', 14, 50)
+                console.error("Error rendering payment proof:", e)
+                doc.setTextColor(255, 0, 0)
+                doc.setFontSize(10)
+                doc.text(`Error rendering image: ${e.message}`, 14, 50)
             }
 
             addFooter(doc, 3, 3)
