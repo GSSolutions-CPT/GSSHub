@@ -435,7 +435,9 @@ export default function ClientPortal() {
               <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
                 <p className="font-semibold text-lg">Banking Details</p>
                 <div className="grid grid-cols-2 gap-2">
+                  <span className="text-muted-foreground">Account Name:</span> <span>GSS Solutions</span>
                   <span className="text-muted-foreground">Bank:</span> <span>FNB / RMB</span>
+                  <span className="text-muted-foreground">Account Type:</span> <span>Cheque Account</span>
                   <span className="text-muted-foreground">Account:</span> <span>63182000223</span>
                   <span className="text-muted-foreground">Branch:</span> <span>250655</span>
                   <span className="text-muted-foreground">Ref:</span> <span className="font-mono bg-white px-1 rounded border">{acceptingQuote?.id.substring(0, 6)}</span>
