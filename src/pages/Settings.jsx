@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Upload, Download, Database, FileSpreadsheet, Users, Package, Receipt, Briefcase, Moon, Sun, UserPlus, Trash2, Wallet, Coins } from 'lucide-react'
+import { Upload, Download, Database, FileSpreadsheet, Users, Package, Receipt, Briefcase, Moon, Sun, UserPlus, Trash2, Wallet, Coins, Building, Bell, Scale, Save, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useTheme } from '@/lib/use-theme.jsx'
 import { useCurrency } from '@/lib/use-currency.jsx'
@@ -239,15 +239,102 @@ export default function Settings() {
             <Download className="mr-2 h-4 w-4" />
             Export Data
           </TabsTrigger>
-          <TabsTrigger value="users">
-            <Users className="mr-2 h-4 w-4" />
-            User Management
+          <TabsTrigger value="company">
+            <Building className="mr-2 h-4 w-4" />
+            Company
           </TabsTrigger>
           <TabsTrigger value="banking">
             <Wallet className="mr-2 h-4 w-4" />
-            Banking Details
+            Banking
+          </TabsTrigger>
+          <TabsTrigger value="users">
+            <Users className="mr-2 h-4 w-4" />
+            Team
+          </TabsTrigger>
+          <TabsTrigger value="import">
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </TabsTrigger>
+          <TabsTrigger value="export">
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </TabsTrigger>
+          <TabsTrigger value="legal">
+            <Scale className="mr-2 h-4 w-4" />
+            Legal
           </TabsTrigger>
         </TabsList>
+
+        {/* Company Settings */}
+        <TabsContent value="company" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Company Profile</CardTitle>
+              <CardDescription>Manage your company details displayed on invoices and quotes.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <Label>Company Name</Label>
+                <Input
+                  defaultValue={localStorage.getItem('companyName') || 'Global Security Solutions'}
+                  onChange={(e) => localStorage.setItem('companyName', e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Phone Number</Label>
+                <Input
+                  defaultValue={localStorage.getItem('companyPhone') || '062 955 8559'}
+                  onChange={(e) => localStorage.setItem('companyPhone', e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Email Address</Label>
+                <Input
+                  defaultValue={localStorage.getItem('companyEmail') || 'Kyle@GSSolutions.co.za'}
+                  onChange={(e) => localStorage.setItem('companyEmail', e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Physical Address</Label>
+                <Input
+                  defaultValue={localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'}
+                  onChange={(e) => localStorage.setItem('companyAddress', e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>VAT Registration (Optional)</Label>
+                <Input
+                  placeholder="e.g. 4440263660"
+                  defaultValue={localStorage.getItem('companyVat') || ''}
+                  onChange={(e) => localStorage.setItem('companyVat', e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Legal / Terms */}
+        <TabsContent value="legal" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between">
+                <div>
+                  <CardTitle>Terms & Conditions</CardTitle>
+                  <CardDescription>Customize the terms appended to your PDFs.</CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => localStorage.removeItem('companyTerms') || alert('Resetted to defaults')}>
+                  Reset to Default
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-muted p-4 rounded-md text-sm text-muted-foreground mb-4">
+                <p>Currently, terms are managed via a JSON structure for advanced control. A visual editor is coming soon.</p>
+              </div>
+              <p className="text-sm">For now, your terms are using the system default unless customized.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Import Tab */}
         <TabsContent value="import" className="space-y-6">

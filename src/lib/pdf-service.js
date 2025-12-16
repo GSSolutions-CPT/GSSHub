@@ -98,12 +98,17 @@ const generatePDF = async (docType, data) => {
 
         doc.setFontSize(10)
         doc.setTextColor(...COLORS.GRAY_TEXT)
-        doc.text('062 955 8559', rightColX, blockY + 11)
-        doc.text('66 Robyn RD, Durbanville', rightColX, blockY + 16)
-        doc.text('Kyle@GSSolutions.co.za', rightColX, blockY + 21)
+        const companyPhone = localStorage.getItem('companyPhone') || '062 955 8559'
+        const companyAddress = localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
+        const companyEmail = localStorage.getItem('companyEmail') || 'Kyle@GSSolutions.co.za'
+        const companyVat = localStorage.getItem('companyVat') || ''
+
+        doc.text(companyPhone, rightColX, blockY + 11)
+        doc.text(companyAddress, rightColX, blockY + 16)
+        doc.text(companyEmail, rightColX, blockY + 21)
         // Add VAT Number for Tax Invoices
-        if (titleText === 'TAX INVOICE') {
-            doc.text('VAT Reg: 4440263660', rightColX, blockY + 26) // Example placeholder or usage from settings
+        if (titleText === 'TAX INVOICE' && companyVat) {
+            doc.text(`VAT Reg: ${companyVat}`, rightColX, blockY + 26)
         }
 
         // Details Strip
@@ -236,7 +241,7 @@ const generatePDF = async (docType, data) => {
         doc.setTextColor(...COLORS.NAVY)
         doc.text('GENERAL TERMS & CONDITIONS', 105, 20, { align: 'center' })
 
-        const terms = [
+        const defaultTerms = [
             {
                 title: "1. Scope of Services",
                 text: "We agree to supply and install the security equipment ('System') as specified. Includes Intruder Detection, CCTV, Access Control, Electric Fencing, and Automation."
@@ -274,6 +279,9 @@ const generatePDF = async (docType, data) => {
                 text: "Client may terminate with notice. 75% deposit non-refundable if work commenced. GSS may terminate for non-payment."
             }
         ]
+
+        const termsCallback = localStorage.getItem('companyTerms');
+        const terms = termsCallback ? JSON.parse(termsCallback) : defaultTerms;
 
         let y = 30
         const colWidth = 85
