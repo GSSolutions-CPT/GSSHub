@@ -17,8 +17,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User, Clock } from 'lucide-react';
+import { Calendar, User, Clock, Download } from 'lucide-react';
 
 const columns = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
 
@@ -82,6 +83,25 @@ function JobCard({ job }) {
                             <User className="h-3 w-3" />
                             <span>{job.assigned_technicians.length} Assigned</span>
                         </div>
+                    )}
+                    {job.quotations?.payment_proof && (
+                        <Button
+                            size="xs"
+                            variant="outline"
+                            className="w-full text-xs h-7 mt-1"
+                            onClick={(e) => {
+                                e.stopPropagation(); // Prevent drag/card click
+                                const link = document.createElement('a');
+                                link.href = job.quotations.payment_proof;
+                                link.download = `PaymentProof_${job.id.substring(0, 6)}`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }}
+                        >
+                            <Download className="mr-1.5 h-3 w-3" />
+                            Proof
+                        </Button>
                     )}
                 </div>
             </CardContent>

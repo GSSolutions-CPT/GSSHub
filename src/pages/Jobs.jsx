@@ -17,7 +17,10 @@ import { generateOutlookLink } from '@/lib/calendar-utils'
 const JobBoard = lazy(() => import('./jobs/JobBoard'))
 const JobCalendar = lazy(() => import('./jobs/JobCalendar'))
 
+import { useLocation } from 'react-router-dom'
+
 export default function Jobs() {
+  const location = useLocation()
   const [jobs, setJobs] = useState([])
   const [clients, setClients] = useState([])
   const [quotations, setQuotations] = useState([])
@@ -36,6 +39,32 @@ export default function Jobs() {
     status: 'Pending'
   })
 
+  // Handle incoming navigation state (e.g. from Sales)
+  useEffect(() => {
+    if (location.state?.createFromQuote && location.state?.quoteData) {
+      const { quoteData } = location.state
+
+      // Switch to Board view as requested
+      setViewMode('board')
+
+      // optimize UX: wait for clients to load before setting form data to ensure matching
+      // Pre-fill form
+      setFormData(prev => ({
+        ...prev,
+        client_id: quoteData.client_id,
+        quotation_id: quoteData.id,
+        notes: `Job for Quotation #${quoteData.id.substring(0, 6)}`,
+        status: 'Pending'
+      }))
+
+      // Open dialog to prompt for scheduling
+      setIsDialogOpen(true)
+
+      // Clear state to prevent re-opening on refresh (optional, but good practice)
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
+
   useEffect(() => {
     fetchJobs()
     fetchClients()
@@ -49,7 +78,7 @@ export default function Jobs() {
         .select(`
           *,
           clients (name, company),
-          quotations (id)
+          quotations (id, payment_proof)
         `)
         .order('created_at', { ascending: false })
 
