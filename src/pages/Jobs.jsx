@@ -35,6 +35,7 @@ export default function Jobs() {
     quotation_id: '',
     assigned_technicians: '',
     scheduled_datetime: '',
+    scheduled_end_datetime: '',
     notes: '',
     status: 'Pending'
   })
@@ -169,6 +170,7 @@ export default function Jobs() {
             event_type: 'Job',
             title: `Job scheduled`,
             datetime: formData.scheduled_datetime,
+            end_datetime: formData.scheduled_end_datetime,
             related_entity_type: 'job'
           }])
         }
@@ -408,6 +410,7 @@ export default function Jobs() {
                   quotation_id: '',
                   assigned_technicians: '',
                   scheduled_datetime: '',
+                  scheduled_end_datetime: '',
                   notes: '',
                   status: 'Pending'
                 })
@@ -449,27 +452,29 @@ export default function Jobs() {
                     </Select>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="quotation_id">Related Quotation (Optional)</Label>
-                    <Select
-                      value={formData.quotation_id}
-                      onValueChange={(value) => setFormData({ ...formData, quotation_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a quotation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">None</SelectItem>
-                        {quotations
-                          .filter(q => q.client_id === formData.client_id)
-                          .map((quotation) => (
-                            <SelectItem key={quotation.id} value={quotation.id}>
-                              Quotation {quotation.id.substring(0, 8)}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {!formData.quotation_id && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="quotation_id">Related Quotation (Optional)</Label>
+                      <Select
+                        value={formData.quotation_id}
+                        onValueChange={(value) => setFormData({ ...formData, quotation_id: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a quotation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {quotations
+                            .filter(q => q.client_id === formData.client_id)
+                            .map((quotation) => (
+                              <SelectItem key={quotation.id} value={quotation.id}>
+                                Quotation {quotation.id.substring(0, 8)}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <div className="grid gap-2">
                     <Label htmlFor="assigned_technicians">Assigned Technicians</Label>
@@ -484,16 +489,30 @@ export default function Jobs() {
                     </p>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="scheduled_datetime">Scheduled Date & Time</Label>
-                    <Input
-                      id="scheduled_datetime"
-                      type="datetime-local"
-                      value={formData.scheduled_datetime}
-                      onChange={(e) => setFormData({ ...formData, scheduled_datetime: e.target.value })}
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="scheduled_datetime">Scheduled Date & Time Start</Label>
+                      <div className="relative">
+                        <Input
+                          id="scheduled_datetime"
+                          type="datetime-local"
+                          value={formData.scheduled_datetime}
+                          onChange={(e) => setFormData({ ...formData, scheduled_datetime: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="scheduled_end_datetime">Scheduled Date & Time End</Label>
+                      <div className="relative">
+                        <Input
+                          id="scheduled_end_datetime"
+                          type="datetime-local"
+                          value={formData.scheduled_end_datetime}
+                          onChange={(e) => setFormData({ ...formData, scheduled_end_datetime: e.target.value })}
+                        />
+                      </div>
+                    </div>
                   </div>
-
                   <div className="grid gap-2">
                     <Label htmlFor="notes">Notes</Label>
                     <Textarea
