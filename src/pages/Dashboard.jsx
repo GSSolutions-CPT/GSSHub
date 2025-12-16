@@ -51,11 +51,11 @@ export default function Dashboard() {
       ) || []
 
       const monthlyRevenue = currentMonthInvoices
-        .filter(inv => inv.status === 'Paid')
+        .filter(inv => ['Paid', 'Sent', 'Overdue'].includes(inv.status))
         .reduce((sum, inv) => sum + (parseFloat(inv.total_amount) || 0), 0)
 
       const monthlyProfit = currentMonthInvoices
-        .filter(inv => inv.status === 'Paid')
+        .filter(inv => ['Paid', 'Sent', 'Overdue'].includes(inv.status))
         .reduce((sum, inv) => sum + (parseFloat(inv.profit_estimate) || 0), 0)
 
       const newClients = clients?.filter(c =>
@@ -89,7 +89,7 @@ export default function Dashboard() {
 
     // Process Invoices
     invoices.forEach(inv => {
-      if (inv.status === 'Paid') {
+      if (['Paid', 'Sent', 'Overdue'].includes(inv.status)) {
         const month = new Date(inv.date_created).toLocaleDateString('en-US', { month: 'short' })
         if (!data[month]) data[month] = { month, revenue: 0, profit: 0, expenses: 0 }
         data[month].revenue += parseFloat(inv.total_amount) || 0
