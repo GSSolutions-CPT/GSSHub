@@ -11,12 +11,14 @@ import { supabase } from '@/lib/supabase'
 import { useTheme } from '@/lib/use-theme.jsx'
 import { useCurrency } from '@/lib/use-currency.jsx'
 import { Switch } from '@/components/ui/switch'
+import { useSettings } from '@/lib/use-settings.jsx'
 
 export default function Settings() {
   const [importing, setImporting] = useState(false)
   const [exporting, setExporting] = useState(false)
   const { theme, setTheme } = useTheme()
   const { currency, updateCurrency } = useCurrency()
+  const { settings, updateSetting } = useSettings()
   const [users, setUsers] = useState([])
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
   const [newUser, setNewUser] = useState({ email: '', role: 'technician', password: '' })
@@ -276,37 +278,41 @@ export default function Settings() {
               <div className="grid gap-2">
                 <Label>Company Name</Label>
                 <Input
-                  defaultValue={localStorage.getItem('companyName') || 'Global Security Solutions'}
-                  onChange={(e) => localStorage.setItem('companyName', e.target.value)}
+                  value={settings.companyName || ''}
+                  onChange={(e) => updateSetting('companyName', e.target.value)}
+                  placeholder="Global Security Solutions"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Phone Number</Label>
                 <Input
-                  defaultValue={localStorage.getItem('companyPhone') || '062 955 8559'}
-                  onChange={(e) => localStorage.setItem('companyPhone', e.target.value)}
+                  value={settings.companyPhone || ''}
+                  onChange={(e) => updateSetting('companyPhone', e.target.value)}
+                  placeholder="062 955 8559"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Email Address</Label>
                 <Input
-                  defaultValue={localStorage.getItem('companyEmail') || 'Kyle@GSSolutions.co.za'}
-                  onChange={(e) => localStorage.setItem('companyEmail', e.target.value)}
+                  value={settings.companyEmail || ''}
+                  onChange={(e) => updateSetting('companyEmail', e.target.value)}
+                  placeholder="Kyle@GSSolutions.co.za"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Physical Address</Label>
                 <Input
-                  defaultValue={localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'}
-                  onChange={(e) => localStorage.setItem('companyAddress', e.target.value)}
+                  value={settings.companyAddress || ''}
+                  onChange={(e) => updateSetting('companyAddress', e.target.value)}
+                  placeholder="66 Robyn RD, Durbanville"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>VAT Registration (Optional)</Label>
                 <Input
                   placeholder="e.g. 4440263660"
-                  defaultValue={localStorage.getItem('companyVat') || ''}
-                  onChange={(e) => localStorage.setItem('companyVat', e.target.value)}
+                  value={settings.companyVat || ''}
+                  onChange={(e) => updateSetting('companyVat', e.target.value)}
                 />
               </div>
             </CardContent>
@@ -684,7 +690,7 @@ export default function Settings() {
         <TabsContent value="banking" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Banking Details (FNB)</CardTitle>
+              <CardTitle>Banking Details</CardTitle>
               <CardDescription>
                 These details will appear on all generated invoices.
               </CardDescription>
@@ -693,48 +699,53 @@ export default function Settings() {
               <div className="grid gap-2">
                 <Label>Bank Name</Label>
                 <Input
-                  defaultValue={localStorage.getItem('bankName') || 'FNB/RMB'}
-                  onChange={(e) => localStorage.setItem('bankName', e.target.value)}
+                  value={settings.bankName || ''}
+                  onChange={(e) => updateSetting('bankName', e.target.value)}
+                  placeholder="FNB/RMB"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Account Holder</Label>
                 <Input
-                  defaultValue={localStorage.getItem('bankAccountHolder') || 'Global Security Solutions'}
-                  onChange={(e) => localStorage.setItem('bankAccountHolder', e.target.value)}
+                  value={settings.bankAccountHolder || ''}
+                  onChange={(e) => updateSetting('bankAccountHolder', e.target.value)}
+                  placeholder="Global Security Solutions"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Account Type</Label>
                 <Input
-                  defaultValue={localStorage.getItem('bankAccountType') || 'First Business Zero Account'}
-                  onChange={(e) => localStorage.setItem('bankAccountType', e.target.value)}
+                  value={settings.bankAccountType || ''}
+                  onChange={(e) => updateSetting('bankAccountType', e.target.value)}
+                  placeholder="Cheque Account"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Account Number</Label>
                 <Input
-                  defaultValue={localStorage.getItem('bankAccountNumber') || '63182000223'}
-                  onChange={(e) => localStorage.setItem('bankAccountNumber', e.target.value)}
+                  value={settings.bankAccountNumber || ''}
+                  onChange={(e) => updateSetting('bankAccountNumber', e.target.value)}
+                  placeholder="63182000223"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Branch Code</Label>
                 <Input
-                  defaultValue={localStorage.getItem('bankBranchCode') || '250655'}
-                  onChange={(e) => localStorage.setItem('bankBranchCode', e.target.value)}
+                  value={settings.bankBranchCode || ''}
+                  onChange={(e) => updateSetting('bankBranchCode', e.target.value)}
+                  placeholder="250655"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Reference</Label>
                 <Input
                   placeholder="Invoice Number"
-                  defaultValue={localStorage.getItem('bankReference') || 'Invoice Number'}
-                  onChange={(e) => localStorage.setItem('bankReference', e.target.value)}
+                  value={settings.bankReference || ''}
+                  onChange={(e) => updateSetting('bankReference', e.target.value)}
                 />
               </div>
               <p className="text-sm text-muted-foreground pt-2">
-                * Changes are saved automatically to this device.
+                * Changes are saved automatically (Synced to Cloud).
               </p>
             </CardContent>
           </Card>

@@ -10,7 +10,7 @@ const COLORS = {
     ACCENT_BLUE: [0, 60, 120]
 }
 
-const generatePDF = async (docType, data) => {
+const generatePDF = async (docType, data, settings = {}) => {
     console.log('Generating PDF for:', docType, data)
     try {
         const doc = new jsPDF()
@@ -96,12 +96,10 @@ const generatePDF = async (docType, data) => {
         // Check if TAX INVOICE to show VAT number if available (just mocking for now/using stored logic if needed)
         doc.text('Global Security Solutions', rightColX, blockY + 6)
 
-        doc.setFontSize(10)
-        doc.setTextColor(...COLORS.GRAY_TEXT)
-        const companyPhone = localStorage.getItem('companyPhone') || '062 955 8559'
-        const companyAddress = localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
-        const companyEmail = localStorage.getItem('companyEmail') || 'Kyle@GSSolutions.co.za'
-        const companyVat = localStorage.getItem('companyVat') || ''
+        const companyPhone = settings.companyPhone || localStorage.getItem('companyPhone') || '062 955 8559'
+        const companyAddress = settings.companyAddress || localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
+        const companyEmail = settings.companyEmail || localStorage.getItem('companyEmail') || 'Kyle@GSSolutions.co.za'
+        const companyVat = settings.companyVat || localStorage.getItem('companyVat') || ''
 
         doc.text(companyPhone, rightColX, blockY + 11)
         doc.text(companyAddress, rightColX, blockY + 16)
@@ -180,11 +178,12 @@ const generatePDF = async (docType, data) => {
         const finalY = doc.lastAutoTable.finalY + 10
 
         // Banking Left
-        const bankName = localStorage.getItem('bankName') || 'FNB/RMB'
-        const accHolder = localStorage.getItem('bankAccountHolder') || 'Global Security Solutions'
-        const accNum = localStorage.getItem('bankAccountNumber') || '63182000223'
-        const accType = localStorage.getItem('bankAccountType') || 'Cheque Account'
-        const branchCode = localStorage.getItem('bankBranchCode') || '250655'
+        // Banking Left
+        const bankName = settings.bankName || localStorage.getItem('bankName') || 'FNB/RMB'
+        const accHolder = settings.bankAccountHolder || localStorage.getItem('bankAccountHolder') || 'Global Security Solutions'
+        const accNum = settings.bankAccountNumber || localStorage.getItem('bankAccountNumber') || '63182000223'
+        const accType = settings.bankAccountType || localStorage.getItem('bankAccountType') || 'Cheque Account'
+        const branchCode = settings.bankBranchCode || localStorage.getItem('bankBranchCode') || '250655'
 
         doc.setFontSize(9)
         doc.setTextColor(...COLORS.GRAY_LABEL)
@@ -280,7 +279,7 @@ const generatePDF = async (docType, data) => {
             }
         ]
 
-        const termsCallback = localStorage.getItem('companyTerms');
+        const termsCallback = settings.companyTerms || localStorage.getItem('companyTerms');
         const terms = termsCallback ? JSON.parse(termsCallback) : defaultTerms;
 
         let y = 30
@@ -424,5 +423,5 @@ const fetchImage = (url) => {
     })
 }
 
-export const generateInvoicePDF = (invoice) => generatePDF('Invoice', invoice)
-export const generateQuotePDF = (quote) => generatePDF('Quotation', quote)
+export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
+export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)

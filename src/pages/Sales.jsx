@@ -10,11 +10,13 @@ import { useNavigate } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
 import { useCurrency } from '@/lib/use-currency.jsx'
 import { toast } from 'sonner'
+import { useSettings } from '@/lib/use-settings.jsx'
 
 
 export default function Sales() {
   const navigate = useNavigate()
   const { formatCurrency } = useCurrency()
+  const { settings } = useSettings()
   const [quotations, setQuotations] = useState([])
   const [invoices, setInvoices] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -264,9 +266,9 @@ export default function Sales() {
       const fullData = { ...sale, lines: lines || [] }
 
       if (type === 'quotation') {
-        generateQuotePDF(fullData)
+        generateQuotePDF(fullData, settings)
       } else {
-        generateInvoicePDF(fullData)
+        generateInvoicePDF(fullData, settings)
       }
       toast.success('PDF Downloaded', { id: toastId })
     } catch (error) {
@@ -505,12 +507,7 @@ export default function Sales() {
                     <span className="font-bold">{formatCurrency(quotation.total_amount)}</span>
                   </div>
 
-                  {/* Debug Info - Remove after fixing */}
-                  <p className="text-xs text-red-500">
-                    Debug: {quotation.payment_proof ? `Data exists (${quotation.payment_proof.length} chars)` : 'No Data'}
-                    <br />
-                    Start: {quotation.payment_proof ? quotation.payment_proof.substring(0, 20) : 'N/A'}
-                  </p>
+
 
                   {quotation.payment_proof && (
                     <div className="space-y-2">

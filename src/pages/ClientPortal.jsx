@@ -11,9 +11,11 @@ import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
 import { useCurrency } from '@/lib/use-currency.jsx'
 import { SignaturePad } from '@/components/ui/signature-pad'
 import { toast } from 'sonner'
+import { useSettings } from '@/lib/use-settings.jsx'
 
 export default function ClientPortal() {
   const { formatCurrency } = useCurrency()
+  const { settings } = useSettings()
   const [searchParams] = useSearchParams()
   const clientId = searchParams.get('client')
   const accessToken = searchParams.get('token')
@@ -287,7 +289,7 @@ export default function ClientPortal() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => generateQuotePDF({ ...quotation, clients: client })}>
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => generateQuotePDF({ ...quotation, clients: client }, settings)}>
                         <Download className="mr-2 h-4 w-4" />
                         Quote PDF
                       </Button>
@@ -336,7 +338,7 @@ export default function ClientPortal() {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <Button className="w-full" onClick={() => generateQuotePDF({ ...quotation, clients: client })}>
+                      <Button className="w-full" onClick={() => generateQuotePDF({ ...quotation, clients: client }, settings)}>
                         <Download className="mr-2 h-4 w-4" />
                         Download Proforma Invoice
                       </Button>
@@ -377,7 +379,7 @@ export default function ClientPortal() {
                       <span className="text-xl font-bold">{formatCurrency(invoice.total_amount)}</span>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Button variant="outline" className="w-full" onClick={() => generateInvoicePDF({ ...invoice, clients: client })}>
+                      <Button variant="outline" className="w-full" onClick={() => generateInvoicePDF({ ...invoice, clients: client }, settings)}>
                         <Download className="mr-2 h-4 w-4" /> Download Invoice
                       </Button>
 
@@ -435,12 +437,12 @@ export default function ClientPortal() {
               <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
                 <p className="font-semibold text-lg">Banking Details</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <span className="text-muted-foreground">Account Name:</span> <span>GSS Solutions</span>
-                  <span className="text-muted-foreground">Bank:</span> <span>FNB / RMB</span>
-                  <span className="text-muted-foreground">Account Type:</span> <span>Cheque Account</span>
-                  <span className="text-muted-foreground">Account:</span> <span>63182000223</span>
-                  <span className="text-muted-foreground">Branch:</span> <span>250655</span>
-                  <span className="text-muted-foreground">Ref:</span> <span className="font-mono bg-white px-1 rounded border">{acceptingQuote?.id.substring(0, 6)}</span>
+                  <span className="text-muted-foreground">Account Name:</span> <span>{settings.bankAccountHolder || 'GSS Solutions'}</span>
+                  <span className="text-muted-foreground">Bank:</span> <span>{settings.bankName || 'FNB / RMB'}</span>
+                  <span className="text-muted-foreground">Account Type:</span> <span>{settings.bankAccountType || 'Cheque Account'}</span>
+                  <span className="text-muted-foreground">Account:</span> <span>{settings.bankAccountNumber || '63182000223'}</span>
+                  <span className="text-muted-foreground">Branch:</span> <span>{settings.bankBranchCode || '250655'}</span>
+                  <span className="text-muted-foreground">Ref:</span> <span className="font-mono bg-white px-1 rounded border">{settings.bankReference || acceptingQuote?.id.substring(0, 6)}</span>
                 </div>
               </div>
 
