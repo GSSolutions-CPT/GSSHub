@@ -54,8 +54,25 @@ export default function CreatePurchaseOrder() {
         try {
             const { text } = await extractItemsFromPDF(uploadedFile)
             setExtractedText(text)
-            toast.success('PDF Processed. Please review extracted text and add items manually if needed.')
-            // Future: Intelligent parsing to auto-fill lines could go here
+
+            // Try to auto-parse items
+            // Dynamic import to avoid circular dependency if define in same file, though here it is fine
+            const { parseTextToItems } = await import('@/lib/pdf-parser')
+            const parsedItems = parseTextToItems(text)
+
+            if (parsedItems.length > 0) {
+                const newLines = parsedItems.map((item, index) => ({
+                    id: Date.now() + index,
+                    description: item.description,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    line_total: item.quantity * item.unit_price
+                }))
+                setLines(newLines)
+                toast.success(`PDF Processed. Auto-filled ${newLines.length} items from quote!`)
+            } else {
+                toast.success('PDF Processed. Could not auto-detect items, please enter manually.', { duration: 5000 })
+            }
         } catch (error) {
             console.error('PDF parsing error:', error)
             toast.error('Failed to parse PDF. Please verify it is a text-based PDF.')
