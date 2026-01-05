@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Download, Trash2, Loader2, CheckCircle } from 'lucide-react'
+import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Download, Trash2, Loader2, CheckCircle, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
@@ -19,12 +19,31 @@ export default function Sales() {
   const { settings } = useSettings()
   const [quotations, setQuotations] = useState([])
   const [invoices, setInvoices] = useState([])
+  const [purchaseOrders, setPurchaseOrders] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     fetchQuotations()
     fetchInvoices()
+    fetchPurchaseOrders()
   }, [])
+
+  const fetchPurchaseOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('purchase_orders')
+        .select(`
+          *,
+          suppliers (name)
+        `)
+        .order('date_created', { ascending: false })
+
+      if (error) throw error
+      setPurchaseOrders(data || [])
+    } catch (error) {
+      console.error('Error fetching POs:', error)
+    }
+  }
 
   const fetchQuotations = async () => {
     try {
@@ -287,6 +306,10 @@ export default function Sales() {
     i.clients?.company?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  const filteredPurchaseOrders = purchaseOrders.filter(po =>
+    po.suppliers?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
   const renderSaleCard = (sale, type) => (
     <Card key={sale.id} className="hover:shadow-lg transition-shadow duration-200">
       <CardHeader>
@@ -453,15 +476,22 @@ export default function Sales() {
           />
         </div>
 
-        <Button onClick={() => navigate('/create-sale')}>
-          Create New Sale
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => navigate('/create-purchase-order')} variant="outline">
+            <Package className="mr-2 h-4 w-4" />
+            Create Purchase Order
+          </Button>
+          <Button onClick={() => navigate('/create-sale')}>
+            Create New Sale
+          </Button>
+        </div>
       </div>
 
       {/* Tabs for Quotations, Proforma, and Invoices */}
       <Tabs defaultValue="quotations" className="space-y-6">
         <TabsList>
           <TabsTrigger value="quotations">Quotes</TabsTrigger>
+          <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="pending" className="relative">
             Pending Review
             {quotations.filter(q => q.status === 'Pending Review').length > 0 && (
@@ -574,6 +604,66 @@ export default function Sales() {
             <div className="col-span-full text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
               <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No invoices found.</p>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="purchase-orders" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredPurchaseOrders.map((po) => (
+            <Card key={po.id} className="hover:shadow-lg transition-shadow duration-200">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      {po.suppliers?.name || 'Unknown Supplier'}
+                    </CardTitle>
+                    <CardDescription>Purchase Order</CardDescription>
+                  </div>
+                  <Badge className="bg-blue-500 text-white">
+                    {po.status}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>{new Date(po.date_created).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-lg font-semibold text-green-600">
+                      <Banknote className="h-5 w-5" />
+                      <span>{formatCurrency(po.total_amount)}</span>
+                    </div>
+                  </div>
+                  {po.expected_date && (
+                    <div className="text-sm text-muted-foreground">
+                      Expected: {new Date(po.expected_date).toLocaleDateString()}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-2 pt-2 border-t">
+                    {po.pdf_url && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => window.open(po.pdf_url, '_blank')}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        View Source PDF
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {filteredPurchaseOrders.length === 0 && (
+            <div className="col-span-full text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-dashed">
+              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No purchase orders found.</p>
             </div>
           )}
         </TabsContent>

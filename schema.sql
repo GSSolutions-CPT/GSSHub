@@ -248,3 +248,57 @@ CREATE TRIGGER update_users_updated_at
 BEFORE UPDATE ON users
 FOR EACH ROW
 EXECUTE FUNCTION update_timestamp();
+
+-- Table: Suppliers
+CREATE TABLE IF NOT EXISTS suppliers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    email TEXT,
+    contact_person TEXT,
+    phone TEXT,
+    address TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    metadata JSONB
+);
+
+-- Table: PurchaseOrders
+CREATE TABLE IF NOT EXISTS purchase_orders (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'Draft', -- Draft, Sent, Received, Cancelled
+    date_created TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expected_date TIMESTAMP WITH TIME ZONE,
+    total_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    pdf_url TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    metadata JSONB
+);
+
+-- Table: PurchaseOrderLines
+CREATE TABLE IF NOT EXISTS purchase_order_lines (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    purchase_order_id UUID REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+    description TEXT,
+    quantity INTEGER NOT NULL,
+    unit_price NUMERIC(10, 2) NOT NULL,
+    line_total NUMERIC(10, 2) NOT NULL,
+    metadata JSONB
+);
+
+-- Indexes for Purchase Orders
+CREATE INDEX IF NOT EXISTS idx_suppliers_name ON suppliers(name);
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_supplier_id ON purchase_orders(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_order_lines_po_id ON purchase_order_lines(purchase_order_id);
+
+-- Triggers for new tables
+CREATE TRIGGER update_suppliers_updated_at
+BEFORE UPDATE ON suppliers
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
+
+CREATE TRIGGER update_purchase_orders_updated_at
+BEFORE UPDATE ON purchase_orders
+FOR EACH ROW
+EXECUTE FUNCTION update_timestamp();
