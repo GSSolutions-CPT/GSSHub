@@ -22,7 +22,8 @@ export const extractItemsFromPDF = async (file) => {
 
           // Simple text extraction (concatenating items)
           // A more robust approach would use item.transform to sort by Y position more accurately
-          const pageText = textContent.items.map(item => item.str).join(' ');
+          // Simpler text extraction respecting EOL if available
+          const pageText = textContent.items.map(item => item.str + (item.hasEOL ? '\n' : ' ')).join('');
           fullText += pageText + '\n';
 
           // Attempt to extract line items
@@ -50,17 +51,53 @@ export const extractItemsFromPDF = async (file) => {
 };
 
 export const parseTextToItems = (text) => {
-  const lines = text.split('\n');
   const items = [];
 
-  // Regex to capture: [Description] [Quantity] [Price]
-  // Matches lines ending in: Number + Currency/Number
-  // Example: "Widget Name 5 R 50.00"
-  // Capture groups: 1 = Description, 2 = Quantity, 3 = Price (with symbol)
-  const endPattern = /^(.*?)\s+(\d+)\s+([R$€£]?\s?[\d,]+\.\d{2})$/i;
+  // Strategy 1: Global "Price Qty Price" pattern (e.g. "10,500.00 1 10,500.00")
+  // This is very robust for invoices that list Unit Price, Qty, Total in sequence
+  // We capture the text BETWEEN these matches to find the description.
 
-  // Regex to capture: [Quantity] [Description] [Price]
-  // Example: "5 Widget Name R 50.00"
+  // Regex: 
+  // Group 1: Unit Price
+  // Group 2: Quantity
+  // Group 3: Total Price
+  const priceQtyTotalRegex = /([R$€£]?\s?[\d,]+\.\d{2})\s+(\d+)\s+([R$€£]?\s?[\d,]+\.\d{2})/g;
+
+  const matches = [...text.matchAll(priceQtyTotalRegex)];
+
+  if (matches.length > 0) {
+    let lastIndex = 0;
+
+    matches.forEach((match, index) => {
+      // Description is the text before this match, starting from end of previous match
+      // If it's the first match, it might contain header info, but we take it anyway and let user edit.
+      // To make it cleaner, we can try to find the start of the line or stripping common indices like "01", "02".
+
+      let rawDesc = text.substring(lastIndex, match.index).trim();
+
+      // Cleanup description: remove trailing newlines or weird chars
+      // Also try to remove leading index numbers like "01 " or "1 " if they exist at the start
+      rawDesc = rawDesc.replace(/^0?\d+\s+/, '');
+
+      // If first item, the description might be huge (header). 
+      // Heuristic: take last 100 chars? Or just split by newline and take last non-empty line?
+      // For now, simpler is better.
+
+      items.push({
+        description: rawDesc,
+        quantity: parseInt(match[2]),
+        unit_price: parseFloat(match[1].replace(/[^\d.]/g, ''))
+      });
+
+      lastIndex = match.index + match[0].length;
+    });
+
+    return items;
+  }
+
+  // Strategy 2: Fallback to line-by-line strict patterns match
+  const lines = text.split('\n');
+  const endPattern = /^(.*?)\s+(\d+)\s+([R$€£]?\s?[\d,]+\.\d{2})$/i;
   const startPattern = /^(\d+)\s+(.+?)\s+([R$€£]?\s?[\d,]+\.\d{2})$/i;
 
   lines.forEach(line => {
