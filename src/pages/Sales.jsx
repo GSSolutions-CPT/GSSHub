@@ -53,6 +53,22 @@ export default function Sales() {
     }
   }
 
+  const handleDeletePO = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this purchase order?')) return
+
+    const toastId = toast.loading('Deleting Purchase Order...')
+    try {
+      const { error } = await supabase.from('purchase_orders').delete().eq('id', id)
+      if (error) throw error
+
+      setPurchaseOrders(purchaseOrders.filter(po => po.id !== id))
+      toast.success('Purchase Order deleted', { id: toastId })
+    } catch (error) {
+      console.error('Error deleting PO:', error)
+      toast.error('Failed to delete Purchase Order', { id: toastId })
+    }
+  }
+
   const fetchPurchaseOrders = async () => {
     try {
       const { data, error } = await supabase
@@ -645,9 +661,15 @@ export default function Sales() {
                     </CardTitle>
                     <div className="flex items-center gap-2 mt-1">
                       <CardDescription>Purchase Order</CardDescription>
-                      <Button variant="ghost" size="xs" className="h-5 px-2 text-muted-foreground text-xs" onClick={() => navigate(`/create-purchase-order?id=${po.id}`)}>
-                        Edit
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="xs" className="h-5 px-2 text-muted-foreground text-xs" onClick={() => navigate(`/create-purchase-order?id=${po.id}`)}>
+                          Edit
+                        </Button>
+                        <span className="text-muted-foreground text-[10px]">•</span>
+                        <Button variant="ghost" size="xs" className="h-5 px-2 text-destructive text-xs hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeletePO(po.id)}>
+                          Delete
+                        </Button>
+                      </div>
                     </div>
                   </div>
                   <Badge className="bg-blue-500 text-white">

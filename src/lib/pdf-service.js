@@ -255,17 +255,19 @@ const generatePDF = async (docType, data, settings = {}) => {
         const accType = settings.bankAccountType || localStorage.getItem('bankAccountType') || 'Cheque Account'
         const branchCode = settings.bankBranchCode || localStorage.getItem('bankBranchCode') || '250655'
 
-        doc.setFontSize(9)
-        doc.setTextColor(...COLORS.GRAY_LABEL)
-        doc.text('PAYMENT INFORMATION', 14, finalY)
+        if (docType !== 'Purchase Order') {
+            doc.setFontSize(9)
+            doc.setTextColor(...COLORS.GRAY_LABEL)
+            doc.text('PAYMENT INFORMATION', 14, finalY)
 
-        doc.setFontSize(10)
-        doc.setTextColor(0, 0, 0)
-        doc.text(`Bank: ${bankName}`, 14, finalY + 6)
-        doc.text(`Account Holder: ${accHolder}`, 14, finalY + 11)
-        doc.text(`Account Number: ${accNum}`, 14, finalY + 16)
-        doc.text(`Branch Code: ${branchCode}`, 14, finalY + 21)
-        doc.text(`Account Type: ${accType}`, 14, finalY + 26)
+            doc.setFontSize(10)
+            doc.setTextColor(0, 0, 0)
+            doc.text(`Bank: ${bankName}`, 14, finalY + 6)
+            doc.text(`Account Holder: ${accHolder}`, 14, finalY + 11)
+            doc.text(`Account Number: ${accNum}`, 14, finalY + 16)
+            doc.text(`Branch Code: ${branchCode}`, 14, finalY + 21)
+            doc.text(`Account Type: ${accType}`, 14, finalY + 26)
+        }
 
         // Totals Right - Logic for VAT display
         const totalsX = 140
@@ -468,10 +470,23 @@ const generatePDF = async (docType, data, settings = {}) => {
         }
 
         // --- GLOBAL FOOTER LOOP ---
-        const totalPages = doc.internal.getNumberOfPages()
-        for (let i = 1; i <= totalPages; i++) {
+        // Ensure we capture the final page count correctly
+        const pageCount = doc.internal.getNumberOfPages()
+
+        for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i)
-            addFooter(doc, i, totalPages)
+            // Re-calc page height in case orientation mixed (unlikely but safe)
+            const pH = doc.internal.pageSize.getHeight() // Use method if available or prop
+
+            // Draw Footer
+            doc.setDrawColor(...COLORS.NAVY)
+            doc.setLineWidth(1)
+            doc.line(0, pH - 15, 220, pH - 15) // Bottom brand line
+
+            doc.setFontSize(8)
+            doc.setTextColor(...COLORS.GRAY_LABEL)
+            doc.text('Web: www.GSSolutions.co.za   |   Email: Kyle@GSSolutions.co.za', 105, pH - 10, { align: 'center' })
+            doc.text(`Page ${i} of ${pageCount}`, 200, pH - 10, { align: 'right' })
         }
 
         // Save
@@ -482,17 +497,7 @@ const generatePDF = async (docType, data, settings = {}) => {
     }
 }
 
-const addFooter = (doc, pageNum, totalPages) => {
-    const pageHeight = doc.internal.pageSize.height
-    doc.setDrawColor(...COLORS.NAVY)
-    doc.setLineWidth(1)
-    doc.line(0, pageHeight - 15, 220, pageHeight - 15) // Bottom brand line
 
-    doc.setFontSize(8)
-    doc.setTextColor(...COLORS.GRAY_LABEL)
-    doc.text('Web: www.GSSolutions.co.za   |   Email: Kyle@GSSolutions.co.za', 105, pageHeight - 10, { align: 'center' })
-    doc.text(`Page ${pageNum} of ${totalPages}`, 200, pageHeight - 10, { align: 'right' })
-}
 
 // Helper to fetch image for logo
 const fetchImage = (url) => {
