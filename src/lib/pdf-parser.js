@@ -1,8 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// Use CDN for worker to avoid build/bundling issues with Vite for now
-// In a production environment, you might want to serve the worker file locally
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export const extractItemsFromPDF = async (file) => {
   const fileReader = new FileReader();
