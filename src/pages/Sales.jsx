@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Search, FileText, Receipt, Banknote, Calendar, User, ArrowRight, Download, Trash2, Loader2, CheckCircle, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
+import { generateInvoicePDF, generateQuotePDF, generatePurchaseOrderPDF } from '@/lib/pdf-service'
 import { useCurrency } from '@/lib/use-currency.jsx'
 import { toast } from 'sonner'
 import { useSettings } from '@/lib/use-settings.jsx'
@@ -27,6 +27,31 @@ export default function Sales() {
     fetchInvoices()
     fetchPurchaseOrders()
   }, [])
+
+  const handleDownloadPO = async (po) => {
+    try {
+      const toastId = toast.loading('Generating Purchase Order PDF...')
+
+      // Fetch full PO details including lines and supplier info
+      const { data: fullPO, error } = await supabase
+        .from('purchase_orders')
+        .select(`
+            *,
+            suppliers (*),
+            lines:purchase_order_lines(*)
+          `)
+        .eq('id', po.id)
+        .single()
+
+      if (error) throw error
+
+      await generatePurchaseOrderPDF(fullPO, settings)
+      toast.success(`PDF Generated for Order #${po.id.substring(0, 8)}`, { id: toastId })
+    } catch (error) {
+      console.error('Error generating PO PDF:', error)
+      toast.error('Failed to generate PDF')
+    }
+  }
 
   const fetchPurchaseOrders = async () => {
     try {
@@ -644,6 +669,16 @@ export default function Sales() {
                   )}
 
                   <div className="flex flex-col gap-2 pt-2 border-t">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="w-full"
+                      onClick={() => handleDownloadPO(po)}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Purchase Order
+                    </Button>
+
                     {po.pdf_url && (
                       <Button
                         size="sm"
@@ -651,8 +686,8 @@ export default function Sales() {
                         className="w-full"
                         onClick={() => window.open(po.pdf_url, '_blank')}
                       >
-                        <Download className="mr-2 h-4 w-4" />
-                        View Source PDF
+                        <FileText className="mr-2 h-4 w-4" />
+                        View Source Quote
                       </Button>
                     )}
                   </div>

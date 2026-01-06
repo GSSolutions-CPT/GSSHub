@@ -50,6 +50,8 @@ const generatePDF = async (docType, data, settings = {}) => {
             if (data.status === 'Accepted' || data.status === 'Approved') {
                 titleText = 'PROFORMA INVOICE'
             }
+        } else if (docType === 'Purchase Order') {
+            titleText = 'PURCHASE ORDER'
         }
 
         // Document Title (Right aligned)
@@ -61,52 +63,120 @@ const generatePDF = async (docType, data, settings = {}) => {
         doc.setTextColor(...COLORS.GRAY_TEXT)
         doc.setFontSize(10)
         doc.text(`#${data.id.substring(0, 8)}`, 196, 40, { align: 'right' })
-        doc.text(`Date: ${new Date(data.date_created).toLocaleDateString()}`, 196, 45, { align: 'right' })
+
+        let dateLabel = 'Date:'
+        let dateValue = new Date(data.date_created).toLocaleDateString()
+
+        if (docType === 'Purchase Order' && data.expected_date) {
+            // For PO, maybe show Expected Date too?
+            // checking space...
+        }
+
+        doc.text(`${dateLabel} ${dateValue}`, 196, 45, { align: 'right' })
 
         // Address Blocks
         const leftColX = 14
         const rightColX = 120 // Moved slightly right for better separation
         const blockY = 70 // Moved down to clear header space
 
-        // Bill To (Left)
-        doc.setFontSize(9)
-        doc.setTextColor(...COLORS.GRAY_LABEL)
-        doc.text('BILL TO', leftColX, blockY)
+        if (docType === 'Purchase Order') {
+            // PO Layout: 
+            // Left: VENDOR (Supplier)
+            // Right: SHIP TO (Us)
 
-        doc.setFontSize(11)
-        doc.setTextColor(0, 0, 0)
-        doc.text(data.clients?.name || 'Unknown Client', leftColX, blockY + 6)
+            // VENDOR (Left)
+            doc.setFontSize(9)
+            doc.setTextColor(...COLORS.GRAY_LABEL)
+            doc.text('VENDOR', leftColX, blockY)
 
-        doc.setFontSize(10)
-        doc.setTextColor(...COLORS.GRAY_TEXT)
-        let addrY = blockY + 11
-        if (data.clients?.company) {
-            doc.text(data.clients.company, leftColX, addrY)
-            addrY += 5
-        }
-        if (data.clients?.email) doc.text(data.clients.email, leftColX, addrY)
+            doc.setFontSize(11)
+            doc.setTextColor(0, 0, 0)
+            doc.text(data.suppliers?.name || 'Unknown Supplier', leftColX, blockY + 6)
 
-        // From (Right)
-        doc.setFontSize(9)
-        doc.setTextColor(...COLORS.GRAY_LABEL)
-        doc.text('FROM', rightColX, blockY)
+            doc.setFontSize(10)
+            doc.setTextColor(...COLORS.GRAY_TEXT)
+            let addrY = blockY + 11
 
-        doc.setFontSize(11)
-        doc.setTextColor(0, 0, 0)
-        // Check if TAX INVOICE to show VAT number if available (just mocking for now/using stored logic if needed)
-        doc.text('Global Security Solutions', rightColX, blockY + 6)
+            // Use supplier details if available
+            if (data.suppliers?.contact_person) {
+                doc.text(`Attn: ${data.suppliers.contact_person}`, leftColX, addrY)
+                addrY += 5
+            }
+            if (data.suppliers?.email) {
+                doc.text(data.suppliers.email, leftColX, addrY)
+                addrY += 5
+            }
+            if (data.suppliers?.phone) {
+                doc.text(data.suppliers.phone, leftColX, addrY)
+                addrY += 5
+            }
+            if (data.suppliers?.address) { // Handle multiline address
+                const splitAddr = doc.splitTextToSize(data.suppliers.address, 80)
+                doc.text(splitAddr, leftColX, addrY)
+            }
 
-        const companyPhone = settings.companyPhone || localStorage.getItem('companyPhone') || '062 955 8559'
-        const companyAddress = settings.companyAddress || localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
-        const companyEmail = settings.companyEmail || localStorage.getItem('companyEmail') || 'Kyle@GSSolutions.co.za'
-        const companyVat = settings.companyVat || localStorage.getItem('companyVat') || ''
 
-        doc.text(companyPhone, rightColX, blockY + 11)
-        doc.text(companyAddress, rightColX, blockY + 16)
-        doc.text(companyEmail, rightColX, blockY + 21)
-        // Add VAT Number for Tax Invoices
-        if (titleText === 'TAX INVOICE' && companyVat) {
-            doc.text(`VAT Reg: ${companyVat}`, rightColX, blockY + 26)
+            // SHIP TO (Right) - US
+            doc.setFontSize(9)
+            doc.setTextColor(...COLORS.GRAY_LABEL)
+            doc.text('SHIP TO', rightColX, blockY)
+
+            doc.setFontSize(11)
+            doc.setTextColor(0, 0, 0)
+            doc.text('Global Security Solutions', rightColX, blockY + 6)
+
+            const companyPhone = settings.companyPhone || localStorage.getItem('companyPhone') || '062 955 8559'
+            const companyAddress = settings.companyAddress || localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
+
+            doc.setFontSize(10)
+            doc.setTextColor(...COLORS.GRAY_TEXT)
+            doc.text(companyPhone, rightColX, blockY + 11)
+            doc.text(companyAddress, rightColX, blockY + 16)
+
+        } else {
+            // Standard Invoice/Quote Layout
+            // Left: BILL TO (Client)
+            // Right: FROM (Us)
+
+            // Bill To (Left)
+            doc.setFontSize(9)
+            doc.setTextColor(...COLORS.GRAY_LABEL)
+            doc.text('BILL TO', leftColX, blockY)
+
+            doc.setFontSize(11)
+            doc.setTextColor(0, 0, 0)
+            doc.text(data.clients?.name || 'Unknown Client', leftColX, blockY + 6)
+
+            doc.setFontSize(10)
+            doc.setTextColor(...COLORS.GRAY_TEXT)
+            let addrY = blockY + 11
+            if (data.clients?.company) {
+                doc.text(data.clients.company, leftColX, addrY)
+                addrY += 5
+            }
+            if (data.clients?.email) doc.text(data.clients.email, leftColX, addrY)
+
+            // From (Right)
+            doc.setFontSize(9)
+            doc.setTextColor(...COLORS.GRAY_LABEL)
+            doc.text('FROM', rightColX, blockY)
+
+            doc.setFontSize(11)
+            doc.setTextColor(0, 0, 0)
+            doc.text('Global Security Solutions', rightColX, blockY + 6)
+
+            const companyPhone = settings.companyPhone || localStorage.getItem('companyPhone') || '062 955 8559'
+            const companyAddress = settings.companyAddress || localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
+            const companyEmail = settings.companyEmail || localStorage.getItem('companyEmail') || 'Kyle@GSSolutions.co.za'
+            const companyVat = settings.companyVat || localStorage.getItem('companyVat') || ''
+
+            doc.text(companyPhone, rightColX, blockY + 11)
+            doc.text(companyAddress, rightColX, blockY + 16)
+            doc.text(companyEmail, rightColX, blockY + 21)
+            // Add VAT Number for Tax Invoices
+            if (titleText === 'TAX INVOICE' && companyVat) {
+                doc.text(`VAT Reg: ${companyVat}`, rightColX, blockY + 26)
+            }
         }
 
         // Details Strip
@@ -425,3 +495,4 @@ const fetchImage = (url) => {
 
 export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
 export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)
+export const generatePurchaseOrderPDF = (po, settings) => generatePDF('Purchase Order', po, settings)
