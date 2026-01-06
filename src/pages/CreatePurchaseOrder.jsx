@@ -28,6 +28,7 @@ export default function CreatePurchaseOrder() {
     const [suppliers, setSuppliers] = useState([])
     const [selectedSupplierId, setSelectedSupplierId] = useState('')
     const [newSupplierName, setNewSupplierName] = useState('') // Quick add
+    const [isNewSupplier, setIsNewSupplier] = useState(false)
 
     const [poDetails, setPoDetails] = useState({
         supplier_id: '',
