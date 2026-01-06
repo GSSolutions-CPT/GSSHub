@@ -121,5 +121,6 @@ export const parseTextToItems = (text) => {
     }
   });
 
-  return items;
+  // Cleanup: Filter out items with 0 quantity or 0 total (likely options or headers)
+  return items.filter(item => item.quantity > 0 && (item.unit_price > 0 || item.line_total > 0));
 }

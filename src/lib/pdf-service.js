@@ -190,7 +190,14 @@ const generatePDF = async (docType, data, settings = {}) => {
         doc.setFontSize(10)
         doc.setTextColor(0, 0, 0)
         doc.text(new Date().toLocaleDateString(), 14, stripY + 5)
-        doc.text(docType === 'Quotation' ? 'Security System' : 'Invoice Payment', 70, stripY + 5)
+
+        // Custom Reference Logic
+        let referenceText = docType === 'Quotation' ? 'Security System' : 'Invoice Payment'
+        if (docType === 'Purchase Order') {
+            referenceText = data.metadata?.reference || 'Invoice Payment'
+        }
+
+        doc.text(referenceText, 70, stripY + 5)
         doc.text(`${data.id.substring(0, 6)}`, 140, stripY + 5)
 
         // --- PRICING TABLE ---

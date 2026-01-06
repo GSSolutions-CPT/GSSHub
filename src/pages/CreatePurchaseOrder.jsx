@@ -30,10 +30,12 @@ export default function CreatePurchaseOrder() {
     const [newSupplierName, setNewSupplierName] = useState('') // Quick add
 
     const [poDetails, setPoDetails] = useState({
+        supplier_id: '',
         expected_date: '',
-        notes: ''
+        notes: '',
+        reference: '', // Default empty
+        extracted_text_snippet: ''
     })
-
     // Default to true as per user request ("add a tax toggle", usually means handling tax explicitly)
     // But user earlier text said "Prices excluded 15% VAT", implying we add VAT on top.
     const [vatApplicable, setVatApplicable] = useState(true)
@@ -72,7 +74,9 @@ export default function CreatePurchaseOrder() {
             setSelectedSupplierId(data.supplier_id)
             setPoDetails({
                 expected_date: data.expected_date ? data.expected_date.split('T')[0] : '', // Format for date input
-                notes: data.metadata?.notes || ''
+                notes: data.metadata?.notes || '',
+                reference: data.metadata?.reference || '', // Load reference
+                extracted_text_snippet: data.metadata?.extracted_text_snippet || ''
             })
             setVatApplicable(data.metadata?.vat_applicable ?? true) // Default true if not set
 
@@ -214,6 +218,7 @@ export default function CreatePurchaseOrder() {
                 updated_at: new Date().toISOString(),
                 metadata: {
                     notes: poDetails.notes,
+                    reference: poDetails.reference, // Custom Reference
                     extracted_text_snippet: extractedText ? extractedText.substring(0, 100) : (poDetails.extracted_text_snippet || ''), // Preserve if not new
                     vat_applicable: vatApplicable
                 }
@@ -321,30 +326,49 @@ export default function CreatePurchaseOrder() {
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Supplier</Label>
-                                    <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
+                                    <Label>Select Supplier</Label>
+                                    <Select onValueChange={(val) => {
+                                        if (val === 'new') {
+                                            setIsNewSupplier(true)
+                                            setSelectedSupplierId(null)
+                                        } else {
+                                            setIsNewSupplier(false)
+                                            setSelectedSupplierId(val)
+                                        }
+                                    }} value={selectedSupplierId || ''}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select Supplier" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {suppliers.map(s => (
-                                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                            ))}
+                                            <SelectItem value="new">+ Add New Supplier</SelectItem>
+                                            {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
 
-                                    <div className="flex gap-2 mt-2">
-                                        <Input
-                                            placeholder="Or add new supplier..."
-                                            value={newSupplierName}
-                                            onChange={(e) => setNewSupplierName(e.target.value)}
-                                            className="h-8 text-sm"
-                                        />
-                                        <Button size="sm" variant="secondary" onClick={handleCreateSupplier} disabled={!newSupplierName}>
-                                            Add
-                                        </Button>
-                                    </div>
+                                    {isNewSupplier && (
+                                        <div className="flex gap-2 mt-2">
+                                            <Input
+                                                placeholder="Or add new supplier..."
+                                                value={newSupplierName}
+                                                onChange={(e) => setNewSupplierName(e.target.value)}
+                                                className="h-8 text-sm"
+                                            />
+                                            <Button size="sm" variant="secondary" onClick={handleCreateSupplier} disabled={!newSupplierName}>
+                                                Add
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div> {/* End of Supplier div */}
+
+                                <div className="space-y-2">
+                                    <Label>Reference</Label>
+                                    <Input
+                                        placeholder="e.g. Job 1234 or Invoice Payment"
+                                        value={poDetails.reference || ''}
+                                        onChange={(e) => setPoDetails({ ...poDetails, reference: e.target.value })}
+                                    />
                                 </div>
+
                                 <div className="space-y-2">
                                     <Label>Expected Delivery</Label>
                                     <Input
@@ -353,7 +377,8 @@ export default function CreatePurchaseOrder() {
                                         onChange={(e) => setPoDetails({ ...poDetails, expected_date: e.target.value })}
                                     />
                                 </div>
-                            </div>
+                            </div> {/* End grid */}
+
 
                             <div className="space-y-2">
                                 <Label>Notes</Label>
@@ -457,7 +482,7 @@ export default function CreatePurchaseOrder() {
                         <Button size="lg" onClick={handleSubmit}>{editId ? 'Update Purchase Order' : 'Create Purchase Order'}</Button>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     )
 }
