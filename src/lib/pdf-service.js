@@ -276,7 +276,10 @@ const generatePDF = async (docType, data, settings = {}) => {
 
         // Reverse calc if total includes VAT (simple logic for now if data doesn't split it perfectly)
         // Ideally data.trade_subtotal exists.
-        if (data.vat_applicable) {
+        if (data.vat_applicable || (docType === 'Purchase Order' && data.metadata?.vat_applicable)) {
+            // For PO with "Prices Exclude VAT" (vat_applicable=true), the total stored IS the gross?
+            // Wait, in CreatePurchaseOrder we stored total = sub + vat.
+            // So reverse calc is correct: total is inclusive. 
             vatVal = totalVal - (totalVal / 1.15)
             subtotalVal = totalVal - vatVal
         }
@@ -301,88 +304,90 @@ const generatePDF = async (docType, data, settings = {}) => {
 
 
         // Footer Page 1
-        addFooter(doc, 1, 2)
+        addFooter(doc, 1, docType === 'Purchase Order' ? 1 : 2) // PO is 1 page usually unless long list. Simple logic.
 
-        // --- PAGE 2: TERMS & CONDITIONS ---
-        doc.addPage()
+        // --- PAGE 2: TERMS & CONDITIONS (Skip for PO) ---
+        if (docType !== 'Purchase Order') {
+            doc.addPage()
 
-        doc.setFontSize(16)
-        doc.setTextColor(...COLORS.NAVY)
-        doc.text('GENERAL TERMS & CONDITIONS', 105, 20, { align: 'center' })
-
-        const defaultTerms = [
-            {
-                title: "1. Scope of Services",
-                text: "We agree to supply and install the security equipment ('System') as specified. Includes Intruder Detection, CCTV, Access Control, Electric Fencing, and Automation."
-            },
-            {
-                title: "2. System Specifications",
-                text: "System components specified in the Quotation. We reserve the right to substitute with equal/superior quality if unavailable, subject to approval."
-            },
-            {
-                title: "3. Installation Procedures",
-                text: "3.1 Site Access: Client checks safe access.\n3.2 Obligations: Power supply (230V AC) required. Client must disclose concealed utilities.\n3.3 Timeline: Estimates only. Not liable for external delays.\n3.4 Completion: Handover confirmed by signature or use."
-            },
-            {
-                title: "4. Warranties",
-                text: "4.1 Workmanship: 12-month warranty.\n4.2 Equipment: Manufacturer warranty applies.\n4.3 Exclusions: Misuse, Acts of God, Third-party service failures, Consumables."
-            },
-            {
-                title: "5. Payment Terms",
-                text: "5.1 Deposit: 75% required on acceptance.\n5.2 Final: 25% due on completion.\n5.3 Ownership: Remains property of GSS until fully paid.\n5.4 Late Payments: Interest charged at prime + 5%."
-            },
-            {
-                title: "6. Data Privacy (POPIA)",
-                text: "Client is Data Controller for system data (CCTV etc). We process data only for billing/service. Remote access only with consent."
-            },
-            {
-                title: "7. Maintenance",
-                text: "Post-warranty service charged at standard rates. Maintenance contracts available separately."
-            },
-            {
-                title: "8. Liability",
-                text: "System is a deterrent, not a guarantee. GSS not liable for loss/damage unless gross negligence proven. Liability limited to Quote value."
-            },
-            {
-                title: "9. Termination",
-                text: "Client may terminate with notice. 75% deposit non-refundable if work commenced. GSS may terminate for non-payment."
-            }
-        ]
-
-        const termsCallback = settings.companyTerms || localStorage.getItem('companyTerms');
-        const terms = termsCallback ? JSON.parse(termsCallback) : defaultTerms;
-
-        let y = 30
-        const colWidth = 85
-        const gap = 10
-        let leftCol = true
-
-        terms.forEach((item, index) => {
-            const x = leftCol ? 14 : 14 + colWidth + gap
-
-            doc.setFontSize(9)
+            doc.setFontSize(16)
             doc.setTextColor(...COLORS.NAVY)
-            doc.text(item.title, x, y)
+            doc.text('GENERAL TERMS & CONDITIONS', 105, 20, { align: 'center' })
 
-            doc.setFontSize(8)
-            doc.setTextColor(60, 60, 60)
-            const lines = doc.splitTextToSize(item.text, colWidth)
-            doc.text(lines, x, y + 5)
+            const defaultTerms = [
+                {
+                    title: "1. Scope of Services",
+                    text: "We agree to supply and install the security equipment ('System') as specified. Includes Intruder Detection, CCTV, Access Control, Electric Fencing, and Automation."
+                },
+                {
+                    title: "2. System Specifications",
+                    text: "System components specified in the Quotation. We reserve the right to substitute with equal/superior quality if unavailable, subject to approval."
+                },
+                {
+                    title: "3. Installation Procedures",
+                    text: "3.1 Site Access: Client checks safe access.\n3.2 Obligations: Power supply (230V AC) required. Client must disclose concealed utilities.\n3.3 Timeline: Estimates only. Not liable for external delays.\n3.4 Completion: Handover confirmed by signature or use."
+                },
+                {
+                    title: "4. Warranties",
+                    text: "4.1 Workmanship: 12-month warranty.\n4.2 Equipment: Manufacturer warranty applies.\n4.3 Exclusions: Misuse, Acts of God, Third-party service failures, Consumables."
+                },
+                {
+                    title: "5. Payment Terms",
+                    text: "5.1 Deposit: 75% required on acceptance.\n5.2 Final: 25% due on completion.\n5.3 Ownership: Remains property of GSS until fully paid.\n5.4 Late Payments: Interest charged at prime + 5%."
+                },
+                {
+                    title: "6. Data Privacy (POPIA)",
+                    text: "Client is Data Controller for system data (CCTV etc). We process data only for billing/service. Remote access only with consent."
+                },
+                {
+                    title: "7. Maintenance",
+                    text: "Post-warranty service charged at standard rates. Maintenance contracts available separately."
+                },
+                {
+                    title: "8. Liability",
+                    text: "System is a deterrent, not a guarantee. GSS not liable for loss/damage unless gross negligence proven. Liability limited to Quote value."
+                },
+                {
+                    title: "9. Termination",
+                    text: "Client may terminate with notice. 75% deposit non-refundable if work commenced. GSS may terminate for non-payment."
+                }
+            ]
 
-            const blockHeight = (lines.length * 4) + 12
+            const termsCallback = settings.companyTerms || localStorage.getItem('companyTerms');
+            const terms = termsCallback ? JSON.parse(termsCallback) : defaultTerms;
 
-            if (index === 4) { // Switch col after 5 items
-                leftCol = false
-                y = 30
-            } else {
-                y += blockHeight
-            }
-        })
+            let y = 30
+            const colWidth = 85
+            const gap = 10
+            let leftCol = true
 
-        // Agreement Footer
-        doc.setFontSize(10)
-        doc.setTextColor(100, 100, 100)
-        doc.text('By accepting this Quotation, you utilize our services bound by these Terms.', 105, 260, { align: 'center' })
+            terms.forEach((item, index) => {
+                const x = leftCol ? 14 : 14 + colWidth + gap
+
+                doc.setFontSize(9)
+                doc.setTextColor(...COLORS.NAVY)
+                doc.text(item.title, x, y)
+
+                doc.setFontSize(8)
+                doc.setTextColor(60, 60, 60)
+                const lines = doc.splitTextToSize(item.text, colWidth)
+                doc.text(lines, x, y + 5)
+
+                const blockHeight = (lines.length * 4) + 12
+
+                if (index === 4) { // Switch col after 5 items
+                    leftCol = false
+                    y = 30
+                } else {
+                    y += blockHeight
+                }
+            })
+
+            // Agreement Footer
+            doc.setFontSize(10)
+            doc.setTextColor(100, 100, 100)
+            doc.text('By accepting this Quotation, you utilize our services bound by these Terms.', 105, 260, { align: 'center' })
+        }
 
         // Signature Block
         doc.setDrawColor(200, 200, 200)

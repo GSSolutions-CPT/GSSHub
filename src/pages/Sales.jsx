@@ -638,12 +638,17 @@ export default function Sales() {
             <Card key={po.id} className="hover:shadow-lg transition-shadow duration-200">
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                  <div className="flex flex-col">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Package className="h-5 w-5" />
                       {po.suppliers?.name || 'Unknown Supplier'}
                     </CardTitle>
-                    <CardDescription>Purchase Order</CardDescription>
+                    <div className="flex items-center gap-2 mt-1">
+                      <CardDescription>Purchase Order</CardDescription>
+                      <Button variant="ghost" size="xs" className="h-5 px-2 text-muted-foreground text-xs" onClick={() => navigate(`/create-purchase-order?id=${po.id}`)}>
+                        Edit
+                      </Button>
+                    </div>
                   </div>
                   <Badge className="bg-blue-500 text-white">
                     {po.status}
