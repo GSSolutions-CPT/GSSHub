@@ -303,8 +303,7 @@ const generatePDF = async (docType, data, settings = {}) => {
         doc.text(`R${totalVal.toFixed(2)}`, 200, finalY + 24, { align: 'right' })
 
 
-        // Footer Page 1
-        addFooter(doc, 1, docType === 'Purchase Order' ? 1 : 2) // PO is 1 page usually unless long list. Simple logic.
+        // Footer Page 1 - Removed manual call, will do global loop at end.
 
         // --- PAGE 2: TERMS & CONDITIONS (Skip for PO) ---
         if (docType !== 'Purchase Order') {
@@ -411,7 +410,7 @@ const generatePDF = async (docType, data, settings = {}) => {
             }
         }
 
-        addFooter(doc, 2, data.payment_proof ? 3 : 2)
+        // Footer manual call removed.
 
         // --- PAGE 3: PAYMENT PROOF (If Exists) ---
         if (data.payment_proof) {
@@ -466,6 +465,13 @@ const generatePDF = async (docType, data, settings = {}) => {
                 doc.setFontSize(10)
                 doc.text(`Error rendering evidence: ${e.message}`, 14, 50)
             }
+        }
+
+        // --- GLOBAL FOOTER LOOP ---
+        const totalPages = doc.internal.getNumberOfPages()
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            addFooter(doc, i, totalPages)
         }
 
         // Save
