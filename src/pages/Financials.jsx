@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Banknote, TrendingUp, TrendingDown, Receipt } from 'lucide-react'
+import { Plus, Banknote, TrendingUp, TrendingDown, Receipt, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -25,6 +25,7 @@ export default function Financials() {
     description: '',
     date: new Date().toISOString().split('T')[0]
   })
+  const [editingId, setEditingId] = useState(null)
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setMonth(new Date().getMonth() - 6)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
@@ -89,22 +90,47 @@ export default function Financials() {
     e.preventDefault()
 
     try {
-      const { error } = await supabase
-        .from('expenses')
-        .insert([{
-          ...formData,
-          amount: parseFloat(formData.amount),
-          job_id: formData.type === 'job' && formData.job_id ? formData.job_id : null
+      if (editingId) {
+        const { error } = await supabase
+          .from('expenses')
+          .update({
+            ...formData,
+            amount: parseFloat(formData.amount),
+            job_id: formData.type === 'job' && formData.job_id ? formData.job_id : null
+          })
+          .eq('id', editingId)
+
+        if (error) throw error
+
+        // Log activity
+        await supabase.from('activity_log').insert([{
+          type: 'Expense Updated',
+          description: `Updated ${formData.type} expense: ${formData.description}`,
+          related_entity_type: 'expense',
+          related_entity_id: editingId
         }])
 
-      if (error) throw error
+        toast.success('Expense updated successfully')
+      } else {
+        const { error } = await supabase
+          .from('expenses')
+          .insert([{
+            ...formData,
+            amount: parseFloat(formData.amount),
+            job_id: formData.type === 'job' && formData.job_id ? formData.job_id : null
+          }])
 
-      // Log activity
-      await supabase.from('activity_log').insert([{
-        type: 'Expense Added',
-        description: `New ${formData.type} expense: ${formData.description}`,
-        related_entity_type: 'expense'
-      }])
+        if (error) throw error
+
+        // Log activity
+        await supabase.from('activity_log').insert([{
+          type: 'Expense Added',
+          description: `New ${formData.type} expense: ${formData.description}`,
+          related_entity_type: 'expense'
+        }])
+
+        toast.success('Expense recorded successfully')
+      }
 
       setFormData({
         type: 'general',
@@ -113,11 +139,43 @@ export default function Financials() {
         description: '',
         date: new Date().toISOString().split('T')[0]
       })
+      setEditingId(null)
+      setIsDialogOpen(false)
       fetchExpenses()
-      toast.success('Expense recorded successfully')
     } catch (error) {
-      console.error('Error creating expense:', error)
-      toast.error('Failed to record expense')
+      console.error('Error saving expense:', error)
+      toast.error('Failed to save expense')
+    }
+  }
+
+  const handleEdit = (expense) => {
+    setFormData({
+      type: expense.type,
+      job_id: expense.job_id || '',
+      amount: expense.amount,
+      description: expense.description,
+      date: expense.date
+    })
+    setEditingId(expense.id)
+    setIsDialogOpen(true)
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this expense?')) return
+
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      toast.success('Expense deleted successfully')
+      fetchExpenses()
+    } catch (error) {
+      console.error('Error deleting expense:', error)
+      toast.error('Failed to delete expense')
     }
   }
 
@@ -347,14 +405,23 @@ export default function Financials() {
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => {
+                  setEditingId(null)
+                  setFormData({
+                    type: 'general',
+                    job_id: '',
+                    amount: '',
+                    description: '',
+                    date: new Date().toISOString().split('T')[0]
+                  })
+                }}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Expense
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                  <DialogTitle>Add New Expense</DialogTitle>
+                  <DialogTitle>{editingId ? 'Edit Expense' : 'Add New Expense'}</DialogTitle>
                   <DialogDescription>
                     Record a business expense
                   </DialogDescription>
@@ -437,7 +504,7 @@ export default function Financials() {
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit">Add Expense</Button>
+                    <Button type="submit">{editingId ? 'Update Expense' : 'Add Expense'}</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -453,9 +520,20 @@ export default function Financials() {
                   <p className="text-sm text-muted-foreground">
                     {expense.type === 'job' ? 'Job Expense' : 'General Overhead'} • {new Date(expense.date).toLocaleDateString()}
                   </p>
+
                 </div>
-                <div className="text-lg font-semibold text-red-600">
-                  -R{parseFloat(expense.amount).toFixed(2)}
+                <div className="flex items-center gap-4">
+                  <div className="text-lg font-semibold text-red-600">
+                    -R{parseFloat(expense.amount).toFixed(2)}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(expense)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(expense.id)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -467,7 +545,7 @@ export default function Financials() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </div >
   )
 }
 

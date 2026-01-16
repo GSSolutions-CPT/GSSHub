@@ -24,6 +24,10 @@ class TableApi {
   update(values) {
     return new UpdateQuery(this.table, values);
   }
+
+  delete() {
+    return new DeleteQuery(this.table);
+  }
 }
 
 class SelectQuery {
@@ -187,6 +191,53 @@ class UpdateQuery {
     }
 
     return { data: updated, error: null };
+  }
+}
+
+class DeleteQuery {
+  constructor(table) {
+    this.table = table;
+    this.filters = [];
+  }
+
+  eq(column, value) {
+    this.filters.push({ column, operator: 'eq', value });
+    return this;
+  }
+
+  gte(column, value) {
+    this.filters.push({ column, operator: 'gte', value });
+    return this;
+  }
+
+  lte(column, value) {
+    this.filters.push({ column, operator: 'lte', value });
+    return this;
+  }
+
+  then(onFulfilled, onRejected) {
+    return this.exec().then(onFulfilled, onRejected);
+  }
+
+  async exec() {
+    const collection = getCollection(this.table);
+    const originalLength = collection.length;
+
+    // Find indices to remove
+    const indicesToRemove = [];
+    for (let i = 0; i < collection.length; i++) {
+      const row = collection[i];
+      if (this.filters.every((filter) => applyFilter(row, filter))) {
+        indicesToRemove.push(i);
+      }
+    }
+
+    // Remove in reverse order to maintain indices
+    for (let i = indicesToRemove.length - 1; i >= 0; i--) {
+      collection.splice(indicesToRemove[i], 1);
+    }
+
+    return { data: null, error: null, count: indicesToRemove.length };
   }
 }
 
