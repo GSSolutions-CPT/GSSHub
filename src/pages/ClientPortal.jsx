@@ -218,8 +218,9 @@ export default function ClientPortal() {
       <header className="bg-card border-b border-border sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">GSSHub Portal</h1>
-            <p className="text-sm text-muted-foreground hidden md:block">Welcome, {client.name}</p>
+            {/* Logo Replaced Text */}
+            <img src="/gss-logo-head.png" alt="Global Security Solutions" className="h-12 w-auto mb-2" />
+            <p className="text-sm text-muted-foreground hidden md:block pl-1">Client Portal • {client.name}</p>
           </div>
           <div className="flex gap-2">
             <Dialog open={contactOpen} onOpenChange={setContactOpen}>

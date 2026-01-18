@@ -389,11 +389,23 @@ const generatePDF = async (docType, data, settings = {}) => {
             const legacyTerms = settings.companyTerms || localStorage.getItem('companyTerms');
 
             if (legalTerms && legalTerms.trim().length > 0) {
-                // Use the simple text block from Settings
-                terms = [{
-                    title: "Terms & Conditions",
-                    text: legalTerms
-                }];
+                // Split text into paragraphs (double newline or single newline)
+                // We treat each paragraph as a separate "term" object to allow flow logic to work.
+                const paragraphs = legalTerms.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+
+                if (paragraphs.length === 1 && paragraphs[0].length > 1000) {
+                    // Fallback: If it's one massive block without double newlines, try parsing by single newline
+                    const lines = legalTerms.split('\n').filter(p => p.trim().length > 0);
+                    terms = lines.map((line, i) => ({
+                        title: i === 0 ? "Terms & Conditions" : "",
+                        text: line.trim()
+                    }));
+                } else {
+                    terms = paragraphs.map((para, i) => ({
+                        title: i === 0 ? "Terms & Conditions" : "",
+                        text: para.trim()
+                    }));
+                }
             } else if (legacyTerms) {
                 try {
                     terms = JSON.parse(legacyTerms);
@@ -406,27 +418,54 @@ const generatePDF = async (docType, data, settings = {}) => {
             const colWidth = 85
             const gap = 10
             let leftCol = true
+            const pageHeight = 297 // A4 Height mm
+            const bottomMargin = 40 // Leave space for footer/signature
 
-            terms.forEach((item, index) => {
+            terms.forEach((item) => {
                 const x = leftCol ? 14 : 14 + colWidth + gap
 
                 doc.setFontSize(9)
-                doc.setTextColor(...COLORS.NAVY)
-                doc.text(item.title, x, y)
+                // Pre-calculate height
+                const titleHeight = item.title ? 5 : 0;
 
                 doc.setFontSize(8)
-                doc.setTextColor(60, 60, 60)
                 const lines = doc.splitTextToSize(item.text, colWidth)
-                doc.text(lines, x, y + 5)
+                const textHeight = (lines.length * 3.5); // Tighten line height slightly
+                const blockHeight = titleHeight + textHeight + 6; // + Gap
 
-                const blockHeight = (lines.length * 4) + 12
+                // Check for overflow
+                if (y + blockHeight > (pageHeight - bottomMargin)) {
+                    if (leftCol) {
+                        // Move to Right Column
+                        leftCol = false;
+                        y = 30;
+                    } else {
+                        // Add New Page
+                        doc.addPage();
+                        // Re-print Header? Maybe simply "Terms Continued"
+                        doc.setFontSize(10);
+                        doc.setTextColor(...COLORS.NAVY);
+                        doc.text("Terms & Conditions (Continued)", 105, 15, { align: 'center' });
 
-                if (index === 4) { // Switch col after 5 items
-                    leftCol = false
-                    y = 30
-                } else {
-                    y += blockHeight
+                        leftCol = true;
+                        y = 30;
+                    }
                 }
+
+                // Render Title
+                if (item.title) {
+                    doc.setFontSize(9)
+                    doc.setTextColor(...COLORS.NAVY)
+                    doc.text(item.title, x, y)
+                    y += 5;
+                }
+
+                // Render Text
+                doc.setFontSize(8)
+                doc.setTextColor(60, 60, 60)
+                doc.text(lines, x, y)
+
+                y += (textHeight + 4); // Add spacing between blocks
             })
 
             // Agreement Footer
