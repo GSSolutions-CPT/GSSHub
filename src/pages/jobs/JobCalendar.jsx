@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import format from 'date-fns/format';
 import parse from 'date-fns/parse';
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Briefcase, Calendar as CalendarIcon, Receipt, ExternalLink } from 'lucide-react'
-import { generateOutlookLink, generateGoogleCalendarLink } from '@/lib/calendar-utils'
+import { generateOutlookLink } from '@/lib/calendar-utils'
 import { toast } from 'sonner'
 
 const locales = {

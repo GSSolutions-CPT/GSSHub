@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Plus, Search, Mail, Phone, Building2, MapPin, ExternalLink, Copy, Users, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Search, Mail, Phone, Building2, MapPin, ExternalLink, Users, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -162,7 +162,7 @@ export default function Clients() {
             <DialogHeader>
               <DialogTitle>{editingClient ? 'Edit Client' : 'Add New Client'}</DialogTitle>
               <DialogDescription>
-                Enter the client's information below
+                Enter the client&apos;s information below
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>

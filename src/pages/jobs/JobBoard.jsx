@@ -9,17 +9,16 @@ import {
     DragOverlay,
 } from '@dnd-kit/core';
 import {
-    arrayMove,
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User, Clock, Download } from 'lucide-react';
+import { Calendar, User, Download } from 'lucide-react';
 
 const columns = ['Pending', 'In Progress', 'Completed', 'Cancelled'];
 

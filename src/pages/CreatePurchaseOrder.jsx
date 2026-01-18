@@ -1,14 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, Plus, Trash2, Upload, FileText } from 'lucide-react'
+import { Loader2, Plus, Trash2, Upload } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -50,7 +49,7 @@ export default function CreatePurchaseOrder() {
         if (editId) {
             loadPurchaseOrder(editId)
         }
-    }, [editId])
+    }, [editId, loadPurchaseOrder])
 
     const fetchSuppliers = async () => {
         const { data, error } = await supabase.from('suppliers').select('*').order('name')
@@ -58,7 +57,7 @@ export default function CreatePurchaseOrder() {
         else setSuppliers(data || [])
     }
 
-    const loadPurchaseOrder = async (id) => {
+    const loadPurchaseOrder = useCallback(async (id) => {
         const toastId = toast.loading('Loading Purchase Order...')
         try {
             const { data, error } = await supabase
@@ -99,7 +98,7 @@ export default function CreatePurchaseOrder() {
             toast.error('Failed to load Purchase Order', { id: toastId })
             navigate('/sales')
         }
-    }
+    }, [navigate])
 
     const handleFileUpload = async (e) => {
         const uploadedFile = e.target.files[0]
@@ -201,7 +200,7 @@ export default function CreatePurchaseOrder() {
             // For simplicity, we skip re-uploading on edit unless user selects new file.
             // If file is null, keep existing URL if editing.
 
-            let pdfUrl = null
+            // let pdfUrl = null
             // ... (Skipping upload logic as per previous implementation plan for now, reusing existing or null)
             // If editing, we should probably fetch existing URL?
             // Ideally we'd keep it. Since we don't have it in state here easily for re-save without fetching again

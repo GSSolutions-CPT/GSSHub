@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from 'react'
+import { useState, useEffect, Suspense, lazy, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Banknote, TrendingUp, Users, AlertCircle, Activity } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -17,13 +17,8 @@ export default function Dashboard() {
   const [monthlyData, setMonthlyData] = useState([])
   const [expenseBreakdown, setExpenseBreakdown] = useState([])
   const [activities, setActivities] = useState([])
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [])
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       const now = new Date()
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
@@ -75,13 +70,14 @@ export default function Dashboard() {
 
       // Prepare Chart Data (reuse logic)
       prepareChartData(invoices || [], expenses || [])
-
-      setLoading(false)
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
-      setLoading(false)
     }
-  }
+  }, []) // No dependencies needed as supabase is imported
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
 
   const prepareChartData = (invoices, expenses) => {
     const data = {}

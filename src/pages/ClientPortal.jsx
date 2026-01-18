@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { FileText, Receipt, Briefcase, Download, CheckCircle, XCircle, Upload, PenTool } from 'lucide-react'
+import { Download, CheckCircle, Upload, PenTool } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSearchParams } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
@@ -23,7 +23,7 @@ export default function ClientPortal() {
   const [client, setClient] = useState(null)
   const [quotations, setQuotations] = useState([])
   const [invoices, setInvoices] = useState([])
-  const [jobs, setJobs] = useState([])
+
   const [loading, setLoading] = useState(true)
 
   // Acceptance Workflow State
@@ -31,13 +31,7 @@ export default function ClientPortal() {
   const [step, setStep] = useState(0) // 0: Closed, 1: Sign, 2: Payment Info
   const [signature, setSignature] = useState(null)
 
-  useEffect(() => {
-    if (clientId && accessToken) {
-      fetchClientData()
-    }
-  }, [clientId, accessToken])
-
-  const fetchClientData = async () => {
+  const fetchClientData = useCallback(async () => {
     try {
       // Fetch client info
       const { data: clientData, error: clientError } = await supabase
@@ -78,22 +72,25 @@ export default function ClientPortal() {
       if (invoicesError) throw invoicesError
       setInvoices(processedInvoices)
 
-      // Fetch jobs
-      const { data: jobsData, error: jobsError } = await supabase
+      await supabase
         .from('jobs')
         .select('*')
         .eq('client_id', clientId)
         .order('created_at', { ascending: false })
 
-      if (jobsError) throw jobsError
-      setJobs(jobsData || [])
 
       setLoading(false)
     } catch (error) {
       console.error('Error fetching client data:', error)
       setLoading(false)
     }
-  }
+  }, [clientId])
+
+  useEffect(() => {
+    if (clientId && accessToken) {
+      fetchClientData()
+    }
+  }, [clientId, accessToken, fetchClientData])
 
   const initiateAcceptance = (quote) => {
     setAcceptingQuote(quote)
@@ -180,32 +177,7 @@ export default function ClientPortal() {
     }
   }
 
-  const handlePaymentUpload = async (invoiceId, file) => {
-    try {
-      const { error } = await supabase
-        .from('invoices')
-        .update({
-          status: 'Paid',
-          metadata: { payment_proof_uploaded: true, upload_date: new Date().toISOString() }
-        })
-        .eq('id', invoiceId)
 
-      if (error) throw error
-
-      await supabase.from('activity_log').insert([{
-        type: 'Payment Proof Uploaded',
-        description: 'Client uploaded payment proof',
-        related_entity_id: invoiceId,
-        related_entity_type: 'invoice'
-      }])
-
-      fetchClientData()
-      alert('Payment proof uploaded successfully!')
-    } catch (error) {
-      console.error('Error uploading payment proof:', error)
-      alert('Error uploading payment proof. Please try again.')
-    }
-  }
 
   const handleDecline = async (quote) => {
     if (!confirm('Are you sure you want to decline this quotation?')) return
@@ -230,15 +202,9 @@ export default function ClientPortal() {
     }
   }
 
-  const getWorkflowStatus = () => {
-    const hasQuotation = quotations.some(q => q.status === 'Accepted' || q.status === 'Approved')
-    const hasJob = jobs.some(j => j.status === 'Completed')
-    const hasInvoice = invoices.some(i => i.status === 'Paid')
 
-    return { quotation: hasQuotation, job: hasJob, invoice: hasInvoice }
-  }
 
-  const workflowStatus = getWorkflowStatus()
+
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
   if (!client) return <div className="min-h-screen bg-background flex items-center justify-center">Invalid Link</div>

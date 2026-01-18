@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React from 'react';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils'; // Moved or import from relative if utils is in same dir
@@ -29,7 +30,7 @@ const buttonVariants = cva(
 );
 
 export const Button = React.forwardRef(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, ...props }, ref) => {
     return (
       <button
         className={cn(buttonVariants({ variant, size, className }))}

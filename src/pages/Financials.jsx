@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from 'react'
+import { useState, useEffect, Suspense, lazy, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Banknote, TrendingUp, TrendingDown, Receipt, Pencil, Trash2 } from 'lucide-react'
+
+import { Plus, Banknote, TrendingUp, TrendingDown, Receipt, Pencil, Trash2, Paperclip, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -23,8 +23,10 @@ export default function Financials() {
     job_id: '',
     amount: '',
     description: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
+    receipt_url: ''
   })
+  const [uploading, setUploading] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setMonth(new Date().getMonth() - 6)).toISOString().split('T')[0],
@@ -35,9 +37,9 @@ export default function Financials() {
     fetchExpenses()
     fetchJobs()
     fetchInvoices()
-  }, [])
+  }, [fetchExpenses, fetchJobs, fetchInvoices])
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('expenses')
@@ -49,9 +51,9 @@ export default function Financials() {
     } catch (error) {
       console.error('Error fetching expenses:', error)
     }
-  }
+  }, [])
 
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('jobs')
@@ -66,9 +68,9 @@ export default function Financials() {
     } catch (error) {
       console.error('Error fetching jobs:', error)
     }
-  }
+  }, [])
 
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('invoices')
@@ -83,6 +85,40 @@ export default function Financials() {
       setInvoices(data || [])
     } catch (error) {
       console.error('Error fetching invoices:', error)
+    }
+  }, [dateRange])
+
+  const handleFileChange = async (e) => {
+    try {
+      setUploading(true)
+      const file = e.target.files[0]
+      if (!file) return
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(filePath, file)
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      // MOCK OVERRIDE: Since the mock public URL won't display a local file,
+      // we use a blob URL for immediate preview/usage in this session.
+      const displayUrl = URL.createObjectURL(file)
+
+      setFormData(prev => ({ ...prev, receipt_url: displayUrl }))
+      toast.success('Receipt attached!')
+
+    } catch (error) {
+      console.error('Error uploading receipt:', error)
+      toast.error('Error uploading receipt')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -137,7 +173,8 @@ export default function Financials() {
         job_id: '',
         amount: '',
         description: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        receipt_url: ''
       })
       setEditingId(null)
       setIsDialogOpen(false)
@@ -148,13 +185,15 @@ export default function Financials() {
     }
   }
 
+
   const handleEdit = (expense) => {
     setFormData({
       type: expense.type,
       job_id: expense.job_id || '',
       amount: expense.amount,
       description: expense.description,
-      date: expense.date
+      date: expense.date,
+      receipt_url: expense.receipt_url || ''
     })
     setEditingId(expense.id)
     setIsDialogOpen(true)
@@ -408,11 +447,11 @@ export default function Financials() {
                 <Button onClick={() => {
                   setEditingId(null)
                   setFormData({
-                    type: 'general',
                     job_id: '',
                     amount: '',
                     description: '',
-                    date: new Date().toISOString().split('T')[0]
+                    date: new Date().toISOString().split('T')[0],
+                    receipt_url: ''
                   })
                 }}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -499,12 +538,32 @@ export default function Financials() {
                         required
                       />
                     </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="receipt">Receipt (Optional)</Label>
+                      <Input
+                        id="receipt"
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleFileChange}
+                        disabled={uploading}
+                      />
+                      {uploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
+                      {formData.receipt_url && !uploading && (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <Paperclip className="h-4 w-4" />
+                          Receipt attached
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit">{editingId ? 'Update Expense' : 'Add Expense'}</Button>
+                    <Button type="submit" disabled={uploading}>
+                      {editingId ? 'Update Expense' : 'Add Expense'}
+                    </Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -527,6 +586,13 @@ export default function Financials() {
                     -R{parseFloat(expense.amount).toFixed(2)}
                   </div>
                   <div className="flex gap-2">
+                    {expense.receipt_url && (
+                      <Button variant="ghost" size="icon" asChild>
+                        <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer">
+                          <FileText className="h-4 w-4 text-blue-500" />
+                        </a>
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(expense)}>
                       <Pencil className="h-4 w-4" />
                     </Button>

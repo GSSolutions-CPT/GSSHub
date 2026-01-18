@@ -69,9 +69,7 @@ export function Select({
       disabled,
       isOpen,
       setOpenState,
-      onOpenChange,
       onValueChange,
-      open,
       selectedLabel,
       value,
     ]

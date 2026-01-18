@@ -2,12 +2,9 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
-  Package,
-  FileText,
   Receipt,
   Briefcase,
   Banknote,
-  Calendar as CalendarIcon,
   FileSignature,
   Settings as SettingsIcon,
   Menu,

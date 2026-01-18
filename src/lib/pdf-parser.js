@@ -13,7 +13,7 @@ export const extractItemsFromPDF = async (file) => {
         const pdf = await pdfjsLib.getDocument(typedarray).promise;
         const numPages = pdf.numPages;
         let fullText = '';
-        const items = [];
+
 
         // Loop through all pages
         for (let i = 1; i <= numPages; i++) {
@@ -68,7 +68,7 @@ export const parseTextToItems = (text) => {
   if (matches.length > 0) {
     let lastIndex = 0;
 
-    matches.forEach((match, index) => {
+    matches.forEach((match) => {
       // Description is the text before this match, starting from end of previous match
       // If it's the first match, it might contain header info, but we take it anyway and let user edit.
       // To make it cleaner, we can try to find the start of the line or stripping common indices like "01", "02".

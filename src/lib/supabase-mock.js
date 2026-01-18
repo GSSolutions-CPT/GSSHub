@@ -221,7 +221,6 @@ class DeleteQuery {
 
   async exec() {
     const collection = getCollection(this.table);
-    const originalLength = collection.length;
 
     // Find indices to remove
     const indicesToRemove = [];
@@ -258,6 +257,31 @@ export const supabase = {
     },
     signOut: () => Promise.resolve({ error: null }),
     getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+  },
+  storage: {
+    from: (bucket) => ({
+      upload: (path) => {
+        // Simulate upload delay
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            // In a real app this would upload to minimal storage
+            // For mock, we'll return a fake path or use a blob URL if we could, 
+            // but here we just return success. The UI will likely use a local preview.
+            resolve({ data: { path }, error: null })
+          }, 500)
+        })
+      },
+      getPublicUrl: (path) => {
+        // In a real app this returns the public URL
+        // For mock, we can try to return a data URI if we had the file content,
+        // but since we only have the path here, we'll return a placeholder or 
+        // the client has to handle the preview separately.
+        // However, to make the preview persistent in the session (if using URL.createObjectURL in UI),
+        // we might not need this to return a real valid URL for the mock unless we store the blob.
+        // Let's simluate a success struct.
+        return { data: { publicUrl: `https://mock-storage.com/${bucket}/${path}` } }
+      }
+    })
   }
 };
 
@@ -270,7 +294,6 @@ function getCollection(table) {
 }
 
 function createInitialData() {
-  const now = new Date('2025-10-15T12:00:00.000Z');
   const iso = (date) => new Date(date).toISOString();
 
   return {

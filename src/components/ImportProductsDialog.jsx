@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Upload, FileSpreadsheet, Clipboard, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { Upload, FileSpreadsheet, Clipboard, Loader2 } from 'lucide-react'
 import Papa from 'papaparse'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -198,7 +198,7 @@ export function ImportProductsDialog({ onImportSuccess }) {
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Map "Name" Column *</Label>
+                                <Label>Map &quot;Name&quot; Column *</Label>
                                 <Select value={mapping.name} onValueChange={(v) => setMapping({ ...mapping, name: v })}>
                                     <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
                                     <SelectContent>
@@ -207,7 +207,7 @@ export function ImportProductsDialog({ onImportSuccess }) {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Map "Retail Price" Column *</Label>
+                                <Label>Map &quot;Retail Price&quot; Column *</Label>
                                 <Select value={mapping.retail_price} onValueChange={(v) => setMapping({ ...mapping, retail_price: v })}>
                                     <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
                                     <SelectContent>
@@ -216,7 +216,7 @@ export function ImportProductsDialog({ onImportSuccess }) {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Map "Cost Price" Column (Optional)</Label>
+                                <Label>Map &quot;Cost Price&quot; Column (Optional)</Label>
                                 <Select value={mapping.cost_price} onValueChange={(v) => setMapping({ ...mapping, cost_price: v })}>
                                     <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
                                     <SelectContent>
@@ -225,7 +225,7 @@ export function ImportProductsDialog({ onImportSuccess }) {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Map "Code/SKU" Column (Optional)</Label>
+                                <Label>Map &quot;Code/SKU&quot; Column (Optional)</Label>
                                 <Select value={mapping.code} onValueChange={(v) => setMapping({ ...mapping, code: v })}>
                                     <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
                                     <SelectContent>
