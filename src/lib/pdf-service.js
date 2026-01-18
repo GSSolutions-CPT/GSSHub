@@ -27,8 +27,7 @@ const generatePDF = async (docType, data, settings = {}) => {
             const logoUrl = window.location.origin + '/logo.png'
             const img = await fetchImage(logoUrl)
             // Fix: Constrain logo width/height to avoid overlap.
-            // Width 40, Height Auto. Assuming square-ish logo.
-            doc.addImage(img, 'PNG', 14, 10, 40, 0)
+            doc.addImage(img, 'PNG', 14, 12, 35, 0)
         } catch (e) {
             console.warn('Logo load failed', e)
             doc.setFontSize(22)
@@ -36,10 +35,10 @@ const generatePDF = async (docType, data, settings = {}) => {
             doc.text('GSS', 14, 25)
         }
 
-        // Tagline - Moved down to Y=55 to clear the logo
+        // Tagline - Moved up slightly
         doc.setFontSize(8)
         doc.setTextColor(...COLORS.GRAY_LABEL)
-        doc.text('INSTALLATIONS • MAINTENANCE • AUTOMATION', 14, 55)
+        doc.text('INSTALLATIONS • MAINTENANCE • AUTOMATION', 14, 45)
 
         // Fix: Determine Title Logic based on requirements
         let titleText = docType.toUpperCase()
@@ -55,29 +54,24 @@ const generatePDF = async (docType, data, settings = {}) => {
         }
 
         // Document Title (Right aligned)
-        doc.setFontSize(26)
+        doc.setFontSize(24)
         doc.setTextColor(200, 200, 200)
-        doc.text(titleText, 196, 30, { align: 'right' })
+        doc.text(titleText, 196, 25, { align: 'right' })
 
         // Document Details (Right aligned below Title)
         doc.setTextColor(...COLORS.GRAY_TEXT)
         doc.setFontSize(10)
-        doc.text(`#${data.id.substring(0, 8)}`, 196, 40, { align: 'right' })
+        doc.text(`#${data.id.substring(0, 8)}`, 196, 32, { align: 'right' })
 
         let dateLabel = 'Date:'
         let dateValue = new Date(data.date_created).toLocaleDateString()
 
-        if (docType === 'Purchase Order' && data.expected_date) {
-            // For PO, maybe show Expected Date too?
-            // checking space...
-        }
-
-        doc.text(`${dateLabel} ${dateValue}`, 196, 45, { align: 'right' })
+        doc.text(`${dateLabel} ${dateValue}`, 196, 37, { align: 'right' })
 
         // Address Blocks
         const leftColX = 14
-        const rightColX = 120 // Moved slightly right for better separation
-        const blockY = 70 // Moved down to clear header space
+        const rightColX = 115
+        const blockY = 60
 
         if (docType === 'Purchase Order') {
             // PO Layout: 
@@ -91,11 +85,11 @@ const generatePDF = async (docType, data, settings = {}) => {
 
             doc.setFontSize(11)
             doc.setTextColor(0, 0, 0)
-            doc.text(data.suppliers?.name || 'Unknown Supplier', leftColX, blockY + 6)
+            doc.text(data.suppliers?.name || 'Unknown Supplier', leftColX, blockY + 8)
 
             doc.setFontSize(10)
             doc.setTextColor(...COLORS.GRAY_TEXT)
-            let addrY = blockY + 11
+            let addrY = blockY + 14
 
             // Use supplier details if available
             if (data.suppliers?.contact_person) {
@@ -123,15 +117,15 @@ const generatePDF = async (docType, data, settings = {}) => {
 
             doc.setFontSize(11)
             doc.setTextColor(0, 0, 0)
-            doc.text('Global Security Solutions', rightColX, blockY + 6)
+            doc.text('Global Security Solutions', rightColX, blockY + 8)
 
             const companyPhone = settings.companyPhone || localStorage.getItem('companyPhone') || '062 955 8559'
             const companyAddress = settings.companyAddress || localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
 
             doc.setFontSize(10)
             doc.setTextColor(...COLORS.GRAY_TEXT)
-            doc.text(companyPhone, rightColX, blockY + 11)
-            doc.text(companyAddress, rightColX, blockY + 16)
+            doc.text(companyPhone, rightColX, blockY + 14)
+            doc.text(companyAddress, rightColX, blockY + 19)
 
         } else {
             // Standard Invoice/Quote Layout
@@ -145,11 +139,11 @@ const generatePDF = async (docType, data, settings = {}) => {
 
             doc.setFontSize(11)
             doc.setTextColor(0, 0, 0)
-            doc.text(data.clients?.name || 'Unknown Client', leftColX, blockY + 6)
+            doc.text(data.clients?.name || 'Unknown Client', leftColX, blockY + 8)
 
             doc.setFontSize(10)
             doc.setTextColor(...COLORS.GRAY_TEXT)
-            let addrY = blockY + 11
+            let addrY = blockY + 14
             if (data.clients?.company) {
                 doc.text(data.clients.company, leftColX, addrY)
                 addrY += 5
@@ -163,33 +157,35 @@ const generatePDF = async (docType, data, settings = {}) => {
 
             doc.setFontSize(11)
             doc.setTextColor(0, 0, 0)
-            doc.text('Global Security Solutions', rightColX, blockY + 6)
+            doc.text('Global Security Solutions', rightColX, blockY + 8)
 
             const companyPhone = settings.companyPhone || localStorage.getItem('companyPhone') || '062 955 8559'
             const companyAddress = settings.companyAddress || localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
             const companyEmail = settings.companyEmail || localStorage.getItem('companyEmail') || 'Kyle@GSSolutions.co.za'
             const companyVat = settings.companyVat || localStorage.getItem('companyVat') || ''
 
-            doc.text(companyPhone, rightColX, blockY + 11)
-            doc.text(companyAddress, rightColX, blockY + 16)
-            doc.text(companyEmail, rightColX, blockY + 21)
+            doc.setFontSize(10)
+            doc.setTextColor(...COLORS.GRAY_TEXT)
+            doc.text(companyPhone, rightColX, blockY + 14)
+            doc.text(companyAddress, rightColX, blockY + 19)
+            doc.text(companyEmail, rightColX, blockY + 24)
             // Add VAT Number for Tax Invoices
             if (titleText === 'TAX INVOICE' && companyVat) {
-                doc.text(`VAT Reg: ${companyVat}`, rightColX, blockY + 26)
+                doc.text(`VAT Reg: ${companyVat}`, rightColX, blockY + 29)
             }
         }
 
         // Details Strip
-        const stripY = blockY + 35
+        const stripY = blockY + 45
         doc.setFontSize(9)
         doc.setTextColor(...COLORS.GRAY_LABEL)
         doc.text('DATE', 14, stripY)
-        doc.text('REFERENCE', 70, stripY) // Adjusted spacing
-        doc.text('DOC NR', 140, stripY)   // Adjusted spacing
+        doc.text('REFERENCE', 80, stripY)
+        doc.text('DOC NR', 150, stripY)
 
         doc.setFontSize(10)
         doc.setTextColor(0, 0, 0)
-        doc.text(new Date().toLocaleDateString(), 14, stripY + 5)
+        doc.text(new Date().toLocaleDateString(), 14, stripY + 6)
 
         // Custom Reference Logic
         let referenceText = docType === 'Quotation' ? 'Security System' : 'Invoice Payment'
