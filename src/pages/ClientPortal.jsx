@@ -3,8 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Download, CheckCircle, Upload, PenTool } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Download, CheckCircle, Upload, PenTool, MessageCircle, Phone, Mail, HelpCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSearchParams } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
@@ -31,6 +31,7 @@ export default function ClientPortal() {
   const [acceptingQuote, setAcceptingQuote] = useState(null)
   const [step, setStep] = useState(0) // 0: Closed, 1: Sign, 2: Payment Info
   const [signature, setSignature] = useState(null)
+  const [contactOpen, setContactOpen] = useState(false)
 
   const fetchClientData = useCallback(async () => {
     try {
@@ -203,29 +204,77 @@ export default function ClientPortal() {
     }
   }
 
-
-
+  // Helpers for links
+  const companyPhone = settings.companyPhone || '0629558559'
+  const companyEmail = settings.companyEmail || 'Kyle@GSSolutions.co.za'
+  const whatsappUrl = `https://wa.me/${companyPhone.replace(/\s+/g, '')}`
 
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
   if (!client) return <div className="min-h-screen bg-background flex items-center justify-center">Invalid Link</div>
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card border-b border-border">
-        <div className="container mx-auto px-6 py-6 flex justify-between items-center">
+    <div className="min-h-screen bg-background relative">
+      <header className="bg-card border-b border-border sticky top-0 z-10 shadow-sm">
+        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Global Security Solutions</h1>
-            <p className="text-muted-foreground mt-1">Client Portal • {client.name}</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">GSSHub Portal</h1>
+            <p className="text-sm text-muted-foreground hidden md:block">Welcome, {client.name}</p>
           </div>
-          <div className="text-right">
-            {client.company && <p className="text-sm font-medium">{client.company}</p>}
-            <p className="text-sm text-muted-foreground">{client.email}</p>
+          <div className="flex gap-2">
+            <Dialog open={contactOpen} onOpenChange={setContactOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  Contact Support
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Contact Support</DialogTitle>
+                  <DialogDescription>
+                    Need help? Reach out to us directly.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <a href={`tel:${companyPhone}`} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted transition-colors">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <Phone className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Phone Support</p>
+                      <p className="text-sm text-muted-foreground">{companyPhone}</p>
+                    </div>
+                  </a>
+                  <a href={`mailto:${companyEmail}`} className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted transition-colors">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <Mail className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Email Support</p>
+                      <p className="text-sm text-muted-foreground">{companyEmail}</p>
+                    </div>
+                  </a>
+                  <a href={whatsappUrl} target="_blank" rel="noreferrer" className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted transition-colors border-green-200 bg-green-50">
+                    <div className="bg-green-100 p-2 rounded-full">
+                      <MessageCircle className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-green-900">WhatsApp Chat</p>
+                      <p className="text-sm text-green-700">Chat with us instantly</p>
+                    </div>
+                  </a>
+                </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setContactOpen(false)}>Close</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-6 py-8 pb-24">
         {/* Workflow Tracker (Same as before) */}
 
         <Tabs defaultValue="quotations" className="space-y-6">
@@ -371,6 +420,17 @@ export default function ClientPortal() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg transition-transform hover:scale-110 flex items-center justify-center animate-bounce-subtle"
+        title="Chat on WhatsApp"
+      >
+        <MessageCircle className="h-8 w-8" />
+      </a>
 
       {/* Acceptance Modal */}
       <Dialog open={step > 0} onOpenChange={(open) => !open && setStep(0)}>
