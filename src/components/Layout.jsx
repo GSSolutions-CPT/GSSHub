@@ -80,7 +80,7 @@ export default function Layout() {
               <span className="sr-only">Toggle Menu</span>
             </Button>
             <Link to="/dashboard" className="flex items-center gap-2">
-              <img src="/logo.png" alt="GSSHub" className="h-8 w-auto" />
+              <span className="hidden font-bold sm:inline-block text-primary">GSSHub</span>
             </Link>
             <div className="w-6" /> {/* Spacer for centering if needed, or put profile here */}
           </div>
