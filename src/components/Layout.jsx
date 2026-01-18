@@ -41,6 +41,7 @@ export default function Layout() {
           {/* Logo */}
           <div className="mr-4 hidden md:flex">
             <Link to="/dashboard" className="flex items-center gap-2 group">
+              <img src="/logo.png" alt="GSSHub" className="h-8 w-auto transition-transform group-hover:scale-110 duration-300" />
               <span className="hidden font-bold sm:inline-block text-primary tech-glow tracking-wide">GSSHub</span>
             </Link>
           </div>
