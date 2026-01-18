@@ -7,6 +7,18 @@ import { useCurrency } from '@/lib/use-currency.jsx'
 
 const FinancialCharts = lazy(() => import('./FinancialCharts.jsx'))
 
+const getActivityConfig = (type) => {
+  const t = (type || '').toLowerCase()
+  if (t.includes('quotation') || t.includes('quote')) return { icon: FileText, color: 'text-blue-500', path: '/sales' }
+  if (t.includes('invoice')) return { icon: Receipt, color: 'text-purple-500', path: '/sales' }
+  if (t.includes('payment')) return { icon: Banknote, color: 'text-green-500', path: '/sales' }
+  if (t.includes('job')) return { icon: Briefcase, color: 'text-orange-500', path: '/jobs' }
+  if (t.includes('client')) return { icon: Users, color: 'text-teal-500', path: '/clients' }
+  if (t.includes('purchase order') || t.includes('order')) return { icon: Package, color: 'text-indigo-500', path: '/sales' }
+  if (t.includes('contract')) return { icon: FileSignature, color: 'text-cyan-500', path: '/contracts' }
+  return { icon: Activity, color: 'text-muted-foreground', path: '/dashboard' }
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { formatCurrency } = useCurrency()
@@ -191,19 +203,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-4">
               {activities.map((activity, index) => {
-                const getActivityConfig = (type) => {
-                  const t = type.toLowerCase()
-                  if (t.includes('quotation') || t.includes('quote')) return { icon: FileText, color: 'text-blue-500', path: '/sales' }
-                  if (t.includes('invoice')) return { icon: Receipt, color: 'text-purple-500', path: '/sales' }
-                  if (t.includes('payment')) return { icon: Banknote, color: 'text-green-500', path: '/sales' }
-                  if (t.includes('job')) return { icon: Briefcase, color: 'text-orange-500', path: '/jobs' }
-                  if (t.includes('client')) return { icon: Users, color: 'text-teal-500', path: '/clients' }
-                  if (t.includes('purchase order') || t.includes('order')) return { icon: Package, color: 'text-indigo-500', path: '/sales' }
-                  if (t.includes('contract')) return { icon: FileSignature, color: 'text-cyan-500', path: '/contracts' }
-                  return { icon: Activity, color: 'text-muted-foreground', path: '/dashboard' }
-                }
-
-                const config = getActivityConfig(activity.type || '')
+                const config = getActivityConfig(activity.type)
                 const Icon = config.icon
 
                 return (
