@@ -66,7 +66,7 @@ export function processData() {
     }
 
     const header = "name,code,category,retail_price,cost_price,description";
-    const csvContent = header + "\\n" + rows.join("\\n");
+    const csvContent = header + "\n" + rows.join("\n");
     fs.writeFileSync('products_import.csv', csvContent);
     console.log(`Generated products_import.csv with ${rows.length} rows.`);
 }
