@@ -24,7 +24,8 @@ export default function CreateSale() {
     client_id: '',
     valid_until: '',
     due_date: '',
-    vat_applicable: false
+    vat_applicable: false,
+    deposit_amount: 0 // Track deposit
   })
   const [lineItems, setLineItems] = useState([
     { product_id: '', quantity: 1, unit_price: 0, cost_price: 0 }
@@ -168,7 +169,8 @@ export default function CreateSale() {
         client_id: sale.client_id,
         valid_until: sale.valid_until ? sale.valid_until.split('T')[0] : '', // Format for date input
         due_date: sale.due_date ? sale.due_date.split('T')[0] : '',
-        vat_applicable: sale.vat_applicable
+        vat_applicable: sale.vat_applicable,
+        deposit_amount: sale.deposit_amount || 0 // Populate deposit
       })
 
       // Populate IDs if products exist (or custom)
@@ -211,12 +213,12 @@ export default function CreateSale() {
       // Base payload
       const basePayload = {
         client_id: formData.client_id,
-        // Don't override status if editing, unless specific logic needed? 
+        // Don't override status if editing, unless specific logic needed?
         // For now, keep existing status or maybe 'Draft' if editing triggers re-approval?
-        // Let's assume editing keeps current status or sets to Draft? 
+        // Let's assume editing keeps current status or sets to Draft?
         // User didn't specify, so let's keep it simple: if editing, assume we might be fixing a draft or updating an un-sent one.
-        // SAFE BET: If it was Accepted, updating it might be risky without status change. 
-        // For simple edit, let's allow updating fields without forcing status reset, 
+        // SAFE BET: If it was Accepted, updating it might be risky without status change.
+        // For simple edit, let's allow updating fields without forcing status reset,
         // UNLESS it's important. Let's just update the fields.
         total_amount: totals.total,
         vat_applicable: formData.vat_applicable,
@@ -227,7 +229,7 @@ export default function CreateSale() {
       // Add specific fields based on mode
       const payload = mode === 'quotation'
         ? { ...basePayload, valid_until: formData.valid_until || null }
-        : { ...basePayload, due_date: formData.due_date || null }
+        : { ...basePayload, due_date: formData.due_date || null, deposit_amount: parseFloat(formData.deposit_amount) || 0 }
 
       let saleId = editId
 
@@ -384,6 +386,23 @@ export default function CreateSale() {
                     value={formData.due_date}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                   />
+                </div>
+              )}
+
+              {mode === 'invoice' && (
+                <div className="grid gap-2">
+                  <Label htmlFor="deposit_amount">Deposit / Amount Paid (R)</Label>
+                  <Input
+                    id="deposit_amount"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.deposit_amount}
+                    onChange={(e) => setFormData({ ...formData, deposit_amount: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter any amount already paid (e.g. 75% deposit). The invoice will show the balance due.
+                  </p>
                 </div>
               )}
 

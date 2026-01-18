@@ -439,16 +439,32 @@ export default function Sales() {
               </Button>
             )}
 
+            {/* Edit Button for Invoices - LOCKED if Paid */}
+            {type === 'invoice' && sale.status !== 'Paid' && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate(`/create-sale?edit=${sale.id}&type=invoice`)}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Edit Invoice
+              </Button>
+            )}
+
             {/* Delete Button - Available for most statuses if needed, or restricted. User requested "delete button" so enabling broadly for now but asking confirmation */}
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full text-destructive hover:bg-destructive/10"
-              onClick={() => handleDelete(sale.id, type)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete {type === 'quotation' ? 'Quote' : 'Invoice'}
-            </Button>
+            {/* LOCKED if Invoice is Paid */}
+            {!(type === 'invoice' && sale.status === 'Paid') && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full text-destructive hover:bg-destructive/10"
+                onClick={() => handleDelete(sale.id, type)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete {type === 'quotation' ? 'Quote' : 'Invoice'}
+              </Button>
+            )}
 
             <div className="flex gap-2">
               {type === 'quotation' && sale.status === 'Draft' && (
