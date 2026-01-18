@@ -134,49 +134,49 @@ export default function Dashboard() {
 
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="glass-effect tech-border bg-transparent">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
-            <Banknote className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Monthly Revenue</CardTitle>
+            <Banknote className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metrics.monthlyRevenue)}</div>
+            <div className="text-2xl font-bold text-primary tech-glow">{formatCurrency(metrics.monthlyRevenue)}</div>
             <p className="text-xs text-muted-foreground">
               +20.1% from last month
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-effect tech-border bg-transparent">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Est. Profit</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Est. Profit</CardTitle>
+            <TrendingUp className="h-4 w-4 text-emerald-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(metrics.monthlyProfit)}</div>
+            <div className="text-2xl font-bold text-emerald-400 tech-glow">{formatCurrency(metrics.monthlyProfit)}</div>
             <p className="text-xs text-muted-foreground">
               +15% from last month
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-effect tech-border bg-transparent">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Clients</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">New Clients</CardTitle>
+            <Users className="h-4 w-4 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{metrics.newClients}</div>
+            <div className="text-2xl font-bold text-blue-400 tech-glow">+{metrics.newClients}</div>
             <p className="text-xs text-muted-foreground">
               This month
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="glass-effect tech-border bg-transparent">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Overdue Invoices</CardTitle>
             <AlertCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{metrics.overdueInvoices}</div>
+            <div className="text-2xl font-bold text-red-500 tech-glow">{metrics.overdueInvoices}</div>
             <p className="text-xs text-muted-foreground">
               Action required
             </p>
@@ -193,10 +193,10 @@ export default function Dashboard() {
         </div>
 
         {/* Activity Feed */}
-        <Card className="col-span-3">
+        <Card className="col-span-3 glass-effect tech-border bg-transparent">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
+            <CardDescription className="text-muted-foreground/80">
               Latest actions across the system
             </CardDescription>
           </CardHeader>
@@ -209,18 +209,18 @@ export default function Dashboard() {
                 return (
                   <div
                     key={activity.id || index}
-                    className="flex items-center p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    className="flex items-center p-3 rounded-lg hover:bg-primary/5 border border-transparent hover:border-primary/20 cursor-pointer transition-all duration-200"
                     onClick={() => navigate(config.path)}
                   >
                     <Icon className={`mr-4 h-4 w-4 ${config.color}`} />
                     <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
+                      <p className="text-sm font-medium leading-none text-foreground">
                         {activity.type}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {activity.description}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground/60">
                         {new Date(activity.timestamp).toLocaleDateString()} {new Date(activity.timestamp).toLocaleTimeString()}
                       </p>
                     </div>

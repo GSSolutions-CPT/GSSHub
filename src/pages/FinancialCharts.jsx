@@ -25,24 +25,26 @@ export default function FinancialCharts({ monthlyData, expenseBreakdown, colors 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card>
+      <Card className="glass-effect tech-border bg-transparent col-span-2 lg:col-span-2">
         <CardHeader>
           <CardTitle>Monthly Performance</CardTitle>
-          <CardDescription>Revenue, profit, and expenses over time</CardDescription>
+          <CardDescription className="text-muted-foreground/80">Revenue, profit, and expenses over time</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
             {hasMonthlyData ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted)/0.2)" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                  <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--state-popover))' }}
+                  />
                   <Legend />
-                  <Bar dataKey="revenue" fill="hsl(var(--chart-1))" name="Revenue" />
-                  <Bar dataKey="profit" fill="hsl(var(--chart-3))" name="Profit" />
-                  <Bar dataKey="expenses" fill="hsl(var(--chart-2))" name="Expenses" />
+                  <Bar dataKey="revenue" fill="hsl(var(--primary))" name="Revenue" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="profit" fill="#10b981" name="Profit" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expenses" fill="hsl(var(--destructive))" name="Expenses" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -54,10 +56,10 @@ export default function FinancialCharts({ monthlyData, expenseBreakdown, colors 
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="glass-effect tech-border bg-transparent col-span-2 lg:col-span-2">
         <CardHeader>
           <CardTitle>Expense Breakdown</CardTitle>
-          <CardDescription>Job vs general expenses</CardDescription>
+          <CardDescription className="text-muted-foreground/80">Job vs general expenses</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px]">
@@ -67,9 +69,10 @@ export default function FinancialCharts({ monthlyData, expenseBreakdown, colors 
                   <Pie
                     data={expenseBreakdown}
                     cx="50%"
+                    cy="50%"
                     labelLine={false}
                     label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
-                    outerRadius={80}
+                    outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -77,6 +80,7 @@ export default function FinancialCharts({ monthlyData, expenseBreakdown, colors 
                       <Cell
                         key={`cell-${entry?.name ?? index}`}
                         fill={resolvedColors[index % resolvedColors.length]}
+                        stroke="rgba(0,0,0,0)"
                       />
                     ))}
                   </Pie>
