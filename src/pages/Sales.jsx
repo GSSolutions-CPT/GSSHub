@@ -284,163 +284,236 @@ export default function Sales() {
     }
   }
 
+  const renderSaleCard = (sale, type) => {
+    const isPaid = sale.status === 'Paid'
+    const isLocked = isPaid && type === 'invoice'
 
-  !isLocked && (
-    <>
-      <Button size="sm" variant="ghost" onClick={() => navigate(`/create-sale?edit=${sale.id}&type=${type}`)}>Edit</Button>
-      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(sale.id, type)}>Delete</Button>
-    </>
-  )
-}
-          </div >
-        </CardContent >
-      </Card >
+    return (
+      <Card key={sale.id} className="hover:shadow-md transition-shadow">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                {type === 'quotation' ? <FileText className="h-4 w-4" /> : <Receipt className="h-4 w-4" />}
+                {sale.clients?.company || sale.clients?.name}
+              </CardTitle>
+              <CardDescription>#{sale.id.substring(0, 6)} • {new Date(sale.date_created).toLocaleDateString()}</CardDescription>
+            </div>
+            <Badge className={getStatusColor(sale.status)}>{sale.status}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-2xl font-bold">{formatCurrency(sale.total_amount)}</span>
+            {sale.status === 'Accepted' && (
+              <Badge variant="outline" className="text-green-600 border-green-600">
+                <CheckCircle className="h-3 w-3 mr-1" /> Accepted
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => type === 'quotation' ? generateQuotePDF(sale, settings) : generateInvoicePDF(sale, settings)}
+            >
+              <Download className="mr-2 h-4 w-4" /> PDF
+            </Button>
+
+            {/* Convert Button - for Accepted OR Approved */}
+            {type === 'quotation' && (sale.status === 'Approved' || sale.status === 'Accepted') && (
+              <Button
+                size="sm"
+                onClick={() => convertToInvoice(sale)}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <ArrowRight className="mr-2 h-4 w-4" /> Convert
+              </Button>
+            )}
+
+            {/* Confirm Payment & Book Job - for Accepted or Pending Review */}
+            {type === 'quotation' && (sale.status === 'Accepted' || sale.status === 'Pending Review') && (
+              <Button size="sm" onClick={() => handleConfirmPayment(sale)} className="bg-blue-600 hover:bg-blue-700 col-span-2">
+                <FileSignature className="mr-2 h-4 w-4" /> Confirm & Book Job
+              </Button>
+            )}
+
+            {/* View Payment Proof */}
+            {type === 'quotation' && sale.status === 'Pending Review' && sale.payment_proof && (
+              <Button size="sm" variant="outline" onClick={() => downloadProof(sale.payment_proof, `Proof_${sale.id}`)} className="col-span-2 border-dashed">
+                <Download className="mr-2 h-4 w-4" /> View Payment Proof
+              </Button>
+            )}
+
+            {/* Invoice Status Actions */}
+            {type === 'invoice' && sale.status === 'Draft' && (
+              <Button size="sm" onClick={() => updateStatus('invoice', sale.id, 'Sent')} className="flex-1">
+                Send Invoice
+              </Button>
+            )}
+            {type === 'invoice' && (sale.status === 'Sent' || sale.status === 'Overdue' || sale.status === 'Partially Paid') && (
+              <Button size="sm" onClick={() => updateStatus('invoice', sale.id, 'Paid')} className="flex-1">
+                Mark Paid
+              </Button>
+            )}
+
+            {/* Edit / Delete (Protected) */}
+            {!isLocked && (
+              <>
+                <Button size="sm" variant="ghost" onClick={() => navigate(`/create-sale?edit=${sale.id}&type=${type}`)}>Edit</Button>
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(sale.id, type)}>Delete</Button>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     )
   }
 
-return (
-  <div className="p-6 space-y-8 animate-fade-in">
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Sales & Finance</h1>
-        <p className="text-muted-foreground mt-1">Manage quotes, invoices, and purchase orders.</p>
-      </div>
-      <div className="flex gap-2">
-        <Button onClick={() => navigate('/create-sale?type=quotation')}>New Quote</Button>
-        <Button variant="outline" onClick={() => navigate('/create-sale?type=invoice')}>New Invoice</Button>
-        <Button variant="secondary" onClick={() => navigate('/create-po')}>
-          <Package className="mr-2 h-4 w-4" /> New PO
-        </Button>
-      </div>
-    </div>
-
-    {/* Dashboard Metrics */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card className="bg-primary/5 border-primary/20">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          <Banknote className="h-4 w-4 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-primary">{formatCurrency(metrics.totalRevenue)}</div>
-          <p className="text-xs text-muted-foreground">From paid invoices (All Time)</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
-          <AlertCircle className="h-4 w-4 text-orange-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-orange-600">{formatCurrency(metrics.totalOutstanding)}</div>
-          <p className="text-xs text-muted-foreground">{filteredInvoices.filter(i => i.status === 'Sent' || i.status === 'Overdue').length} invoices pending payment</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
-          <TrendingUp className="h-4 w-4 text-blue-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-blue-600">{formatCurrency(metrics.pipelineValue)}</div>
-          <p className="text-xs text-muted-foreground">Active quotations awaiting response</p>
-        </CardContent>
-      </Card>
-    </div>
-
-    {/* Filters */}
-    <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg items-center">
-      <div className="relative flex-1 w-full">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search clients, invoice numbers..."
-          className="pl-8 bg-background"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-      <Select value={statusFilter} onValueChange={setStatusFilter}>
-        <SelectTrigger className="w-[180px] bg-background">
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="All">All Statuses</SelectItem>
-          <SelectItem value="Paid">Paid</SelectItem>
-          <SelectItem value="Sent">Sent / Unpaid</SelectItem>
-          <SelectItem value="Draft">Draft</SelectItem>
-          <SelectItem value="Overdue">Overdue</SelectItem>
-        </SelectContent>
-      </Select>
-      <Select value={dateFilter} onValueChange={setDateFilter}>
-        <SelectTrigger className="w-[180px] bg-background">
-          <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-          <SelectValue placeholder="Date Range" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="All Time">All Time</SelectItem>
-          <SelectItem value="This Month">This Month</SelectItem>
-          <SelectItem value="Last Month">Last Month</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-
-    <Tabs defaultValue="quotations" className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="quotations">Quotations ({filteredQuotations.length})</TabsTrigger>
-        <TabsTrigger value="invoices">Invoices ({filteredInvoices.length})</TabsTrigger>
-        <TabsTrigger value="purchase_orders">Purchase Orders ({filteredPOs.length})</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="quotations" className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredQuotations.map(quote => renderSaleCard(quote, 'quotation'))}
-          {filteredQuotations.length === 0 && <p className="text-muted-foreground col-span-full text-center py-10">No quotations found fitting criteria.</p>}
+  return (
+    <div className="p-6 space-y-8 animate-fade-in">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Sales & Finance</h1>
+          <p className="text-muted-foreground mt-1">Manage quotes, invoices, and purchase orders.</p>
         </div>
-      </TabsContent>
-
-      <TabsContent value="invoices" className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredInvoices.map(inv => renderSaleCard(inv, 'invoice'))}
-          {filteredInvoices.length === 0 && <p className="text-muted-foreground col-span-full text-center py-10">No invoices found fitting criteria.</p>}
+        <div className="flex gap-2">
+          <Button onClick={() => navigate('/create-sale?type=quotation')}>New Quote</Button>
+          <Button variant="outline" onClick={() => navigate('/create-sale?type=invoice')}>New Invoice</Button>
+          <Button variant="secondary" onClick={() => navigate('/create-po')}>
+            <Package className="mr-2 h-4 w-4" /> New PO
+          </Button>
         </div>
-      </TabsContent>
+      </div>
 
-      <TabsContent value="purchase_orders" className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPOs.map((po) => (
-            <Card key={po.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Package className="h-4 w-4" />
-                      {po.suppliers?.name || 'Unknown Supplier'}
-                    </CardTitle>
-                    <CardDescription>PO #{po.id.substring(0, 8)} • {new Date(po.date_created).toLocaleDateString()}</CardDescription>
+      {/* Dashboard Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <Banknote className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">{formatCurrency(metrics.totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">From paid invoices (All Time)</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
+            <AlertCircle className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{formatCurrency(metrics.totalOutstanding)}</div>
+            <p className="text-xs text-muted-foreground">{filteredInvoices.filter(i => i.status === 'Sent' || i.status === 'Overdue').length} invoices pending payment</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pipeline Value</CardTitle>
+            <TrendingUp className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{formatCurrency(metrics.pipelineValue)}</div>
+            <p className="text-xs text-muted-foreground">Active quotations awaiting response</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-4 bg-muted/30 p-4 rounded-lg items-center">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search clients, invoice numbers..."
+            className="pl-8 bg-background"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px] bg-background">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Statuses</SelectItem>
+            <SelectItem value="Paid">Paid</SelectItem>
+            <SelectItem value="Sent">Sent / Unpaid</SelectItem>
+            <SelectItem value="Draft">Draft</SelectItem>
+            <SelectItem value="Overdue">Overdue</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={dateFilter} onValueChange={setDateFilter}>
+          <SelectTrigger className="w-[180px] bg-background">
+            <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+            <SelectValue placeholder="Date Range" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All Time">All Time</SelectItem>
+            <SelectItem value="This Month">This Month</SelectItem>
+            <SelectItem value="Last Month">Last Month</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Tabs defaultValue="quotations" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="quotations">Quotations ({filteredQuotations.length})</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices ({filteredInvoices.length})</TabsTrigger>
+          <TabsTrigger value="purchase_orders">Purchase Orders ({filteredPOs.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="quotations" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredQuotations.map(quote => renderSaleCard(quote, 'quotation'))}
+            {filteredQuotations.length === 0 && <p className="text-muted-foreground col-span-full text-center py-10">No quotations found fitting criteria.</p>}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="invoices" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredInvoices.map(inv => renderSaleCard(inv, 'invoice'))}
+            {filteredInvoices.length === 0 && <p className="text-muted-foreground col-span-full text-center py-10">No invoices found fitting criteria.</p>}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="purchase_orders" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPOs.map((po) => (
+              <Card key={po.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        {po.suppliers?.name || 'Unknown Supplier'}
+                      </CardTitle>
+                      <CardDescription>PO #{po.id.substring(0, 8)} • {new Date(po.date_created).toLocaleDateString()}</CardDescription>
+                    </div>
+                    <Badge variant="outline">{po.status || 'Draft'}</Badge>
                   </div>
-                  <Badge variant="outline">{po.status || 'Draft'}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-xl font-bold">Total: {formatCurrency(po.total_amount || 0)}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleDownloadPO(po)} className="w-full">
-                    <Download className="mr-2 h-4 w-4" /> Download PDF
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-destructive w-full" onClick={() => handleDeletePO(po.id)}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete PO
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {filteredPOs.length === 0 && <p className="text-muted-foreground col-span-full text-center py-10">No purchase orders found.</p>}
-        </div>
-      </TabsContent>
-    </Tabs>
-  </div>
-)
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-xl font-bold">Total: {formatCurrency(po.total_amount || 0)}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleDownloadPO(po)} className="w-full">
+                      <Download className="mr-2 h-4 w-4" /> Download PDF
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-destructive w-full" onClick={() => handleDeletePO(po.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete PO
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {filteredPOs.length === 0 && <p className="text-muted-foreground col-span-full text-center py-10">No purchase orders found.</p>}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
 }
 
