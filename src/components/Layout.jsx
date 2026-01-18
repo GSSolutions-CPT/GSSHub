@@ -65,10 +65,6 @@ export default function Layout() {
           <div className="flex items-center justify-between gap-2 px-6 pb-5 pt-6 border-b border-sidebar-border/50">
             <div className="flex items-center gap-3">
               <img src="/logo.png" alt="Global Security Solutions" className="h-10 w-auto" />
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/50">System</p>
-                <h1 className="text-lg font-bold tracking-tight text-sidebar-foreground">Control Centre</h1>
-              </div>
             </div>
             <Button
               variant="ghost"
