@@ -44,18 +44,11 @@ export default function CreatePurchaseOrder() {
         { id: 1, description: '', quantity: 1, unit_price: 0, line_total: 0 }
     ])
 
-    useEffect(() => {
-        fetchSuppliers()
-        if (editId) {
-            loadPurchaseOrder(editId)
-        }
-    }, [editId, loadPurchaseOrder])
-
-    const fetchSuppliers = async () => {
+    const fetchSuppliers = useCallback(async () => {
         const { data, error } = await supabase.from('suppliers').select('*').order('name')
         if (error) console.error('Error fetching suppliers:', error)
         else setSuppliers(data || [])
-    }
+    }, [])
 
     const loadPurchaseOrder = useCallback(async (id) => {
         const toastId = toast.loading('Loading Purchase Order...')
@@ -99,6 +92,13 @@ export default function CreatePurchaseOrder() {
             navigate('/sales')
         }
     }, [navigate])
+
+    useEffect(() => {
+        fetchSuppliers()
+        if (editId) {
+            loadPurchaseOrder(editId)
+        }
+    }, [editId, loadPurchaseOrder, fetchSuppliers])
 
     const handleFileUpload = async (e) => {
         const uploadedFile = e.target.files[0]
