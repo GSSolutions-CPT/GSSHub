@@ -86,9 +86,7 @@ export default function Layout() {
 
           {/* User Profile / Search (Right Side) */}
           <div className="flex flex-1 items-center justify-end space-x-2 md:justify-end">
-            <div className="h-8 w-8 rounded-full bg-secondary text-xs flex items-center justify-center font-bold text-secondary-foreground border border-input">
-              JM
-            </div>
+
             <Button
               variant="ghost"
               size="icon"
