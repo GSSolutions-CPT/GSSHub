@@ -5,12 +5,12 @@ import {
   Receipt,
   Briefcase,
   Banknote,
-  FileSignature,
   Settings as SettingsIcon,
   Menu,
-  X
+  X,
+  ChevronLeft
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 
 const navItems = [
@@ -18,15 +18,37 @@ const navItems = [
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/sales', label: 'Sales', icon: Receipt },
   { path: '/jobs', label: 'Jobs', icon: Briefcase },
-  { path: '/contracts', label: 'Contracts', icon: FileSignature },
   { path: '/financials', label: 'Financials', icon: Banknote },
   { path: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
 export default function Layout() {
   const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
   const activeItem = navItems.find((item) => item.path === location.pathname)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024
+      setIsMobile(mobile)
+      if (mobile) {
+        setIsSidebarOpen(false)
+      } else {
+        setIsSidebarOpen(true)
+      }
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
+
+  const handleLinkClick = () => {
+    if (isMobile) setIsSidebarOpen(false)
+  }
 
   return (
     <div className="relative flex min-h-screen bg-background text-foreground">
@@ -34,8 +56,9 @@ export default function Layout() {
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border
         transform transition-transform duration-300 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:static lg:translate-x-0
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 lg:static lg:inset-auto lg:transform-none
+        ${!isSidebarOpen && !isMobile && 'lg:hidden'}
       `}>
         <div className="flex h-full flex-col">
           {/* Logo/Header */}
@@ -51,7 +74,7 @@ export default function Layout() {
               variant="ghost"
               size="icon"
               className="text-sidebar-foreground/70 hover:text-sidebar-foreground lg:hidden"
-              onClick={() => setSidebarOpen(false)}
+              onClick={() => setIsSidebarOpen(false)}
             >
               <X className="h-5 w-5" />
             </Button>
@@ -68,7 +91,7 @@ export default function Layout() {
                   <li key={item.path}>
                     <Link
                       to={item.path}
-                      onClick={() => setSidebarOpen(false)}
+                      onClick={handleLinkClick}
                       className={`
                         group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200
                         ${isActive
@@ -97,10 +120,10 @@ export default function Layout() {
       </aside>
 
       {/* Overlay for mobile */}
-      {sidebarOpen && (
+      {isSidebarOpen && isMobile && (
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
@@ -113,10 +136,14 @@ export default function Layout() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="lg:hidden"
-                onClick={() => setSidebarOpen(true)}
+                onClick={toggleSidebar}
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-5 w-5 lg:hidden" />
+                {isSidebarOpen ? (
+                  <ChevronLeft className="h-5 w-5 hidden lg:block" />
+                ) : (
+                  <Menu className="h-5 w-5 hidden lg:block" />
+                )}
               </Button>
               <h2 className="text-lg font-semibold text-foreground">
                 {activeItem?.label ?? 'Dashboard'}

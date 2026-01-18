@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Search, FileText, Receipt, Banknote, Calendar, ArrowRight, Download, Trash2, CheckCircle, Package } from 'lucide-react'
+import { Search, FileText, Receipt, Banknote, Calendar, ArrowRight, Download, Trash2, CheckCircle, Package, FileSignature } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF, generatePurchaseOrderPDF } from '@/lib/pdf-service'
@@ -518,6 +518,10 @@ export default function Sales() {
         </div>
 
         <div className="flex gap-2">
+          <Button onClick={() => navigate('/contracts')} variant="outline">
+            <FileSignature className="mr-2 h-4 w-4" />
+            Contracts
+          </Button>
           <Button onClick={() => navigate('/create-purchase-order')} variant="outline">
             <Package className="mr-2 h-4 w-4" />
             Create Purchase Order
