@@ -18,6 +18,7 @@ const Financials = lazy(() => import('./pages/Financials.jsx'))
 const ClientPortal = lazy(() => import('./pages/ClientPortal.jsx'))
 const Contracts = lazy(() => import('./pages/Contracts.jsx'))
 const Settings = lazy(() => import('./pages/Settings.jsx'))
+const InvoicePreview = lazy(() => import('./pages/InvoicePreview.jsx'))
 
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/portal" element={<ClientPortal />} />
+              <Route path="/invoice-preview/:id" element={<InvoicePreview />} />
 
               {/* Protected Admin Routes */}
               <Route path="/" element={

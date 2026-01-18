@@ -396,8 +396,8 @@ export default function ClientPortal() {
                       <span className="text-xl font-bold">{formatCurrency(invoice.total_amount)}</span>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Button variant="outline" className="w-full" onClick={() => generateInvoicePDF({ ...invoice, clients: client }, settings)}>
-                        <Download className="mr-2 h-4 w-4" /> Download Invoice
+                      <Button variant="outline" className="w-full" onClick={() => window.open(`/invoice-preview/${invoice.id}`, '_blank')}>
+                        <Download className="mr-2 h-4 w-4" /> Download / Print Invoice
                       </Button>
 
                       {invoice.payment_proof && (
