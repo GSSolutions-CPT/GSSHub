@@ -122,6 +122,76 @@ export default function CreateSale() {
     setLineItems([...newItems, ...mappedItems])
   }
 
+  const [editId, setEditId] = useState(null)
+
+  // ... (previous state declarations remain)
+
+  useEffect(() => {
+    // Check URL params
+    const params = new URLSearchParams(window.location.search)
+    const editParam = params.get('edit')
+    const typeParam = params.get('type')
+
+    if (editParam) {
+      setEditId(editParam)
+      if (typeParam) setMode(typeParam)
+      fetchEditData(editParam, typeParam || 'quotation')
+    }
+  }, [])
+
+  const fetchEditData = async (id, type) => {
+    try {
+      setIsLoading(true)
+      const table = type === 'quotation' ? 'quotations' : 'invoices'
+      const linesTable = type === 'quotation' ? 'quotation_lines' : 'invoice_lines'
+      const idColumn = type === 'quotation' ? 'quotation_id' : 'invoice_id'
+
+      // Fetch main record
+      const { data: sale, error: saleError } = await supabase
+        .from(table)
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (saleError) throw saleError
+
+      // Fetch lines
+      const { data: lines, error: linesError } = await supabase
+        .from(linesTable)
+        .select('*')
+        .eq(idColumn, id)
+
+      if (linesError) throw linesError
+
+      // Populate State
+      setFormData({
+        client_id: sale.client_id,
+        valid_until: sale.valid_until ? sale.valid_until.split('T')[0] : '', // Format for date input
+        due_date: sale.due_date ? sale.due_date.split('T')[0] : '',
+        vat_applicable: sale.vat_applicable
+      })
+
+      // Populate IDs if products exist (or custom)
+      if (lines && lines.length > 0) {
+        setLineItems(lines.map(line => ({
+          product_id: line.product_id || '', // or '' if null
+          quantity: line.quantity,
+          unit_price: line.unit_price,
+          cost_price: line.cost_price,
+          description: line.description || ''
+        })))
+      }
+
+    } catch (error) {
+      console.error('Error fetching edit data:', error)
+      toast.error('Failed to load data for editing')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // ... (add/remove/update line items functions remain)
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -141,8 +211,13 @@ export default function CreateSale() {
       // Base payload
       const basePayload = {
         client_id: formData.client_id,
-        status: 'Draft',
-        date_created: new Date().toISOString(),
+        // Don't override status if editing, unless specific logic needed? 
+        // For now, keep existing status or maybe 'Draft' if editing triggers re-approval?
+        // Let's assume editing keeps current status or sets to Draft? 
+        // User didn't specify, so let's keep it simple: if editing, assume we might be fixing a draft or updating an un-sent one.
+        // SAFE BET: If it was Accepted, updating it might be risky without status change. 
+        // For simple edit, let's allow updating fields without forcing status reset, 
+        // UNLESS it's important. Let's just update the fields.
         total_amount: totals.total,
         vat_applicable: formData.vat_applicable,
         trade_subtotal: totals.tradeSubtotal,
@@ -154,21 +229,39 @@ export default function CreateSale() {
         ? { ...basePayload, valid_until: formData.valid_until || null }
         : { ...basePayload, due_date: formData.due_date || null }
 
+      let saleId = editId
 
-      const { data: saleData, error: saleError } = await supabase
-        .from(table)
-        .insert([payload])
-        .select()
+      if (editId) {
+        // UPDATE Existing
+        const { error: updateError } = await supabase
+          .from(table)
+          .update(payload)
+          .eq('id', editId)
 
-      if (saleError) throw saleError
+        if (updateError) throw updateError
 
-      const saleId = saleData[0].id
+        // Delete existing lines (easiest way to handle updates/removals)
+        const linesTable = mode === 'quotation' ? 'quotation_lines' : 'invoice_lines'
+        const idColumn = mode === 'quotation' ? 'quotation_id' : 'invoice_id'
 
-      // Create line items
+        await supabase.from(linesTable).delete().eq(idColumn, editId)
+
+      } else {
+        // CREATE New
+        const { data: saleData, error: saleError } = await supabase
+          .from(table)
+          .insert([{ ...payload, status: 'Draft', date_created: new Date().toISOString() }]) // Force Draft/New Date for NEW
+          .select()
+
+        if (saleError) throw saleError
+        saleId = saleData[0].id
+      }
+
+      // Create line items (for both new and update)
       const lines = lineItems.map(item => ({
         [`${mode}_id`]: saleId,
-        product_id: item.product_id || null, // Allow null for custom items
-        description: item.description, // Ensure description is saved
+        product_id: item.product_id || null,
+        description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
         cost_price: item.cost_price,
@@ -183,17 +276,17 @@ export default function CreateSale() {
 
       // Log activity
       await supabase.from('activity_log').insert([{
-        type: mode === 'quotation' ? 'Quotation Created' : 'Invoice Created',
-        description: `New ${mode} created for client`,
+        type: editId ? `${mode === 'quotation' ? 'Quotation' : 'Invoice'} Updated` : `${mode === 'quotation' ? 'Quotation' : 'Invoice'} Created`,
+        description: `${editId ? 'Updated' : 'New'} ${mode} ${editId ? 'details' : 'created'} for client`,
         related_entity_id: saleId,
         related_entity_type: mode
       }])
 
-      toast.success(`${mode === 'quotation' ? 'Quotation' : 'Invoice'} created successfully!`)
+      toast.success(`${mode === 'quotation' ? 'Quotation' : 'Invoice'} ${editId ? 'updated' : 'created'} successfully!`)
       navigate('/sales')
     } catch (error) {
-      console.error('Error creating sale:', error)
-      toast.error(`Error creating sale: ${error.message}`)
+      console.error('Error saving sale:', error)
+      toast.error(`Error saving sale: ${error.message}`)
     } finally {
       setIsLoading(false)
     }

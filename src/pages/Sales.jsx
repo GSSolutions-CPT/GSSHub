@@ -426,17 +426,29 @@ export default function Sales() {
               </Button>
             )}
 
-            {(sale.status === 'Draft' || sale.status === 'Cancelled' || sale.status === 'Rejected') && (
+            {/* Edit Button - for drafts or accepted/approved quotes */}
+            {type === 'quotation' && (sale.status === 'Draft' || sale.status === 'Accepted' || sale.status === 'Approved') && (
               <Button
                 size="sm"
                 variant="outline"
-                className="w-full text-destructive hover:bg-destructive/10"
-                onClick={() => handleDelete(sale.id, type)}
+                className="w-full"
+                onClick={() => navigate(`/create-sale?edit=${sale.id}&type=quotation`)}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete {type === 'quotation' ? 'Quote' : 'Invoice'}
+                <FileText className="mr-2 h-4 w-4" />
+                Edit Quote
               </Button>
             )}
+
+            {/* Delete Button - Available for most statuses if needed, or restricted. User requested "delete button" so enabling broadly for now but asking confirmation */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-destructive hover:bg-destructive/10"
+              onClick={() => handleDelete(sale.id, type)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete {type === 'quotation' ? 'Quote' : 'Invoice'}
+            </Button>
 
             <div className="flex gap-2">
               {type === 'quotation' && sale.status === 'Draft' && (
@@ -468,7 +480,8 @@ export default function Sales() {
                   </Button>
                 </>
               )}
-              {type === 'quotation' && sale.status === 'Approved' && (
+              {/* Convert Button - for Accepted OR Approved */}
+              {type === 'quotation' && (sale.status === 'Approved' || sale.status === 'Accepted') && (
                 <Button
                   size="sm"
                   onClick={() => convertToInvoice(sale)}
