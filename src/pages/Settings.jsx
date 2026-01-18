@@ -12,6 +12,7 @@ import { useTheme } from '@/lib/use-theme.jsx'
 import { useCurrency } from '@/lib/use-currency.jsx'
 import { useSettings } from '@/lib/use-settings.jsx'
 import { Textarea } from '@/components/ui/textarea'
+import Papa from 'papaparse'
 
 export default function Settings() {
   const [importing, setImporting] = useState(false)
@@ -70,62 +71,86 @@ export default function Settings() {
     }
   }
 
-  const handleImportClients = async (file) => {
+  const handleImportClients = (file) => {
     setImporting(true)
-    try {
-      const text = await file.text()
-      const lines = text.split('\n')
-      const headers = lines[0].split(',').map(h => h.trim())
-      const clients = []
-      for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim()) {
-          const values = lines[i].split(',').map(v => v.trim())
-          const client = {}
-          headers.forEach((header, index) => { client[header] = values[index] || '' })
-          clients.push(client)
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const { data } = results
+          if (!data || data.length === 0) throw new Error('No data found in file')
+
+          // Clean keys and values
+          const clients = data.map(row => {
+            const cleanRow = {}
+            Object.keys(row).forEach(key => {
+              if (key.trim()) {
+                cleanRow[key.trim()] = row[key]?.trim() || ''
+              }
+            })
+            return cleanRow
+          })
+
+          const { error } = await supabase.from('clients').insert(clients)
+          if (error) throw error
+          alert(`Successfully imported ${clients.length} clients!`)
+        } catch (error) {
+          console.error('Error importing clients:', error)
+          alert('Error importing clients: ' + error.message)
+        } finally {
+          setImporting(false)
         }
+      },
+      error: (error) => {
+        console.error('CSV Parse Error:', error)
+        alert('Failed to parse CSV file')
+        setImporting(false)
       }
-      const { error } = await supabase.from('clients').insert(clients)
-      if (error) throw error
-      alert(`Successfully imported ${clients.length} clients!`)
-    } catch (error) {
-      console.error('Error importing clients:', error)
-      alert('Error importing clients. Check file format.')
-    } finally {
-      setImporting(false)
-    }
+    })
   }
 
-  const handleImportProducts = async (file) => {
+  const handleImportProducts = (file) => {
     setImporting(true)
-    try {
-      const text = await file.text()
-      const lines = text.split('\n')
-      const headers = lines[0].split(',').map(h => h.trim())
-      const products = []
-      for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim()) {
-          const values = lines[i].split(',').map(v => v.trim())
-          const product = {}
-          headers.forEach((header, index) => {
-            if (header === 'retail_price' || header === 'cost_price') {
-              product[header] = parseFloat(values[index]) || 0
-            } else {
-              product[header] = values[index] || ''
-            }
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const { data } = results
+          if (!data || data.length === 0) throw new Error('No data found in file')
+
+          const products = data.map(row => {
+            const product = {}
+            Object.keys(row).forEach(key => {
+              const cleanKey = key.trim()
+              const value = row[key] ? row[key].trim() : ''
+
+              if (cleanKey === 'retail_price' || cleanKey === 'cost_price') {
+                product[cleanKey] = parseFloat(value) || 0
+              } else if (cleanKey) {
+                product[cleanKey] = value
+              }
+            })
+            return product
           })
-          products.push(product)
+
+          const { error } = await supabase.from('products').insert(products)
+          if (error) throw error
+          alert(`Successfully imported ${products.length} products!`)
+        } catch (error) {
+          console.error('Error importing products:', error)
+          alert('Error importing products: ' + error.message)
+        } finally {
+          setImporting(false)
         }
+      },
+      error: (error) => {
+        console.error('CSV Parse Error:', error)
+        alert('Failed to parse CSV file')
+        setImporting(false)
       }
-      const { error } = await supabase.from('products').insert(products)
-      if (error) throw error
-      alert(`Successfully imported ${products.length} products!`)
-    } catch (error) {
-      console.error('Error importing products:', error)
-      alert('Error importing products. Check file format.')
-    } finally {
-      setImporting(false)
-    }
+    })
   }
 
   const exportData = async (table, filename, format = 'csv') => {
