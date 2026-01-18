@@ -1,3 +1,4 @@
+
 import fs from 'fs';
 
 let rawData = "";
@@ -11,7 +12,7 @@ export function processData() {
     let cleanData = rawData.replace(headerPattern, " ");
     cleanData = cleanData.replace(/\s+/g, ' ').trim();
 
-    const anchorRegex = /,([A-Z0-9-\/]+),([A-Za-z0-9 &-]+),(\d+\.\d{2}),(\d+\.\d{2}),/g;
+    const anchorRegex = /,([A-Z0-9-/]+),([A-Za-z0-9 &-]+),(\d+\.\d{2}),(\d+\.\d{2}),/g;
 
     let matches = [];
     let match;
@@ -61,7 +62,7 @@ export function processData() {
         // CSV Escape
         const safeName = prevName.replace(/"/g, '""');
         const safeDesc = desc.replace(/"/g, '""');
-        rows.push(`"${safeName}","${currentMatch.code}","${currentMatch.category}",${currentMatch.retail},${currentMatch.cost},"${safeDesc}"`);
+        rows.push('"' + safeName + '","' + currentMatch.code + '","' + currentMatch.category + '",' + currentMatch.retail + ',' + currentMatch.cost + ',"' + safeDesc + '"');
         prevName = nextName;
     }
 
