@@ -123,66 +123,58 @@ export default function Jobs() {
     setIsLoading(true)
 
     try {
-      const technicians = formData.assigned_technicians
-        ? formData.assigned_technicians.split(',').map(t => t.trim()).filter(t => t)
-        : []
+      const technicians = formData.assigned_technicians.split(',').map(t => t.trim())
 
-      // Sanitize payload (convert empty strings to null for timestamps/FKs)
-      const payload = {
+      const jobPayload = {
         client_id: formData.client_id,
         quotation_id: formData.quotation_id || null,
         assigned_technicians: technicians,
         scheduled_datetime: formData.scheduled_datetime || null,
-        scheduled_end_datetime: formData.scheduled_end_datetime || null,
-        notes: formData.notes || null,
+        notes: formData.notes,
         status: formData.status
       }
-
-      let jobId = editingJob?.id
 
       if (editingJob) {
         // Update existing job
         const { error } = await supabase
           .from('jobs')
-          .update(payload)
-          .eq('id', jobId)
+          .update(jobPayload)
+          .eq('id', editingJob.id)
 
         if (error) throw error
 
         await supabase.from('activity_log').insert([{
           type: 'Job Updated',
           description: `Job updated for client`,
-          related_entity_id: jobId,
+          related_entity_id: editingJob.id,
           related_entity_type: 'job'
         }])
         toast.success('Job updated successfully')
       } else {
         // Create new job
-        const { data, error } = await supabase
+        const { data: newJob, error } = await supabase
           .from('jobs')
-          .insert([payload])
+          .insert([jobPayload])
           .select()
           .single()
 
         if (error) throw error
-        jobId = data.id
 
-        // Log activity with linked ID
+        // Log activity
         await supabase.from('activity_log').insert([{
           type: 'Job Created',
           description: `New job created for client`,
-          related_entity_id: jobId,
+          related_entity_id: newJob?.id,
           related_entity_type: 'job'
         }])
 
-        // Create calendar event if scheduled
-        if (payload.scheduled_datetime) {
+        // Create calendar event
+        if (formData.scheduled_datetime) {
           await supabase.from('calendar_events').insert([{
             event_type: 'Job',
-            title: `Job: ${clients.find(c => c.id === payload.client_id)?.name || 'Scheduled'}`,
-            datetime: payload.scheduled_datetime,
-            end_datetime: payload.scheduled_end_datetime,
-            related_entity_id: jobId,
+            title: `Job scheduled`,
+            datetime: formData.scheduled_datetime,
+            end_datetime: formData.scheduled_end_datetime,
             related_entity_type: 'job'
           }])
         }
@@ -191,20 +183,18 @@ export default function Jobs() {
 
       setIsDialogOpen(false)
       setEditingJob(null)
-      // Reset form
       setFormData({
         client_id: '',
         quotation_id: '',
         assigned_technicians: '',
         scheduled_datetime: '',
-        scheduled_end_datetime: '',
         notes: '',
         status: 'Pending'
       })
       fetchJobs()
     } catch (error) {
       console.error('Error saving job:', error)
-      toast.error(`Failed to save job: ${error.message || 'Unknown error'}`)
+      toast.error('Failed to save job')
     } finally {
       setIsLoading(false)
     }
