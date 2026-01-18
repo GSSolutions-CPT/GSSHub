@@ -450,6 +450,7 @@ function createInitialData() {
         date_created: iso('2025-09-05T11:00:00Z'),
         due_date: '2025-09-20',
         total_amount: 5400,
+        deposit_amount: 0,
         vat_applicable: true,
         trade_subtotal: 3600,
         profit_estimate: 1800,

@@ -252,11 +252,6 @@ const generatePDF = async (docType, data, settings = {}) => {
 
         // Banking Left
         // Banking Left
-        const bankName = settings.bankName || localStorage.getItem('bankName') || 'FNB/RMB'
-        const accHolder = settings.bankAccountHolder || localStorage.getItem('bankAccountHolder') || 'Global Security Solutions'
-        const accNum = settings.bankAccountNumber || localStorage.getItem('bankAccountNumber') || '63182000223'
-        const accType = settings.bankAccountType || localStorage.getItem('bankAccountType') || 'Cheque Account'
-        const branchCode = settings.bankBranchCode || localStorage.getItem('bankBranchCode') || '250655'
 
         if (docType !== 'Purchase Order') {
             doc.setFontSize(9)
@@ -280,268 +275,285 @@ const generatePDF = async (docType, data, settings = {}) => {
             doc.text(`Account Number: ${accNum}`, 14, finalY + 15)
             doc.text(`Branch Code: ${branchCode}`, 14, finalY + 20)
             doc.text(`Ref: #${data.id.substring(0, 8)}`, 14, finalY + 25)
+        }
 
-            // Totals (Right)
-            const totalsX = 140
-            const subtotalVal = parseFloat(data.total_amount) / (data.vat_applicable ? 1.15 : 1)
-            const vatVal = data.vat_applicable ? (parseFloat(data.total_amount) - subtotalVal) : 0
-            const totalVal = parseFloat(data.total_amount)
+        // Totals (Right)
+        const totalsX = 140
+        const subtotalVal = parseFloat(data.total_amount) / (data.vat_applicable ? 1.15 : 1)
+        const vatVal = data.vat_applicable ? (parseFloat(data.total_amount) - subtotalVal) : 0
+        const totalVal = parseFloat(data.total_amount)
 
-            // Get Deposit (default to 0 if undefined)
-            const depositVal = parseFloat(data.deposit_amount || 0)
-            const balanceDue = totalVal - depositVal
+        // Get Deposit (default to 0 if undefined)
+        const depositVal = parseFloat(data.deposit_amount || 0)
+        const balanceDue = totalVal - depositVal
+
+        doc.setFontSize(10)
+        doc.setTextColor(...COLORS.GRAY_TEXT)
+        doc.text('Subtotal:', totalsX, finalY)
+        doc.text(`R${subtotalVal.toFixed(2)}`, 200, finalY, { align: 'right' })
+
+        if (data.vat_applicable) {
+            doc.text('VAT (15%):', totalsX, finalY + 5)
+            doc.text(`R${vatVal.toFixed(2)}`, 200, finalY + 5, { align: 'right' })
+        } else {
+            doc.text('VAT (0%):', totalsX, finalY + 5)
+            doc.text('R0.00', 200, finalY + 5, { align: 'right' })
+        }
+
+        // Divider
+        doc.setDrawColor(200, 200, 200)
+        doc.line(totalsX, finalY + 10, 200, finalY + 10)
+
+        // Totals Logic
+        let currentY = finalY + 16
+
+        // If a deposit was paid, show Total -> Deposit -> Balance
+        if (depositVal > 0) {
+            doc.setFontSize(10)
+            doc.setTextColor(...COLORS.GRAY_TEXT)
+            doc.text('Total Amount:', totalsX, currentY)
+            doc.text(`R${totalVal.toFixed(2)}`, 200, currentY, { align: 'right' })
+            currentY += 5
+
+            doc.setTextColor(...COLORS.GRAY_LABEL) // Muted color for deposit deduction
+            doc.text('Less Deposit Paid:', totalsX, currentY)
+            doc.text(`(R${depositVal.toFixed(2)})`, 200, currentY, { align: 'right' })
+            currentY += 8 // Extra gap
+
+            // Grand Total (Balance Due)
+            doc.setFontSize(14)
+            doc.setTextColor(...COLORS.NAVY)
+            doc.text('Balance Due:', totalsX, currentY)
+            doc.text(`R${balanceDue.toFixed(2)}`, 200, currentY, { align: 'right' })
+        } else {
+            // Standard Total (No Deposit)
+            doc.setFontSize(14)
+            doc.setTextColor(...COLORS.NAVY)
+            doc.text('Total:', totalsX, currentY)
+            doc.text(`R${totalVal.toFixed(2)}`, 200, currentY, { align: 'right' })
+        }
+
+
+        // Footer Page 1 - Removed manual call, will do global loop at end.
+
+        // --- PAGE 2: TERMS & CONDITIONS (Skip for PO) ---
+        if (docType !== 'Purchase Order') {
+            doc.addPage()
+
+            doc.setFontSize(16)
+            doc.setTextColor(...COLORS.NAVY)
+            doc.text('GENERAL TERMS & CONDITIONS', 105, 20, { align: 'center' })
+
+            const defaultTerms = [
+                {
+                    title: "1. Scope of Services",
+                    text: "We agree to supply and install the security equipment ('System') as specified. Includes Intruder Detection, CCTV, Access Control, Electric Fencing, and Automation."
+                },
+                {
+                    title: "2. System Specifications",
+                    text: "System components specified in the Quotation. We reserve the right to substitute with equal/superior quality if unavailable, subject to approval."
+                },
+                {
+                    title: "3. Installation Procedures",
+                    text: "3.1 Site Access: Client checks safe access.\n3.2 Obligations: Power supply (230V AC) required. Client must disclose concealed utilities.\n3.3 Timeline: Estimates only. Not liable for external delays.\n3.4 Completion: Handover confirmed by signature or use."
+                },
+                {
+                    title: "4. Warranties",
+                    text: "4.1 Workmanship: 12-month warranty.\n4.2 Equipment: Manufacturer warranty applies.\n4.3 Exclusions: Misuse, Acts of God, Third-party service failures, Consumables."
+                },
+                {
+                    title: "5. Payment Terms",
+                    text: "5.1 Deposit: 75% required on acceptance.\n5.2 Final: 25% due on completion.\n5.3 Ownership: Remains property of GSS until fully paid.\n5.4 Late Payments: Interest charged at prime + 5%."
+                },
+                {
+                    title: "6. Data Privacy (POPIA)",
+                    text: "Client is Data Controller for system data (CCTV etc). We process data only for billing/service. Remote access only with consent."
+                },
+                {
+                    title: "7. Maintenance",
+                    text: "Post-warranty service charged at standard rates. Maintenance contracts available separately."
+                },
+                {
+                    title: "8. Liability",
+                    text: "System is a deterrent, not a guarantee. GSS not liable for loss/damage unless gross negligence proven. Liability limited to Quote value."
+                },
+                {
+                    title: "9. Termination",
+                    text: "Client may terminate with notice. 75% deposit non-refundable if work commenced. GSS may terminate for non-payment."
+                }
+            ]
+
+            // Terms Logic: Priority -> legalTerms (String) -> companyTerms (JSON) -> defaultTerms
+            let terms = defaultTerms;
+            const legalTerms = settings.legalTerms || localStorage.getItem('legalTerms');
+            const legacyTerms = settings.companyTerms || localStorage.getItem('companyTerms');
+
+            if (legalTerms && legalTerms.trim().length > 0) {
+                // Use the simple text block from Settings
+                terms = [{
+                    title: "Terms & Conditions",
+                    text: legalTerms
+                }];
+            } else if (legacyTerms) {
+                try {
+                    terms = JSON.parse(legacyTerms);
+                } catch (e) {
+                    console.warn('Failed to parse legacy terms', e);
+                }
+            }
+
+            let y = 30
+            const colWidth = 85
+            const gap = 10
+            let leftCol = true
+
+            terms.forEach((item, index) => {
+                const x = leftCol ? 14 : 14 + colWidth + gap
+
+                doc.setFontSize(9)
+                doc.setTextColor(...COLORS.NAVY)
+                doc.text(item.title, x, y)
+
+                doc.setFontSize(8)
+                doc.setTextColor(60, 60, 60)
+                const lines = doc.splitTextToSize(item.text, colWidth)
+                doc.text(lines, x, y + 5)
+
+                const blockHeight = (lines.length * 4) + 12
+
+                if (index === 4) { // Switch col after 5 items
+                    leftCol = false
+                    y = 30
+                } else {
+                    y += blockHeight
+                }
+            })
+
+            // Agreement Footer
+            doc.setFontSize(10)
+            doc.setTextColor(100, 100, 100)
+            doc.text('By accepting this Quotation, you utilize our services bound by these Terms.', 105, 260, { align: 'center' })
+        }
+
+        // Signature Block
+        doc.setDrawColor(200, 200, 200)
+        doc.line(14, 275, 80, 275) // Sign 1
+        doc.line(120, 275, 190, 275) // Sign 2
+
+        doc.setFontSize(8)
+        doc.text('CLIENT SIGNATURE', 14, 280)
+        doc.text('GSS REPRESENTATIVE', 120, 280)
+
+        // Render Signature Image if exists
+        if (data.client_signature) {
+            try {
+                // Signature is usually a data URL (base64)
+                doc.addImage(data.client_signature, 'PNG', 14, 255, 40, 20)
+                doc.setTextColor(0, 128, 0)
+                doc.setFontSize(6)
+                doc.text(`Signed digitally at ${new Date(data.accepted_at).toLocaleString()}`, 14, 274)
+            } catch (e) {
+                console.warn('Could not render signature', e)
+            }
+        }
+
+        // Footer manual call removed.
+
+        // --- PAGE 3: PAYMENT PROOF (If Exists) ---
+        if (data.payment_proof) {
+            doc.addPage()
+
+            // Header
+            doc.setDrawColor(...COLORS.NAVY)
+            doc.setLineWidth(1.5)
+            doc.line(0, 5, 220, 5)
+
+            doc.setFontSize(16)
+            doc.setTextColor(...COLORS.NAVY)
+            doc.text('PAYMENT PROOF', 14, 25)
 
             doc.setFontSize(10)
             doc.setTextColor(...COLORS.GRAY_TEXT)
-            doc.text('Subtotal:', totalsX, finalY)
-            doc.text(`R${subtotalVal.toFixed(2)}`, 200, finalY, { align: 'right' })
+            doc.text('Attached below is the proof of payment provided by the client.', 14, 32)
 
-            if (data.vat_applicable) {
-                doc.text('VAT (15%):', totalsX, finalY + 5)
-                doc.text(`R${vatVal.toFixed(2)}`, 200, finalY + 5, { align: 'right' })
-            } else {
-                doc.text('VAT (0%):', totalsX, finalY + 5)
-                doc.text('R0.00', 200, finalY + 5, { align: 'right' })
-            }
+            // Render Image
+            // Render Image or PDF Placeholder
+            try {
+                // Check if it's a PDF
+                if (data.payment_proof.startsWith('data:application/pdf')) {
+                    // Render PDF Placeholder
+                    doc.setFillColor(240, 240, 240)
+                    doc.setDrawColor(200, 200, 200)
+                    doc.rect(14, 40, 180, 60, 'FD')
 
-            // Divider
-            doc.setDrawColor(200, 200, 200)
-            doc.line(totalsX, finalY + 10, 200, finalY + 10)
-
-            // Totals Logic
-            let currentY = finalY + 16
-
-            // If a deposit was paid, show Total -> Deposit -> Balance
-            if (depositVal > 0) {
-                doc.setFontSize(10)
-                doc.setTextColor(...COLORS.GRAY_TEXT)
-                doc.text('Total Amount:', totalsX, currentY)
-                doc.text(`R${totalVal.toFixed(2)}`, 200, currentY, { align: 'right' })
-                currentY += 5
-
-                doc.setTextColor(...COLORS.GRAY_LABEL) // Muted color for deposit deduction
-                doc.text('Less Deposit Paid:', totalsX, currentY)
-                doc.text(`(R${depositVal.toFixed(2)})`, 200, currentY, { align: 'right' })
-                currentY += 8 // Extra gap
-
-                // Grand Total (Balance Due)
-                doc.setFontSize(14)
-                doc.setTextColor(...COLORS.NAVY)
-                doc.text('Balance Due:', totalsX, currentY)
-                doc.text(`R${balanceDue.toFixed(2)}`, 200, currentY, { align: 'right' })
-            } else {
-                // Standard Total (No Deposit)
-                doc.setFontSize(14)
-                doc.setTextColor(...COLORS.NAVY)
-                doc.text('Total:', totalsX, currentY)
-                doc.text(`R${totalVal.toFixed(2)}`, 200, currentY, { align: 'right' })
-            }
-
-
-            // Footer Page 1 - Removed manual call, will do global loop at end.
-
-            // --- PAGE 2: TERMS & CONDITIONS (Skip for PO) ---
-            if (docType !== 'Purchase Order') {
-                doc.addPage()
-
-                doc.setFontSize(16)
-                doc.setTextColor(...COLORS.NAVY)
-                doc.text('GENERAL TERMS & CONDITIONS', 105, 20, { align: 'center' })
-
-                const defaultTerms = [
-                    {
-                        title: "1. Scope of Services",
-                        text: "We agree to supply and install the security equipment ('System') as specified. Includes Intruder Detection, CCTV, Access Control, Electric Fencing, and Automation."
-                    },
-                    {
-                        title: "2. System Specifications",
-                        text: "System components specified in the Quotation. We reserve the right to substitute with equal/superior quality if unavailable, subject to approval."
-                    },
-                    {
-                        title: "3. Installation Procedures",
-                        text: "3.1 Site Access: Client checks safe access.\n3.2 Obligations: Power supply (230V AC) required. Client must disclose concealed utilities.\n3.3 Timeline: Estimates only. Not liable for external delays.\n3.4 Completion: Handover confirmed by signature or use."
-                    },
-                    {
-                        title: "4. Warranties",
-                        text: "4.1 Workmanship: 12-month warranty.\n4.2 Equipment: Manufacturer warranty applies.\n4.3 Exclusions: Misuse, Acts of God, Third-party service failures, Consumables."
-                    },
-                    {
-                        title: "5. Payment Terms",
-                        text: "5.1 Deposit: 75% required on acceptance.\n5.2 Final: 25% due on completion.\n5.3 Ownership: Remains property of GSS until fully paid.\n5.4 Late Payments: Interest charged at prime + 5%."
-                    },
-                    {
-                        title: "6. Data Privacy (POPIA)",
-                        text: "Client is Data Controller for system data (CCTV etc). We process data only for billing/service. Remote access only with consent."
-                    },
-                    {
-                        title: "7. Maintenance",
-                        text: "Post-warranty service charged at standard rates. Maintenance contracts available separately."
-                    },
-                    {
-                        title: "8. Liability",
-                        text: "System is a deterrent, not a guarantee. GSS not liable for loss/damage unless gross negligence proven. Liability limited to Quote value."
-                    },
-                    {
-                        title: "9. Termination",
-                        text: "Client may terminate with notice. 75% deposit non-refundable if work commenced. GSS may terminate for non-payment."
-                    }
-                ]
-
-                const termsCallback = settings.companyTerms || localStorage.getItem('companyTerms');
-                const terms = termsCallback ? JSON.parse(termsCallback) : defaultTerms;
-
-                let y = 30
-                const colWidth = 85
-                const gap = 10
-                let leftCol = true
-
-                terms.forEach((item, index) => {
-                    const x = leftCol ? 14 : 14 + colWidth + gap
-
-                    doc.setFontSize(9)
+                    doc.setFontSize(14)
                     doc.setTextColor(...COLORS.NAVY)
-                    doc.text(item.title, x, y)
+                    doc.text('PDF DOCUMENT', 105, 65, { align: 'center' })
 
-                    doc.setFontSize(8)
-                    doc.setTextColor(60, 60, 60)
-                    const lines = doc.splitTextToSize(item.text, colWidth)
-                    doc.text(lines, x, y + 5)
-
-                    const blockHeight = (lines.length * 4) + 12
-
-                    if (index === 4) { // Switch col after 5 items
-                        leftCol = false
-                        y = 30
-                    } else {
-                        y += blockHeight
+                    doc.setFontSize(10)
+                    doc.setTextColor(...COLORS.GRAY_TEXT)
+                    doc.text('The payment proof is a PDF document.', 105, 75, { align: 'center' })
+                    doc.text('Please view the original file in the Sales Dashboard.', 105, 80, { align: 'center' })
+                } else {
+                    // It's likely an image (PNG/JPEG/etc)
+                    let format = 'PNG'; // Default
+                    if (data.payment_proof.startsWith('data:image/')) {
+                        const mimeType = data.payment_proof.split(';')[0].split(':')[1];
+                        if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
+                            format = 'JPEG';
+                        }
                     }
-                })
-
-                // Agreement Footer
+                    // Fit max width 180, max height 200. "0" for height maintains aspect ratio in jsPDF
+                    doc.addImage(data.payment_proof, format, 14, 40, 180, 0)
+                }
+            } catch (e) {
+                console.error("Error rendering payment proof:", e)
+                doc.setTextColor(255, 0, 0)
                 doc.setFontSize(10)
-                doc.setTextColor(100, 100, 100)
-                doc.text('By accepting this Quotation, you utilize our services bound by these Terms.', 105, 260, { align: 'center' })
+                doc.text(`Error rendering evidence: ${e.message}`, 14, 50)
             }
+        }
 
-            // Signature Block
-            doc.setDrawColor(200, 200, 200)
-            doc.line(14, 275, 80, 275) // Sign 1
-            doc.line(120, 275, 190, 275) // Sign 2
+        // --- GLOBAL FOOTER LOOP ---
+        // Ensure we capture the final page count correctly
+        const pageCount = doc.internal.getNumberOfPages()
+
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i)
+            // Re-calc page height in case orientation mixed (unlikely but safe)
+            const pH = doc.internal.pageSize.getHeight() // Use method if available or prop
+
+            // Draw Footer
+            doc.setDrawColor(...COLORS.NAVY)
+            doc.setLineWidth(1)
+            doc.line(0, pH - 15, 220, pH - 15) // Bottom brand line
 
             doc.setFontSize(8)
-            doc.text('CLIENT SIGNATURE', 14, 280)
-            doc.text('GSS REPRESENTATIVE', 120, 280)
-
-            // Render Signature Image if exists
-            if (data.client_signature) {
-                try {
-                    // Signature is usually a data URL (base64)
-                    doc.addImage(data.client_signature, 'PNG', 14, 255, 40, 20)
-                    doc.setTextColor(0, 128, 0)
-                    doc.setFontSize(6)
-                    doc.text(`Signed digitally at ${new Date(data.accepted_at).toLocaleString()}`, 14, 274)
-                } catch (e) {
-                    console.warn('Could not render signature', e)
-                }
-            }
-
-            // Footer manual call removed.
-
-            // --- PAGE 3: PAYMENT PROOF (If Exists) ---
-            if (data.payment_proof) {
-                doc.addPage()
-
-                // Header
-                doc.setDrawColor(...COLORS.NAVY)
-                doc.setLineWidth(1.5)
-                doc.line(0, 5, 220, 5)
-
-                doc.setFontSize(16)
-                doc.setTextColor(...COLORS.NAVY)
-                doc.text('PAYMENT PROOF', 14, 25)
-
-                doc.setFontSize(10)
-                doc.setTextColor(...COLORS.GRAY_TEXT)
-                doc.text('Attached below is the proof of payment provided by the client.', 14, 32)
-
-                // Render Image
-                // Render Image or PDF Placeholder
-                try {
-                    // Check if it's a PDF
-                    if (data.payment_proof.startsWith('data:application/pdf')) {
-                        // Render PDF Placeholder
-                        doc.setFillColor(240, 240, 240)
-                        doc.setDrawColor(200, 200, 200)
-                        doc.rect(14, 40, 180, 60, 'FD')
-
-                        doc.setFontSize(14)
-                        doc.setTextColor(...COLORS.NAVY)
-                        doc.text('PDF DOCUMENT', 105, 65, { align: 'center' })
-
-                        doc.setFontSize(10)
-                        doc.setTextColor(...COLORS.GRAY_TEXT)
-                        doc.text('The payment proof is a PDF document.', 105, 75, { align: 'center' })
-                        doc.text('Please view the original file in the Sales Dashboard.', 105, 80, { align: 'center' })
-                    } else {
-                        // It's likely an image (PNG/JPEG/etc)
-                        let format = 'PNG'; // Default
-                        if (data.payment_proof.startsWith('data:image/')) {
-                            const mimeType = data.payment_proof.split(';')[0].split(':')[1];
-                            if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
-                                format = 'JPEG';
-                            }
-                        }
-                        // Fit max width 180, max height 200. "0" for height maintains aspect ratio in jsPDF
-                        doc.addImage(data.payment_proof, format, 14, 40, 180, 0)
-                    }
-                } catch (e) {
-                    console.error("Error rendering payment proof:", e)
-                    doc.setTextColor(255, 0, 0)
-                    doc.setFontSize(10)
-                    doc.text(`Error rendering evidence: ${e.message}`, 14, 50)
-                }
-            }
-
-            // --- GLOBAL FOOTER LOOP ---
-            // Ensure we capture the final page count correctly
-            const pageCount = doc.internal.getNumberOfPages()
-
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i)
-                // Re-calc page height in case orientation mixed (unlikely but safe)
-                const pH = doc.internal.pageSize.getHeight() // Use method if available or prop
-
-                // Draw Footer
-                doc.setDrawColor(...COLORS.NAVY)
-                doc.setLineWidth(1)
-                doc.line(0, pH - 15, 220, pH - 15) // Bottom brand line
-
-                doc.setFontSize(8)
-                doc.setTextColor(...COLORS.GRAY_LABEL)
-                doc.text('Web: www.GSSolutions.co.za   |   Email: Kyle@GSSolutions.co.za', 105, pH - 10, { align: 'center' })
-                doc.text(`Page ${i} of ${pageCount}`, 200, pH - 10, { align: 'right' })
-            }
-
-            // Save
-            doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
-        } catch (error) {
-            console.error('PDF Generation Error:', error)
-            alert(`Failed to generate PDF: ${error.message}`)
+            doc.setTextColor(...COLORS.GRAY_LABEL)
+            doc.text('Web: www.GSSolutions.co.za   |   Email: Kyle@GSSolutions.co.za', 105, pH - 10, { align: 'center' })
+            doc.text(`Page ${i} of ${pageCount}`, 200, pH - 10, { align: 'right' })
         }
+
+        // Save
+        doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
+    } catch (error) {
+        console.error('PDF Generation Error:', error)
+        alert(`Failed to generate PDF: ${error.message}`)
     }
+}
 
 
 
 // Helper to fetch image for logo
 const fetchImage = (url) => {
-        return new Promise((resolve, reject) => {
-            const img = new Image()
-            img.src = url
-            img.onload = () => resolve(img)
-            img.onerror = reject
-        })
-    }
+    return new Promise((resolve, reject) => {
+        const img = new Image()
+        img.src = url
+        img.onload = () => resolve(img)
+        img.onerror = reject
+    })
+}
 
-    export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
-    export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)
-    export const generatePurchaseOrderPDF = (po, settings) => generatePDF('Purchase Order', po, settings)
+export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
+export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)
+export const generatePurchaseOrderPDF = (po, settings) => generatePDF('Purchase Order', po, settings)
