@@ -12,6 +12,7 @@ import { useCurrency } from '@/lib/use-currency.jsx'
 import { SignaturePad } from '@/components/ui/signature-pad'
 import { toast } from 'sonner'
 import { useSettings } from '@/lib/use-settings.jsx'
+import { InstallPrompt } from '@/components/InstallPrompt'
 
 export default function ClientPortal() {
   const { formatCurrency } = useCurrency()
@@ -451,6 +452,7 @@ export default function ClientPortal() {
           )}
         </DialogContent>
       </Dialog>
+      <InstallPrompt />
     </div>
   )
 }

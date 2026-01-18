@@ -18,19 +18,25 @@ export default defineConfig({
         name: 'Global Security Solutions',
         short_name: 'GSS Hub',
         description: 'Comprehensive Security Business Management System',
-        theme_color: '#ffffff',
+        theme_color: '#02040a',
+        background_color: '#02040a',
+        display: 'standalone',
+        orientation: 'portrait',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: '/logo.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: '/logo.png',
             sizes: '512x512',
             type: 'image/png'
           }
         ]
+      },
+      devOptions: {
+        enabled: true
       }
     })
   ],
