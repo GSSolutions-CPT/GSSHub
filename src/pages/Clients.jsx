@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,11 +22,7 @@ export default function Clients() {
     address: ''
   })
 
-  useEffect(() => {
-    fetchClients()
-  }, [])
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -38,7 +34,11 @@ export default function Clients() {
     } catch (error) {
       console.error('Error fetching clients:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchClients()
+  }, [fetchClients])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

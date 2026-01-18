@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from 'react'
+import { useState, useEffect, Suspense, lazy, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -66,13 +66,7 @@ export default function Jobs() {
     }
   }, [location.state])
 
-  useEffect(() => {
-    fetchJobs()
-    fetchClients()
-    fetchQuotations()
-  }, [])
-
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('jobs')
@@ -88,9 +82,9 @@ export default function Jobs() {
     } catch (error) {
       console.error('Error fetching jobs:', error)
     }
-  }
+  }, [])
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -102,9 +96,9 @@ export default function Jobs() {
     } catch (error) {
       console.error('Error fetching clients:', error)
     }
-  }
+  }, [])
 
-  const fetchQuotations = async () => {
+  const fetchQuotations = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('quotations')
@@ -116,7 +110,13 @@ export default function Jobs() {
     } catch (error) {
       console.error('Error fetching quotations:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchJobs()
+    fetchClients()
+    fetchQuotations()
+  }, [fetchJobs, fetchClients, fetchQuotations])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

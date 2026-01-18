@@ -33,12 +33,6 @@ export default function Financials() {
     end: new Date().toISOString().split('T')[0]
   })
 
-  useEffect(() => {
-    fetchExpenses()
-    fetchJobs()
-    fetchInvoices()
-  }, [fetchExpenses, fetchJobs, fetchInvoices])
-
   const fetchExpenses = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -87,6 +81,12 @@ export default function Financials() {
       console.error('Error fetching invoices:', error)
     }
   }, [dateRange])
+
+  useEffect(() => {
+    fetchExpenses()
+    fetchJobs()
+    fetchInvoices()
+  }, [fetchExpenses, fetchJobs, fetchInvoices])
 
   const handleFileChange = async (e) => {
     try {

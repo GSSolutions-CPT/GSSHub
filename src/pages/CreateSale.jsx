@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,12 +30,7 @@ export default function CreateSale() {
     { product_id: '', quantity: 1, unit_price: 0, cost_price: 0 }
   ])
 
-  useEffect(() => {
-    fetchClients()
-    fetchProducts()
-  }, [])
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -47,9 +42,9 @@ export default function CreateSale() {
     } catch (error) {
       console.error('Error fetching clients:', error)
     }
-  }
+  }, [])
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('products')
@@ -61,7 +56,12 @@ export default function CreateSale() {
     } catch (error) {
       console.error('Error fetching products:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchClients()
+    fetchProducts()
+  }, [fetchClients, fetchProducts])
 
   const addLineItem = () => {
     setLineItems([...lineItems, { product_id: '', quantity: 1, unit_price: 0, cost_price: 0 }])
