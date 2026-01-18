@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,12 +26,7 @@ export default function Contracts() {
     active: true
   })
 
-  useEffect(() => {
-    fetchContracts()
-    fetchClients()
-  }, [])
-
-  const fetchContracts = async () => {
+  const fetchContracts = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('recurring_contracts')
@@ -46,9 +41,9 @@ export default function Contracts() {
     } catch (error) {
       console.error('Error fetching contracts:', error)
     }
-  }
+  }, [])
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -60,7 +55,12 @@ export default function Contracts() {
     } catch (error) {
       console.error('Error fetching clients:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchContracts()
+    fetchClients()
+  }, [fetchContracts, fetchClients])
 
   const calculateNextBillingDate = (startDate, frequency) => {
     const date = new Date(startDate)
