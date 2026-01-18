@@ -5,7 +5,7 @@ import { useSettings } from '@/lib/use-settings'
 import { useCurrency } from '@/lib/use-currency'
 import { Loader2, Printer } from 'lucide-react'
 
-export default function InvoicePreview() {
+const InvoicePreview = () => {
     const { id } = useParams()
     const { settings } = useSettings()
     const { formatCurrency } = useCurrency()
@@ -44,13 +44,8 @@ export default function InvoicePreview() {
     if (!invoice) return <div>Invoice not found</div>
 
     const client = invoice.clients
-    // Calculate totals
-    const subtotal = invoice.total_amount // Assuming total_amount stored is grand total. If we need subtotal logic, we might need to recalculate from items if items were stored separately. 
-    // For now, based on previous code, invoice.items is a JSON array.
-
     const items = invoice.items || []
     const calculatedSubtotal = items.reduce((sum, item) => sum + (parseFloat(item.price) * (item.qty || 1)), 0)
-    const vat = 0 // Assuming 0 for now as per previous logic
     const grandTotal = calculatedSubtotal // + vat
 
     // Company Details (fallback to Settings or hardcoded if settings empty)
@@ -253,14 +248,6 @@ export default function InvoicePreview() {
                     </div>
 
                     <div className="p-8 space-y-6 text-sm leading-relaxed whitespace-pre-line text-slate-700">
-                        {/* 
-                         If settings.legalTerms exists, usage that.
-                         Otherwise, use the structure from the HTML template. 
-                         For now, I will assume we rely on settings if available, else standard text.
-                         However, the user asked to "make it look like this", implying the specific text structure.
-                         I'll try to map the user's HTML text structure here but maybe allow dynamic injection if I had time.
-                         For now, I will drop the 'settings.legalTerms' inside this container if it exists, or show default.
-                     */}
                         {settings?.legalTerms ? (
                             <div className="prose max-w-none">
                                 {settings.legalTerms}
@@ -270,7 +257,6 @@ export default function InvoicePreview() {
                         )}
                     </div>
 
-                    {/* Acceptance Signature Area if needed */}
                     <div className="px-8 pb-8 mt-8">
                         <div className="border-2 border-slate-800 rounded-lg p-6 bg-slate-50">
                             <div className="grid grid-cols-2 gap-8">
@@ -288,7 +274,6 @@ export default function InvoicePreview() {
                         </div>
                     </div>
 
-                    {/* Footer */}
                     <div className="bg-[#0f172a] text-white py-4 px-8 rounded-b-lg print:rounded-none">
                         <div className="flex justify-between items-center text-sm">
                             <p className="text-slate-400">{companyName} © {new Date().getFullYear()}</p>
@@ -307,3 +292,5 @@ export default function InvoicePreview() {
         </div>
     )
 }
+
+export default InvoicePreview;
