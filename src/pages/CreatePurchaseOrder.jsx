@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useCurrency } from '@/lib/use-currency'
-import { extractItemsFromPDF } from '@/lib/pdf-parser'
+// PDF parser imported dynamically to prevent worker initialization issues
 
 export default function CreatePurchaseOrder() {
     const navigate = useNavigate()
@@ -107,12 +107,13 @@ export default function CreatePurchaseOrder() {
         setFile(uploadedFile)
         setIsProcessing(true)
         try {
+            // Dynamic import to avoid initialization issues with pdfjs-dist
+            const { extractItemsFromPDF, parseTextToItems } = await import('@/lib/pdf-parser')
+
             const { text } = await extractItemsFromPDF(uploadedFile)
             setExtractedText(text)
 
             // Try to auto-parse items
-            // Dynamic import to avoid circular dependency if define in same file, though here it is fine
-            const { parseTextToItems } = await import('@/lib/pdf-parser')
             const parsedItems = parseTextToItems(text)
 
             if (parsedItems.length > 0) {
