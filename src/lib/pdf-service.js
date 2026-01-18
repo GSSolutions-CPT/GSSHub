@@ -27,7 +27,7 @@ const generatePDF = async (docType, data, settings = {}) => {
             const logoUrl = window.location.origin + '/logo.png'
             const img = await fetchImage(logoUrl)
             // Fix: Constrain logo width/height to avoid overlap.
-            doc.addImage(img, 'PNG', 14, 12, 35, 0)
+            doc.addImage(img, 'PNG', 14, 10, 35, 0)
         } catch (e) {
             console.warn('Logo load failed', e)
             doc.setFontSize(22)
@@ -35,10 +35,10 @@ const generatePDF = async (docType, data, settings = {}) => {
             doc.text('GSS', 14, 25)
         }
 
-        // Tagline - Moved up slightly
+        // Tagline - Moved up
         doc.setFontSize(8)
         doc.setTextColor(...COLORS.GRAY_LABEL)
-        doc.text('INSTALLATIONS • MAINTENANCE • AUTOMATION', 14, 45)
+        doc.text('INSTALLATIONS • MAINTENANCE • AUTOMATION', 14, 35)
 
         // Fix: Determine Title Logic based on requirements
         let titleText = docType.toUpperCase()
@@ -56,22 +56,22 @@ const generatePDF = async (docType, data, settings = {}) => {
         // Document Title (Right aligned)
         doc.setFontSize(24)
         doc.setTextColor(200, 200, 200)
-        doc.text(titleText, 196, 25, { align: 'right' })
+        doc.text(titleText, 196, 20, { align: 'right' })
 
         // Document Details (Right aligned below Title)
         doc.setTextColor(...COLORS.GRAY_TEXT)
         doc.setFontSize(10)
-        doc.text(`#${data.id.substring(0, 8)}`, 196, 32, { align: 'right' })
+        doc.text(`#${data.id.substring(0, 8)}`, 196, 27, { align: 'right' })
 
         let dateLabel = 'Date:'
         let dateValue = new Date(data.date_created).toLocaleDateString()
 
-        doc.text(`${dateLabel} ${dateValue}`, 196, 37, { align: 'right' })
+        doc.text(`${dateLabel} ${dateValue}`, 196, 32, { align: 'right' })
 
         // Address Blocks
         const leftColX = 14
         const rightColX = 115
-        const blockY = 60
+        const blockY = 45 // Moved up significantly (was 60, then 70)
 
         if (docType === 'Purchase Order') {
             // PO Layout: 
@@ -85,24 +85,24 @@ const generatePDF = async (docType, data, settings = {}) => {
 
             doc.setFontSize(11)
             doc.setTextColor(0, 0, 0)
-            doc.text(data.suppliers?.name || 'Unknown Supplier', leftColX, blockY + 8)
+            doc.text(data.suppliers?.name || 'Unknown Supplier', leftColX, blockY + 6)
 
             doc.setFontSize(10)
             doc.setTextColor(...COLORS.GRAY_TEXT)
-            let addrY = blockY + 14
+            let addrY = blockY + 11
 
             // Use supplier details if available
             if (data.suppliers?.contact_person) {
                 doc.text(`Attn: ${data.suppliers.contact_person}`, leftColX, addrY)
-                addrY += 5
+                addrY += 4
             }
             if (data.suppliers?.email) {
                 doc.text(data.suppliers.email, leftColX, addrY)
-                addrY += 5
+                addrY += 4
             }
             if (data.suppliers?.phone) {
                 doc.text(data.suppliers.phone, leftColX, addrY)
-                addrY += 5
+                addrY += 4
             }
             if (data.suppliers?.address) { // Handle multiline address
                 const splitAddr = doc.splitTextToSize(data.suppliers.address, 80)
@@ -117,15 +117,15 @@ const generatePDF = async (docType, data, settings = {}) => {
 
             doc.setFontSize(11)
             doc.setTextColor(0, 0, 0)
-            doc.text('Global Security Solutions', rightColX, blockY + 8)
+            doc.text('Global Security Solutions', rightColX, blockY + 6)
 
             const companyPhone = settings.companyPhone || localStorage.getItem('companyPhone') || '062 955 8559'
             const companyAddress = settings.companyAddress || localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
 
             doc.setFontSize(10)
             doc.setTextColor(...COLORS.GRAY_TEXT)
-            doc.text(companyPhone, rightColX, blockY + 14)
-            doc.text(companyAddress, rightColX, blockY + 19)
+            doc.text(companyPhone, rightColX, blockY + 11)
+            doc.text(companyAddress, rightColX, blockY + 15)
 
         } else {
             // Standard Invoice/Quote Layout
@@ -139,14 +139,14 @@ const generatePDF = async (docType, data, settings = {}) => {
 
             doc.setFontSize(11)
             doc.setTextColor(0, 0, 0)
-            doc.text(data.clients?.name || 'Unknown Client', leftColX, blockY + 8)
+            doc.text(data.clients?.name || 'Unknown Client', leftColX, blockY + 6)
 
             doc.setFontSize(10)
             doc.setTextColor(...COLORS.GRAY_TEXT)
-            let addrY = blockY + 14
+            let addrY = blockY + 11
             if (data.clients?.company) {
                 doc.text(data.clients.company, leftColX, addrY)
-                addrY += 5
+                addrY += 4
             }
             if (data.clients?.email) doc.text(data.clients.email, leftColX, addrY)
 
@@ -157,7 +157,7 @@ const generatePDF = async (docType, data, settings = {}) => {
 
             doc.setFontSize(11)
             doc.setTextColor(0, 0, 0)
-            doc.text('Global Security Solutions', rightColX, blockY + 8)
+            doc.text('Global Security Solutions', rightColX, blockY + 6)
 
             const companyPhone = settings.companyPhone || localStorage.getItem('companyPhone') || '062 955 8559'
             const companyAddress = settings.companyAddress || localStorage.getItem('companyAddress') || '66 Robyn RD, Durbanville'
@@ -166,17 +166,17 @@ const generatePDF = async (docType, data, settings = {}) => {
 
             doc.setFontSize(10)
             doc.setTextColor(...COLORS.GRAY_TEXT)
-            doc.text(companyPhone, rightColX, blockY + 14)
-            doc.text(companyAddress, rightColX, blockY + 19)
-            doc.text(companyEmail, rightColX, blockY + 24)
+            doc.text(companyPhone, rightColX, blockY + 11)
+            doc.text(companyAddress, rightColX, blockY + 15)
+            doc.text(companyEmail, rightColX, blockY + 19)
             // Add VAT Number for Tax Invoices
             if (titleText === 'TAX INVOICE' && companyVat) {
-                doc.text(`VAT Reg: ${companyVat}`, rightColX, blockY + 29)
+                doc.text(`VAT Reg: ${companyVat}`, rightColX, blockY + 23)
             }
         }
 
         // Details Strip
-        const stripY = blockY + 45
+        const stripY = blockY + 30
         doc.setFontSize(9)
         doc.setTextColor(...COLORS.GRAY_LABEL)
         doc.text('DATE', 14, stripY)
