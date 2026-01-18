@@ -36,18 +36,18 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full glass-effect tech-border">
         <div className="container flex h-16 items-center px-4 md:px-6">
           {/* Logo */}
           <div className="mr-4 hidden md:flex">
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <img src="/logo.png" alt="GSSHub" className="h-8 w-auto" />
-              <span className="hidden font-bold sm:inline-block text-primary">GSSHub</span>
+            <Link to="/dashboard" className="flex items-center gap-2 group">
+              <img src="/logo.png" alt="GSSHub" className="h-8 w-auto transition-transform group-hover:scale-110 duration-300" />
+              <span className="hidden font-bold sm:inline-block text-primary tech-glow tracking-wide">GSSHub</span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="flex items-center space-x-6 text-sm font-medium hidden md:flex mx-6">
+          <nav className="flex items-center space-x-1 hidden md:flex mx-6">
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = location.pathname === item.path
@@ -55,7 +55,12 @@ export default function Layout() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-2 transition-colors hover:text-foreground/80 ${isActive ? 'text-foreground' : 'text-foreground/60'}`}
+                  className={`
+                    flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
+                    ${isActive
+                      ? 'bg-primary/10 text-primary tech-glow'
+                      : 'text-muted-foreground hover:text-primary hover:bg-primary/5'}
+                  `}
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
