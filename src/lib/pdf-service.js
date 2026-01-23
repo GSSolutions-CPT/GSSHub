@@ -347,32 +347,32 @@ const generatePDF = async (docType, data) => {
             ]
 
             // Preamble
-            doc.setFontSize(9)
+            doc.setFontSize(8)
             doc.setTextColor(100, 116, 139) // Slate 500
             const preamble = "These Terms and Conditions (\"Agreement\") govern the provision and installation of security systems and related services (\"Services\") by Global Security Solutions (\"we,\" \"us,\" \"our\") to the customer (\"you,\" \"your\"). This Agreement, together with the official Quotation provided, constitutes the entire contract between both parties."
             const preambleLines = doc.splitTextToSize(preamble, pageWidth - 28)
             doc.text(preambleLines, 14, termY)
-            termY += (preambleLines.length * 4) + 10
+            termY += (preambleLines.length * 3.5) + 8
 
             doc.setTextColor(...COLORS.TEXT_DARK)
             terms.forEach(term => {
                 // Check Page Break
-                if (termY > pageHeight - bottomMargin - 20) {
+                if (termY > pageHeight - bottomMargin - 10) {
                     doc.addPage()
                     termY = 20
                 }
 
-                doc.setFontSize(10)
+                doc.setFontSize(9)
                 doc.setFont('helvetica', 'bold')
                 doc.setTextColor(...COLORS.PRIMARY)
                 doc.text(term.t, 14, termY)
 
-                doc.setFontSize(9)
+                doc.setFontSize(8)
                 doc.setFont('helvetica', 'normal')
                 doc.setTextColor(60, 60, 60)
                 const lines = doc.splitTextToSize(term.c, pageWidth - 28)
-                doc.text(lines, 14, termY + 5)
-                termY += (lines.length * 4) + 8
+                doc.text(lines, 14, termY + 4)
+                termY += (lines.length * 3.5) + 6
             })
 
             // Acceptance Block
