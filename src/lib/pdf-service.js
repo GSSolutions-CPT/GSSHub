@@ -47,7 +47,13 @@ const generatePDF = async (docType, data) => {
             // Assumes logo.png is in your public folder
             const logoUrl = window.location.origin + '/logo.png'
             const img = await fetchImage(logoUrl)
-            doc.addImage(img, 'PNG', 14, 10, 25, 25)
+
+            // Calculate aspect ratio
+            const imgProps = doc.getImageProperties(img)
+            const logoWidth = 40
+            const logoHeight = (imgProps.height * logoWidth) / imgProps.width
+
+            doc.addImage(img, 'PNG', 14, 5, logoWidth, logoHeight)
         } catch (e) {
             // Fallback Text Logo
             doc.setFontSize(22)
@@ -55,17 +61,6 @@ const generatePDF = async (docType, data) => {
             doc.setFont('helvetica', 'bold')
             doc.text('GSS', 14, 25)
         }
-
-        // Company Info
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(20)
-        doc.setTextColor(...COLORS.WHITE)
-        doc.text(COMPANY_DETAILS.name, 45, 20)
-
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(9)
-        doc.setTextColor(148, 163, 184) // Slate 400
-        doc.text(COMPANY_DETAILS.tagline, 45, 26)
 
         // Contact Info (Right Aligned)
         const rightX = pageWidth - 14
