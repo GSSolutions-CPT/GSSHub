@@ -166,7 +166,10 @@ const generatePDF = async (docType, data) => {
             doc.text('Payment Terms:', refX + 4, cardY + 28)
             doc.setTextColor(...COLORS.PRIMARY)
             doc.setFont('helvetica', 'bold')
-            doc.text('75% Deposit / 25% on Completion', refX + 30, cardY + 28)
+            const termText = data.payment_type === 'full'
+                ? '100% Upfront'
+                : `${data.deposit_percentage || 75}% Deposit / ${100 - (data.deposit_percentage || 75)}% on Completion`
+            doc.text(termText, refX + 30, cardY + 28)
         }
 
         // ==========================================
@@ -338,11 +341,11 @@ const generatePDF = async (docType, data) => {
                 { t: '2. System Specifications', c: 'The make, model, quantity, and specific capabilities of all System components will be detailed in the formal Quotation. We reserve the right to propose a substitution of components with items of equal or superior quality and specification if the quoted items become unavailable. Such a substitution will only be made subject to your prior written approval.' },
                 { t: '3. Installation Procedures', c: '3.1 Site Access: You shall provide us with safe, unimpeded access to the Site during agreed-upon working hours.\n3.2 Customer Obligations: You are responsible for ensuring the Site is ready for installation, including providing a stable 230V AC power supply. You must inform us of concealed utilities.\n3.3 Timeline: Estimates only. We are not liable for delays beyond our control.\n3.4 Completion & Handover: Installation is deemed complete upon successful testing. Acceptance is confirmed by signing our job completion form or by using the system.' },
                 { t: '4. Warranties', c: '4.1 Workmanship: 12-month warranty on installation workmanship. Covers faults directly resulting from installation.\n4.2 Equipment: Manufacturer warranty applies. We facilitate claims.\n4.3 Exclusions: Misuse, neglect, Acts of God (lightning, surge), third-party service failures, consumables (batteries, fuses).' },
-                { t: '5. Payment Terms', c: '5.1 Deposit: 75% required on acceptance to secure equipment.\n5.2 Final Payment: 25% due upon completion and handover.\n5.3 Ownership: Equipment remains property of Global Security Solutions until fully paid. We reserve right to remove system if unpaid.\n5.4 Late Payments: Interest charged on overdue accounts at prime plus 5%.' },
+                { t: '5. Payment Terms', c: `5.1 Deposit: ${data.payment_type === 'full' ? '100% payment' : (data.deposit_percentage || 75) + '% deposit'} required on acceptance to secure equipment.\n5.2 Final Payment: ${data.payment_type === 'full' ? '0%' : (100 - (data.deposit_percentage || 75)) + '%'} due upon completion and handover.\n5.3 Ownership: Equipment remains property of Global Security Solutions until fully paid. We reserve right to remove system if unpaid.\n5.4 Late Payments: Interest charged on overdue accounts at prime plus 5%.` },
                 { t: '6. Data Privacy', c: '6.1 Compliance: We handle data in compliance with POPIA.\n6.2 System Data: You are the Data Controller for CCTV footage/logs. You are solely responsible for lawful use.\n6.3 Remote Access: Required for maintenance; done only with your explicit consent.' },
                 { t: '7. Maintenance & Support', c: '7.1 Post-Warranty Service: Service calls requested after warranty period are chargeable at standard rates.\n7.2 Maintenance Contracts: Available for ongoing care.\n7.3 Call-Outs: Standard fees apply for on-site support outside warranty.' },
                 { t: '8. Limitation of Liability', c: '8.1 No Guarantee: Systems are deterrents, not guarantees against loss. GSS is not an insurer.\n8.2 Indemnity: Not liable for loss/damage unless gross negligence is proven.\n8.3 Maximum Liability: Limited to the total contract value.' },
-                { t: '9. Termination', c: '9.1 By You: 75% deposit is non-refundable if work commenced. Costs for work done are due.\n9.2 By Us: We may terminate for non-payment or breach.' },
+                { t: '9. Termination', c: `9.1 By You: ${data.payment_type === 'full' ? 'Payment' : (data.deposit_percentage || 75) + '% deposit'} is non-refundable if work commenced. Costs for work done are due.\n9.2 By Us: We may terminate for non-payment or breach.` },
                 { t: '10. General', c: '10.1 Governing Law: Republic of South Africa.\n10.2 Dispute Resolution: Cape Town courts jurisdiction.\n10.3 Entire Agreement: This document + Quotation supersedes all prior communications.' }
             ]
 

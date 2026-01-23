@@ -226,7 +226,12 @@ export default function ClientPortal() {
         .filter(q => q.status === 'Accepted' || q.status === 'Approved')
         .reduce((sum, q) => {
           const isApproved = q.status === 'Approved' || q.admin_approved
-          return sum + (q.total_amount * (isApproved ? 0.25 : 0.75))
+          const depositRatio = (q.payment_type === 'full' ? 100 : (q.deposit_percentage || 75)) / 100
+          if (isApproved) {
+            return sum + (q.total_amount * (1 - depositRatio))
+          } else {
+            return sum + (q.total_amount * depositRatio)
+          }
         }, 0)
 
     const activeQuotes = quotations
@@ -446,12 +451,22 @@ export default function ClientPortal() {
                         : "bg-yellow-50 text-yellow-800 border-yellow-100"
                     )}>
                       {(quotation.status === 'Approved' || quotation.admin_approved) ? (
-                        <p>Outstanding Balance: <strong>{formatCurrency(quotation.total_amount * 0.25)}</strong></p>
+                        (() => {
+                          const depositRatio = (quotation.payment_type === 'full' ? 100 : (quotation.deposit_percentage || 75)) / 100
+                          const balance = quotation.total_amount * (1 - depositRatio)
+                          return <p>Outstanding Balance: <strong>{formatCurrency(balance)}</strong></p>
+                        })()
                       ) : (
-                        <p>
-                          {quotation.payment_proof ? "Payment Review Pending: " : "Deposit Required: "}
-                          <strong>{formatCurrency(quotation.total_amount * 0.75)}</strong>
-                        </p>
+                        (() => {
+                          const depositRatio = (quotation.payment_type === 'full' ? 100 : (quotation.deposit_percentage || 75)) / 100
+                          const depositAmount = quotation.total_amount * depositRatio
+                          return (
+                            <p>
+                              {quotation.payment_proof ? "Payment Review Pending: " : (quotation.payment_type === 'full' ? "Full Payment Required: " : "Deposit Required: ")}
+                              <strong>{formatCurrency(depositAmount)}</strong>
+                            </p>
+                          )
+                        })()
                       )}
                     </div>
 
@@ -582,7 +597,7 @@ export default function ClientPortal() {
 
                 <div className="pl-10">
                   <p className="text-sm text-slate-500 mb-3">
-                    Please make a <strong>75% deposit ({formatCurrency((acceptingQuote?.total_amount || 0) * 0.75)})</strong> to secure your booking.
+                    Please make a <strong>{acceptingQuote?.payment_type === 'full' ? 'Full Payment' : `${acceptingQuote?.deposit_percentage || 75}% deposit`} ({formatCurrency((acceptingQuote?.total_amount || 0) * ((acceptingQuote?.payment_type === 'full' ? 100 : (acceptingQuote?.deposit_percentage || 75)) / 100))})</strong> to secure your booking.
                   </p>
                   <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center gap-3 hover:bg-slate-50 transition-colors cursor-pointer relative">
                     <Upload className="h-10 w-10 text-slate-300" />

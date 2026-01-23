@@ -25,7 +25,9 @@ export default function CreateSale() {
     valid_until: '',
     due_date: '',
     vat_applicable: false,
-    deposit_amount: 0 // Track deposit
+    deposit_amount: 0, // For invoice tracking
+    payment_type: 'deposit', // 'deposit' or 'full'
+    deposit_percentage: 75 // Default 75%
   })
   const [lineItems, setLineItems] = useState([
     { product_id: '', quantity: 1, unit_price: 0, cost_price: 0 }
@@ -170,7 +172,9 @@ export default function CreateSale() {
         valid_until: sale.valid_until ? sale.valid_until.split('T')[0] : '', // Format for date input
         due_date: sale.due_date ? sale.due_date.split('T')[0] : '',
         vat_applicable: sale.vat_applicable,
-        deposit_amount: sale.deposit_amount || 0 // Populate deposit
+        deposit_amount: sale.deposit_amount || 0,
+        payment_type: sale.payment_type || 'deposit',
+        deposit_percentage: sale.deposit_percentage || 75
       })
 
       // Populate IDs if products exist (or custom)
@@ -228,7 +232,12 @@ export default function CreateSale() {
 
       // Add specific fields based on mode
       const payload = mode === 'quotation'
-        ? { ...basePayload, valid_until: formData.valid_until || null }
+        ? {
+          ...basePayload,
+          valid_until: formData.valid_until || null,
+          payment_type: formData.payment_type,
+          deposit_percentage: parseFloat(formData.deposit_percentage) || 0
+        }
         : { ...basePayload, due_date: formData.due_date || null, deposit_amount: parseFloat(formData.deposit_amount) || 0 }
 
       let saleId = editId
@@ -366,15 +375,51 @@ export default function CreateSale() {
               </div>
 
               {mode === 'quotation' && (
-                <div className="grid gap-2">
-                  <Label htmlFor="valid_until">Valid Until</Label>
-                  <Input
-                    id="valid_until"
-                    type="date"
-                    value={formData.valid_until}
-                    onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
-                  />
-                </div>
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="valid_until">Valid Until</Label>
+                    <Input
+                      id="valid_until"
+                      type="date"
+                      value={formData.valid_until}
+                      onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="payment_type">Payment Terms</Label>
+                    <Select
+                      value={formData.payment_type}
+                      onValueChange={(value) => setFormData({ ...formData, payment_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select terms" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="deposit">Deposit Required</SelectItem>
+                        <SelectItem value="full">100% Upfront</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.payment_type === 'deposit' && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="deposit_percentage">Deposit Percentage (%)</Label>
+                      <div className="relative">
+                        <Input
+                          id="deposit_percentage"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.deposit_percentage}
+                          onChange={(e) => setFormData({ ...formData, deposit_percentage: e.target.value })}
+                          className="pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               {mode === 'invoice' && (
