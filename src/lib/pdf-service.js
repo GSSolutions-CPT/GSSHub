@@ -383,6 +383,18 @@ const generatePDF = async (docType, data) => {
 
             doc.line(120, finalPageHeight - 20, 180, finalPageHeight - 20)
             doc.text('DATE', 120, finalPageHeight - 15)
+
+            // Render Digital Signature if available
+            if (data.client_signature) {
+                try {
+                    doc.addImage(data.client_signature, 'PNG', 14, finalPageHeight - 38, 50, 18)
+                    doc.setFontSize(6)
+                    doc.setTextColor(0, 128, 0)
+                    doc.text(`Digitally Signed: ${new Date(data.accepted_at || new Date()).toLocaleString()}`, 14, finalPageHeight - 12)
+                } catch (e) {
+                    console.warn('Error rendering signature:', e)
+                }
+            }
         }
 
         // --- GLOBAL FOOTER ---

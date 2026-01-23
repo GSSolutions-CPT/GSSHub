@@ -13,6 +13,7 @@ import { SignaturePad } from '@/components/ui/signature-pad'
 import { toast } from 'sonner'
 import { useSettings } from '@/lib/use-settings.jsx'
 import { InstallPrompt } from '@/components/InstallPrompt'
+import { cn } from '@/lib/utils'
 
 export default function ClientPortal() {
   const { formatCurrency } = useCurrency()
@@ -220,7 +221,13 @@ export default function ClientPortal() {
     // Calculate Stats
     const totalOutstanding = invoices
       .filter(i => i.status !== 'Paid' && i.status !== 'Draft')
-      .reduce((sum, i) => sum + (i.total_amount || 0), 0)
+      .reduce((sum, i) => sum + (i.total_amount || 0), 0) +
+      quotations
+        .filter(q => q.status === 'Accepted' || q.status === 'Approved')
+        .reduce((sum, q) => {
+          const isApproved = q.status === 'Approved' || q.admin_approved
+          return sum + (q.total_amount * (isApproved ? 0.25 : 0.75))
+        }, 0)
 
     const activeQuotes = quotations
       .filter(q => q.status === 'Sent')
@@ -432,8 +439,20 @@ export default function ClientPortal() {
                       <span className="text-xl font-bold text-slate-900">{formatCurrency(quotation.total_amount)}</span>
                     </div>
 
-                    <div className="bg-yellow-50 border border-yellow-100 p-3 rounded text-sm text-center text-yellow-800">
-                      <p>Deposit Required: <strong>{formatCurrency(quotation.total_amount * 0.75)}</strong></p>
+                    <div className={cn(
+                      "p-3 rounded text-sm text-center border",
+                      (quotation.status === 'Approved' || quotation.admin_approved)
+                        ? "bg-slate-100 text-slate-800 border-slate-200"
+                        : "bg-yellow-50 text-yellow-800 border-yellow-100"
+                    )}>
+                      {(quotation.status === 'Approved' || quotation.admin_approved) ? (
+                        <p>Outstanding Balance: <strong>{formatCurrency(quotation.total_amount * 0.25)}</strong></p>
+                      ) : (
+                        <p>
+                          {quotation.payment_proof ? "Payment Review Pending: " : "Deposit Required: "}
+                          <strong>{formatCurrency(quotation.total_amount * 0.75)}</strong>
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-2">
