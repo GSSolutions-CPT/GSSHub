@@ -403,30 +403,58 @@ const generatePDF = async (docType, data, settings = {}) => {
             }
 
             let y = 30
-            const colWidth = 85
-            const gap = 10
             let leftCol = true
+            const colWidth = 85
+            const gap = 15
+            const pageHeight = doc.internal.pageSize.getHeight()
+            const bottomMargin = 30 // Ensure space for footer
 
-            terms.forEach((item, index) => {
-                const x = leftCol ? 14 : 14 + colWidth + gap
+            // Helper to reset column/page
+            const nextColumnOrPage = () => {
+                if (leftCol) {
+                    leftCol = false;
+                    y = 30; // Reset Y for new column
+                } else {
+                    doc.addPage();
+                    leftCol = true;
+                    y = 30; // Reset Y for new page
+                    // Re-add Title on new page (optional, but good for context)
+                    doc.setFontSize(10);
+                    doc.setTextColor(...COLORS.NAVY);
+                    doc.text('TERMS & CONDITIONS (Cont.)', 105, 20, { align: 'center' });
+                }
+            }
 
+            terms.forEach((item) => {
+                // Calculate height requirements first
                 doc.setFontSize(9)
-                doc.setTextColor(...COLORS.NAVY)
-                doc.text(item.title, x, y)
+                const titleDim = doc.getTextDimensions(item.title);
 
                 doc.setFontSize(8)
-                doc.setTextColor(60, 60, 60)
-                const lines = doc.splitTextToSize(item.text, colWidth)
-                doc.text(lines, x, y + 5)
+                const textLines = doc.splitTextToSize(item.text, colWidth)
+                const textBlockHeight = (textLines.length * 3.5) + 2 // Tighten line height slightly
 
-                const blockHeight = (lines.length * 4) + 12
+                const totalBlockHeight = titleDim.h + textBlockHeight + 6 // +6 for padding
 
-                if (index === 4) { // Switch col after 5 items
-                    leftCol = false
-                    y = 30
-                } else {
-                    y += blockHeight
+                // Check if block fits in current column
+                if (y + totalBlockHeight > pageHeight - bottomMargin) {
+                    nextColumnOrPage();
                 }
+
+                // Re-calculate X/Y after potential move
+                const currentX = leftCol ? 14 : 14 + colWidth + gap;
+
+                // Render Title
+                doc.setFontSize(9)
+                doc.setTextColor(...COLORS.NAVY)
+                doc.text(item.title, currentX, y)
+
+                // Render Text
+                doc.setFontSize(8)
+                doc.setTextColor(60, 60, 60)
+                doc.text(textLines, currentX, y + 5)
+
+                y += totalBlockHeight
             })
 
             // Agreement Footer
