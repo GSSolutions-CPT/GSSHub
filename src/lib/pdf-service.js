@@ -40,7 +40,7 @@ const generatePDF = async (docType, data) => {
         // 1. HEADER SECTION
         // ==========================================
         doc.setFillColor(...COLORS.DARK)
-        doc.rect(0, 0, pageWidth, 45, 'F')
+        doc.rect(0, 0, pageWidth, 35, 'F')
 
         // Logo Handling
         try {
@@ -66,18 +66,18 @@ const generatePDF = async (docType, data) => {
         const rightX = pageWidth - 14
         doc.setTextColor(203, 213, 225) // Slate 300
         doc.setFontSize(9)
-        doc.text(COMPANY_DETAILS.address, rightX, 15, { align: 'right' })
-        doc.text(COMPANY_DETAILS.phone, rightX, 20, { align: 'right' })
+        doc.text(COMPANY_DETAILS.address, rightX, 10, { align: 'right' })
+        doc.text(COMPANY_DETAILS.phone, rightX, 15, { align: 'right' })
         doc.setTextColor(...COLORS.PRIMARY)
-        doc.text(COMPANY_DETAILS.email, rightX, 25, { align: 'right' })
+        doc.text(COMPANY_DETAILS.email, rightX, 20, { align: 'right' })
         doc.setTextColor(203, 213, 225)
-        doc.text(COMPANY_DETAILS.website, rightX, 30, { align: 'right' })
+        doc.text(COMPANY_DETAILS.website, rightX, 25, { align: 'right' })
 
         // ==========================================
         // 2. BLUE BANNER STRIP
         // ==========================================
         doc.setFillColor(...COLORS.PRIMARY)
-        doc.rect(0, 45, pageWidth, 12, 'F')
+        doc.rect(0, 35, pageWidth, 8, 'F')
 
         // Determine Title
         let titleText = docType.toUpperCase()
@@ -87,18 +87,18 @@ const generatePDF = async (docType, data) => {
         doc.setFontSize(12)
         doc.setTextColor(...COLORS.WHITE)
         doc.setFont('helvetica', 'bold')
-        doc.text(titleText, 14, 52.5)
+        doc.text(titleText, 14, 40.5)
 
         // Meta Data
         doc.setFontSize(10)
         doc.setFont('helvetica', 'normal')
         const dateValue = new Date(data.date_created).toLocaleDateString()
-        doc.text(`NR: ${data.id.substring(0, 8)}   |   DATE: ${dateValue}`, rightX, 52.5, { align: 'right' })
+        doc.text(`NR: ${data.id.substring(0, 8)}   |   DATE: ${dateValue}`, rightX, 40.5, { align: 'right' })
 
         // ==========================================
         // 3. INFO CARDS
         // ==========================================
-        const cardY = 65
+        const cardY = 55
         const cardH = 35
         const colGap = 10
         const colW = (pageWidth - 28 - colGap) / 2
@@ -227,33 +227,41 @@ const generatePDF = async (docType, data) => {
         // --- Banking Card ---
         if (docType !== 'Purchase Order') {
             const bankWidth = 110
-            drawCard(14, finalY, bankWidth, 45, COLORS.DARK)
+            drawCard(14, finalY, bankWidth, 32, COLORS.DARK)
 
             doc.setTextColor(...COLORS.PRIMARY)
             doc.setFontSize(9)
             doc.setFont('helvetica', 'bold')
-            doc.text('BANKING DETAILS', 20, finalY + 10)
+            doc.text('BANKING DETAILS', 20, finalY + 8)
 
             doc.setTextColor(...COLORS.WHITE)
             doc.setFontSize(9)
-            doc.setFont('helvetica', 'normal')
 
             const labelX = 20
             const valX = 60
-            let bankY = finalY + 18
+            let bankY = finalY + 15
             const lineH = 5
 
-            doc.text('Bank:', labelX, bankY); doc.text('FNB/RMB', valX, bankY); bankY += lineH;
-            doc.text('Holder:', labelX, bankY); doc.text('Global Security Solutions', valX, bankY); bankY += lineH;
-
-            doc.text('Account:', labelX, bankY);
-            doc.setTextColor(...COLORS.PRIMARY); doc.setFont('helvetica', 'bold');
-            doc.text('63182000223', valX, bankY);
-            doc.setTextColor(...COLORS.WHITE); doc.setFont('helvetica', 'normal');
+            doc.setFont('helvetica', 'normal'); doc.text('Bank:', labelX, bankY);
+            doc.setFont('helvetica', 'bold'); doc.text('FNB/RMB', valX, bankY);
             bankY += lineH;
 
-            doc.text('Branch:', labelX, bankY); doc.text('250655', valX, bankY); bankY += lineH;
-            doc.text('Type:', labelX, bankY); doc.text('First Business Zero', valX, bankY);
+            doc.setFont('helvetica', 'normal'); doc.text('Holder:', labelX, bankY);
+            doc.setFont('helvetica', 'bold'); doc.text('Global Security Solutions', valX, bankY);
+            bankY += lineH;
+
+            doc.setFont('helvetica', 'normal'); doc.text('Account:', labelX, bankY);
+            doc.setTextColor(...COLORS.PRIMARY); doc.setFont('helvetica', 'bold');
+            doc.text('63182000223', valX, bankY);
+            doc.setTextColor(...COLORS.WHITE);
+            bankY += lineH;
+
+            doc.setFont('helvetica', 'normal'); doc.text('Branch:', labelX, bankY);
+            doc.setFont('helvetica', 'bold'); doc.text('250655', valX, bankY);
+            bankY += lineH;
+
+            doc.setFont('helvetica', 'normal'); doc.text('Type:', labelX, bankY);
+            doc.setFont('helvetica', 'bold'); doc.text('First Business Zero', valX, bankY);
         }
 
         // --- Totals ---
