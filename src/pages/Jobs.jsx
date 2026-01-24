@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Search, Briefcase, Calendar as CalendarIcon, User, Clock, List as ListIcon, Kanban, Pencil, Trash2, Loader2 } from 'lucide-react'
+import { Plus, Search, Briefcase, Calendar as CalendarIcon, User, Clock, List as ListIcon, Kanban, Pencil, Trash2, Loader2, CheckCircle, Activity } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { generateOutlookLink } from '@/lib/calendar-utils'
@@ -39,6 +39,11 @@ export default function Jobs() {
     notes: '',
     status: 'Pending'
   })
+
+  // Calculate Stats
+  const activeJobs = jobs.filter(j => ['Pending', 'In Progress'].includes(j.status)).length
+  const completedJobs = jobs.filter(j => j.status === 'Completed').length
+  const pendingJobs = jobs.filter(j => j.status === 'Pending').length
 
   // Handle incoming navigation state (e.g. from Sales)
   useEffect(() => {
@@ -357,7 +362,35 @@ export default function Jobs() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+          <div className="relative z-10">
+            <p className="text-blue-100 text-sm font-medium">Active Jobs</p>
+            <h3 className="text-3xl font-bold mt-1">{activeJobs}</h3>
+            <p className="text-blue-100 text-xs mt-2">Currently in progress or pending</p>
+          </div>
+          <Activity className="absolute right-[-10px] bottom-[-10px] h-24 w-24 text-white opacity-10 rotate-12" />
+        </div>
+        <div className="bg-gradient-to-r from-green-600 to-green-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+          <div className="relative z-10">
+            <p className="text-green-100 text-sm font-medium">Completed Jobs</p>
+            <h3 className="text-3xl font-bold mt-1">{completedJobs}</h3>
+            <p className="text-green-100 text-xs mt-2">Successfully delivered</p>
+          </div>
+          <CheckCircle className="absolute right-[-10px] bottom-[-10px] h-24 w-24 text-white opacity-10 rotate-12" />
+        </div>
+        <div className="bg-gradient-to-r from-amber-500 to-amber-400 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+          <div className="relative z-10">
+            <p className="text-amber-100 text-sm font-medium">Pending Start</p>
+            <h3 className="text-3xl font-bold mt-1">{pendingJobs}</h3>
+            <p className="text-amber-100 text-xs mt-2">Awaiting action</p>
+          </div>
+          <Clock className="absolute right-[-10px] bottom-[-10px] h-24 w-24 text-white opacity-10 rotate-12" />
+        </div>
+      </div>
+
       {/* Header Actions */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div className="flex flex-col sm:flex-row gap-4 flex-1 w-full xl:w-auto">
@@ -548,92 +581,100 @@ export default function Jobs() {
         {viewMode === 'list' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredJobs.map((job) => (
-              <Card key={job.id} className="hover:shadow-lg transition-shadow duration-200">
-                <CardHeader>
+              <Card key={job.id} className="group hover:shadow-xl transition-all duration-300 border-none shadow-sm bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 dark:border dark:border-border overflow-hidden relative">
+                <div className={`absolute top-0 left-0 w-1 h-full ${getStatusColor(job.status)}`}></div>
+                <CardHeader className="pb-3 pl-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Briefcase className="h-5 w-5" />
+                      <CardTitle className="text-lg flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                        <Briefcase className="h-5 w-5 text-indigo-500" />
                         {job.clients?.name || 'Unknown Client'}
                       </CardTitle>
                       {job.clients?.company && (
-                        <CardDescription>{job.clients.company}</CardDescription>
+                        <CardDescription className="text-slate-500 font-medium">{job.clients.company}</CardDescription>
                       )}
                     </div>
-                    <div className="flex gap-2">
-                      <Badge className={`${getStatusColor(job.status)} text-white`}>
+                    <div className="flex gap-2 items-center">
+                      <Badge className={`${getStatusColor(job.status)} text-white shadow-sm px-3 py-1`}>
                         {job.status}
                       </Badge>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" title="Add to Outlook" onClick={() => openOutlook(job)}>
-                          <CalendarIcon className="h-3 w-3" />
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-blue-600" title="Add to Outlook" onClick={() => openOutlook(job)}>
+                          <CalendarIcon className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEdit(job)}>
-                          <Pencil className="h-3 w-3" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-indigo-600" onClick={() => handleEdit(job)}>
+                          <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDelete(job.id)}>
-                          <Trash2 className="h-3 w-3" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-500 hover:bg-red-50" onClick={() => handleDelete(job.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {job.scheduled_datetime && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <CalendarIcon className="h-4 w-4" />
-                        <span>{new Date(job.scheduled_datetime).toLocaleString()}</span>
-                      </div>
-                    )}
+                <CardContent className="pl-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-dashed border-slate-200 dark:border-slate-800 pb-3">
+                      {job.scheduled_datetime ? (
+                        <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                          <CalendarIcon className="h-4 w-4 text-blue-500" />
+                          <span>{new Date(job.scheduled_datetime).toLocaleString()}</span>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-slate-400 italic">Unscheduled</div>
+                      )}
 
-                    {job.assigned_technicians && job.assigned_technicians.length > 0 && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="h-4 w-4" />
-                        <span>{job.assigned_technicians.join(', ')}</span>
-                      </div>
-                    )}
+                      {job.assigned_technicians && job.assigned_technicians.length > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full text-slate-600 dark:text-slate-400">
+                          <User className="h-3 w-3" />
+                          <span className="truncate max-w-[150px]">{job.assigned_technicians.join(', ')}</span>
+                        </div>
+                      )}
+                    </div>
 
                     {job.notes && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {job.notes}
+                      <p className="text-sm text-muted-foreground line-clamp-2 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-md italic border border-slate-100 dark:border-slate-800">
+                        &quot;{job.notes}&quot;
                       </p>
                     )}
 
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                      <Clock className="h-3 w-3" />
-                      Created {new Date(job.created_at).toLocaleDateString()}
-                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>Created {new Date(job.created_at).toLocaleDateString()}</span>
+                      </div>
 
-                    {/* Status Update Buttons */}
-                    <div className="flex gap-2 pt-2">
-                      {job.status === 'Pending' && (
-                        <Button
-                          size="sm"
-                          onClick={() => updateJobStatus(job.id, 'In Progress')}
-                          className="flex-1"
-                        >
-                          Start Job
-                        </Button>
-                      )}
-                      {job.status === 'In Progress' && (
-                        <Button
-                          size="sm"
-                          onClick={() => updateJobStatus(job.id, 'Completed')}
-                          className="flex-1"
-                        >
-                          Complete Job
-                        </Button>
-                      )}
-                      {(job.status === 'Pending' || job.status === 'In Progress') && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => updateJobStatus(job.id, 'Cancelled')}
-                        >
-                          Cancel
-                        </Button>
-                      )}
+                      {/* Status Update Buttons */}
+                      <div className="flex gap-2">
+                        {job.status === 'Pending' && (
+                          <Button
+                            size="sm"
+                            onClick={() => updateJobStatus(job.id, 'In Progress')}
+                            className="bg-blue-600 hover:bg-blue-700 h-8 text-xs"
+                          >
+                            Start Job
+                          </Button>
+                        )}
+                        {job.status === 'In Progress' && (
+                          <Button
+                            size="sm"
+                            onClick={() => updateJobStatus(job.id, 'Completed')}
+                            className="bg-green-600 hover:bg-green-700 h-8 text-xs"
+                          >
+                            Complete
+                          </Button>
+                        )}
+                        {(job.status === 'Pending' || job.status === 'In Progress') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateJobStatus(job.id, 'Cancelled')}
+                            className="h-8 text-xs hover:bg-red-50 hover:text-red-600 border-slate-200"
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -652,16 +693,24 @@ export default function Jobs() {
       </Suspense>
 
       {filteredJobs.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Briefcase className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              {searchTerm || filterStatus !== 'all'
-                ? 'No jobs found matching your filters'
-                : 'No jobs yet. Create your first job to get started.'}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+          <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-full mb-4">
+            <Briefcase className="h-8 w-8 text-blue-500" />
+          </div>
+          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">
+            {searchTerm || filterStatus !== 'all' ? 'No jobs found' : 'No jobs scheduled'}
+          </h3>
+          <p className="mb-6 max-w-sm text-center">
+            {searchTerm || filterStatus !== 'all'
+              ? 'Try adjusting your filters or search terms.'
+              : 'Create your first job card to track work orders.'}
+          </p>
+          {filterStatus === 'all' && !searchTerm && (
+            <Button onClick={() => setIsDialogOpen(true)} className="ssh-button-gradient">
+              Create First Job
+            </Button>
+          )}
+        </div>
       )}
     </div>
   )
