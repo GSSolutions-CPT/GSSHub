@@ -12,8 +12,6 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { useCurrency } from '@/lib/use-currency.jsx';
-
 const DEFAULT_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
 export default function FinancialCharts({ monthlyData, expenseBreakdown, colors = DEFAULT_COLORS }) {
