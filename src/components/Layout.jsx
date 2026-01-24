@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import {
     LayoutDashboard,
     Users,
-    Package,
     Banknote,
     Briefcase,
     PieChart,
@@ -27,7 +26,6 @@ export default function Layout() {
         { name: 'Clients', path: '/clients', icon: Users },
         { name: 'Jobs', path: '/jobs', icon: Briefcase },
         { name: 'Financials', path: '/financials', icon: PieChart },
-        { name: 'Products', path: '/products', icon: Package },
         { name: 'Settings', path: '/settings', icon: Settings },
     ]
 
