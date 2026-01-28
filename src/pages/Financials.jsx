@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
-import { Plus, Banknote, TrendingUp, TrendingDown, Receipt, Pencil, Trash2, Paperclip, FileText } from 'lucide-react'
+import { Plus, Banknote, TrendingUp, TrendingDown, Receipt, Pencil, Trash2, Paperclip, FileText, Calendar, Wallet, PieChart, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
@@ -311,91 +311,109 @@ export default function Financials() {
   return (
     <div className="space-y-6">
       {/* Date Range Filter */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Financial Period</CardTitle>
-          <CardDescription>Select date range for financial analysis</CardDescription>
+      <Card className="border-none shadow-sm bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+              <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Financial Period</CardTitle>
+              <CardDescription>Analyze performance over a specific timeframe</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <Label htmlFor="start_date">Start Date</Label>
+          <div className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="flex-1 w-full space-y-2">
+              <Label htmlFor="start_date" className="text-xs font-medium text-muted-foreground ml-1">START DATE</Label>
               <Input
                 id="start_date"
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                className="bg-white dark:bg-slate-950"
               />
             </div>
-            <div className="flex-1">
-              <Label htmlFor="end_date">End Date</Label>
+            <div className="flex-1 w-full space-y-2">
+              <Label htmlFor="end_date" className="text-xs font-medium text-muted-foreground ml-1">END DATE</Label>
               <Input
                 id="end_date"
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                className="bg-white dark:bg-slate-950"
               />
             </div>
-            <div className="flex items-end">
-              <Button onClick={fetchInvoices}>Apply</Button>
-            </div>
+            <Button onClick={fetchInvoices} className="w-full sm:w-auto bg-slate-900 dark:bg-slate-100 dark:text-slate-900">Apply Filter</Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Financial Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <Banknote className="h-5 w-5 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R{metrics.totalRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">From paid invoices</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gross Profit</CardTitle>
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R{metrics.totalProfit.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Margin: {metrics.profitMargin}%
+        <div className="bg-gradient-to-br from-emerald-600 to-emerald-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+          <div className="relative z-10">
+            <p className="text-emerald-100 text-sm font-medium flex items-center gap-2">
+              Total Revenue
+              <ArrowUpRight className="h-4 w-4 opacity-75" />
             </p>
-          </CardContent>
-        </Card>
+            <h3 className="text-3xl font-bold mt-2">R{metrics.totalRevenue.toLocaleString()}</h3>
+            <p className="text-emerald-100 text-xs mt-3 bg-emerald-700/30 w-fit px-2 py-1 rounded-full">
+              From paid invoices
+            </p>
+          </div>
+          <Banknote className="absolute right-[-20px] bottom-[-20px] h-32 w-32 text-white opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <Receipt className="h-5 w-5 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R{metrics.totalExpenses.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">All expenses</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-            {metrics.netProfit >= 0 ? (
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            ) : (
-              <TrendingDown className="h-5 w-5 text-red-600" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${metrics.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              R{metrics.netProfit.toLocaleString()}
+        <div className="bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+          <div className="relative z-10">
+            <p className="text-blue-100 text-sm font-medium flex items-center gap-2">
+              Gross Profit
+              <PieChart className="h-4 w-4 opacity-75" />
+            </p>
+            <h3 className="text-3xl font-bold mt-2">R{metrics.totalProfit.toLocaleString()}</h3>
+            <div className="flex items-center gap-2 mt-3">
+              <p className="text-blue-100 text-xs bg-blue-700/30 w-fit px-2 py-1 rounded-full">
+                Margin: {metrics.profitMargin}%
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">After expenses</p>
-          </CardContent>
-        </Card>
+          </div>
+          <TrendingUp className="absolute right-[-20px] bottom-[-20px] h-32 w-32 text-white opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
+        </div>
+
+        <div className="bg-gradient-to-br from-rose-600 to-rose-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+          <div className="relative z-10">
+            <p className="text-rose-100 text-sm font-medium flex items-center gap-2">
+              Total Expenses
+              <ArrowDownRight className="h-4 w-4 opacity-75" />
+            </p>
+            <h3 className="text-3xl font-bold mt-2">R{metrics.totalExpenses.toLocaleString()}</h3>
+            <p className="text-rose-100 text-xs mt-3 bg-rose-700/30 w-fit px-2 py-1 rounded-full">
+              Recorded overheads
+            </p>
+          </div>
+          <Receipt className="absolute right-[-20px] bottom-[-20px] h-32 w-32 text-white opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
+        </div>
+
+        <div className={`rounded-xl p-6 text-white shadow-lg relative overflow-hidden group hover:shadow-xl transition-all duration-300 ${metrics.netProfit >= 0 ? 'bg-gradient-to-br from-indigo-600 to-indigo-500' : 'bg-gradient-to-br from-orange-600 to-orange-500'
+          }`}>
+          <div className="relative z-10">
+            <p className={`text-sm font-medium flex items-center gap-2 ${metrics.netProfit >= 0 ? 'text-indigo-100' : 'text-orange-100'}`}>
+              Net Profit
+              <Wallet className="h-4 w-4 opacity-75" />
+            </p>
+            <h3 className="text-3xl font-bold mt-2">R{metrics.netProfit.toLocaleString()}</h3>
+            <p className={`text-xs mt-3 w-fit px-2 py-1 rounded-full ${metrics.netProfit >= 0 ? 'text-indigo-100 bg-indigo-700/30' : 'text-orange-100 bg-orange-700/30'}`}>
+              Bottom line
+            </p>
+          </div>
+          {metrics.netProfit >= 0 ? (
+            <TrendingUp className="absolute right-[-20px] bottom-[-20px] h-32 w-32 text-white opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
+          ) : (
+            <TrendingDown className="absolute right-[-20px] bottom-[-20px] h-32 w-32 text-white opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
+          )}
+        </div>
       </div>
 
       {/* Charts */}
@@ -573,31 +591,37 @@ export default function Financials() {
         <CardContent>
           <div className="space-y-4">
             {expenses.slice(0, 10).map((expense) => (
-              <div key={expense.id} className="flex items-center justify-between pb-4 border-b last:border-0">
+              <div key={expense.id} className="flex items-center justify-between p-4 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <div className="flex-1">
-                  <p className="font-medium">{expense.description}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {expense.type === 'job' ? 'Job Expense' : 'General Overhead'} • {new Date(expense.date).toLocaleDateString()}
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">{expense.description}</p>
+                    {expense.type === 'job' && <span className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-medium">JOB</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                    <Calendar className="h-3 w-3" /> {new Date(expense.date).toLocaleDateString()}
+                    {expense.type === 'general' && <span className="opacity-50">• General Overhead</span>}
                   </p>
 
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="text-lg font-semibold text-red-600">
-                    -R{parseFloat(expense.amount).toFixed(2)}
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-rose-600 dark:text-rose-500">
+                      -R{parseFloat(expense.amount).toFixed(2)}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1">
                     {expense.receipt_url && (
-                      <Button variant="ghost" size="icon" asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-blue-600" asChild title="View Receipt">
                         <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer">
-                          <FileText className="h-4 w-4 text-blue-500" />
+                          <FileText className="h-4 w-4" />
                         </a>
                       </Button>
                     )}
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(expense)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600" onClick={() => handleEdit(expense)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(expense.id)}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600" onClick={() => handleDelete(expense.id)}>
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
