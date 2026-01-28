@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Download, CheckCircle, Upload, MessageCircle, Phone, Mail, HelpCircle } from 'lucide-react'
+import { Download, CheckCircle, Upload, MessageCircle, Phone, Mail, HelpCircle, PenTool } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSearchParams } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
@@ -245,52 +245,58 @@ export default function ClientPortal() {
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
         {/* Welcome Section */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden group">
           <div className="relative z-10">
-            <h2 className="text-3xl font-bold mb-2">Welcome back, {client.name.split(' ')[0]}</h2>
+            <h2 className="text-3xl font-bold mb-2 tracking-tight">Welcome back, {client.name.split(' ')[0]}</h2>
             <p className="text-slate-300">Here is what is happening with your account today.</p>
 
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white/10 backdrop-blur-md rounded-lg p-4">
-                <p className="text-xs text-slate-300 uppercase tracking-wider">Outstanding Balance</p>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/10 hover:bg-white/15 transition-colors">
+                <p className="text-xs text-slate-300 uppercase tracking-widest font-medium">Outstanding Balance</p>
                 <p className="text-2xl font-bold mt-1 text-white">{formatCurrency(totalOutstanding)}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-md rounded-lg p-4">
-                <p className="text-xs text-slate-300 uppercase tracking-wider">Active Quotes</p>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/10 hover:bg-white/15 transition-colors">
+                <p className="text-xs text-slate-300 uppercase tracking-widest font-medium">Active Quotes</p>
                 <p className="text-2xl font-bold mt-1 text-white">{activeQuotes}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-md rounded-lg p-4">
-                <p className="text-xs text-slate-300 uppercase tracking-wider">Active Jobs</p>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/10 hover:bg-white/15 transition-colors">
+                <p className="text-xs text-slate-300 uppercase tracking-widest font-medium">Active Jobs</p>
                 <p className="text-2xl font-bold mt-1 text-white">0</p>
               </div>
             </div>
           </div>
           {/* Decorative Circle */}
-          <div className="absolute -right-20 -top-20 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute -right-20 -top-20 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-500/30 transition-all duration-1000"></div>
+          <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl group-hover:bg-purple-500/30 transition-all duration-1000"></div>
         </div>
 
         {/* Action Center */}
         {pendingActions.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-foreground">Action Required</h3>
+            <h3 className="text-lg font-semibold mb-4 text-foreground flex items-center gap-2">
+              <span className="w-1.5 h-6 bg-red-500 rounded-full"></span>
+              Action Required
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {quotations.filter(q => q.status === 'Sent').map(q => (
-                <div key={q.id} className="bg-white dark:bg-card border border-l-4 border-l-blue-500 rounded-lg p-6 shadow-sm hover:shadow-md transition-all flex justify-between items-center group">
+                <div key={q.id} className="bg-white/80 dark:bg-card/80 backdrop-blur-sm border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex justify-between items-center group relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>
                   <div>
                     <p className="font-semibold text-foreground">Quote #{q.id.substring(0, 6)} needs review</p>
                     <p className="text-sm text-muted-foreground">Created {new Date(q.date_created).toLocaleDateString()}</p>
                   </div>
-                  <Button onClick={() => document.getElementById('tab-quotations').click()}>View Quote</Button>
+                  <Button onClick={() => document.getElementById('tab-quotations').click()} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">View Quote</Button>
                 </div>
               ))}
 
               {invoices.filter(i => i.status === 'Sent' || i.status === 'Overdue').map(inv => (
-                <div key={inv.id} className="bg-white dark:bg-card border border-l-4 border-l-orange-500 rounded-lg p-6 shadow-sm hover:shadow-md transition-all flex justify-between items-center">
+                <div key={inv.id} className="bg-white/80 dark:bg-card/80 backdrop-blur-sm border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex justify-between items-center relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500"></div>
                   <div>
                     <p className="font-semibold text-foreground">Invoice #{inv.id.substring(0, 6)} is due</p>
                     <p className="text-sm text-muted-foreground font-medium text-orange-600">Due: {formatCurrency(inv.total_amount)}</p>
                   </div>
-                  <Button variant="outline" onClick={() => document.getElementById('tab-invoices').click()}>Pay Now</Button>
+                  <Button variant="outline" onClick={() => document.getElementById('tab-invoices').click()} className="border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800">Pay Now</Button>
                 </div>
               ))}
             </div>
@@ -299,15 +305,22 @@ export default function ClientPortal() {
 
         {/* Quick Links / Services */}
         <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">Quick Access</h3>
+          <h3 className="text-lg font-semibold mb-4 text-foreground flex items-center gap-2">
+            <span className="w-1.5 h-6 bg-slate-300 rounded-full"></span>
+            Quick Access
+          </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-24 flex-col gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-2 border-dashed" onClick={() => setContactOpen(true)}>
-              <HelpCircle className="h-6 w-6 text-slate-500" />
-              <span>Support</span>
+            <Button variant="outline" className="h-28 flex-col gap-3 hover:bg-white dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all bg-white/50 backdrop-blur-sm" onClick={() => setContactOpen(true)}>
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-full">
+                <HelpCircle className="h-6 w-6 text-blue-500" />
+              </div>
+              <span className="font-medium">Support</span>
             </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-2 border-dashed" onClick={() => window.open(whatsappUrl, '_blank')}>
-              <MessageCircle className="h-6 w-6 text-green-500" />
-              <span>WhatsApp</span>
+            <Button variant="outline" className="h-28 flex-col gap-3 hover:bg-white dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all bg-white/50 backdrop-blur-sm" onClick={() => window.open(whatsappUrl, '_blank')}>
+              <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-full">
+                <MessageCircle className="h-6 w-6 text-green-500" />
+              </div>
+              <span className="font-medium">WhatsApp</span>
             </Button>
           </div>
         </div>
@@ -329,36 +342,41 @@ export default function ClientPortal() {
   )
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-background relative font-sans">
-      <header className="bg-white/80 dark:bg-card/80 backdrop-blur-xl border-b border-border/50 sticky top-0 z-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 relative font-sans overflow-x-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-950 dark:to-black opacity-80" />
+      <div className="fixed -top-40 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
+      <div className="fixed top-40 -left-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+
+      <header className="fixed top-0 left-0 right-0 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md border-b border-white/20 dark:border-slate-800/50 z-50">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-slate-900 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg">
+            <div className="h-10 w-10 bg-gradient-to-br from-slate-900 to-slate-700 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-slate-900/20">
               GS
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground leading-none">Client Portal</h1>
-              <p className="text-xs text-muted-foreground">Global Security Solutions</p>
+              <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-none tracking-tight">Client Portal</h1>
+              <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Global Security Solutions</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="hidden md:flex" onClick={() => setContactOpen(true)}>
+          <div className="flex gap-3">
+            <Button variant="ghost" size="sm" className="hidden md:flex hover:bg-white/50" onClick={() => setContactOpen(true)}>
               <HelpCircle className="mr-2 h-4 w-4" /> Help
             </Button>
-            <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs" title={client.name}>
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-white to-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs shadow-sm" title={client.name}>
               {client.name.substring(0, 2).toUpperCase()}
             </div>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 sm:px-6 py-8 pb-32 max-w-7xl">
+      <div className="container mx-auto px-4 sm:px-6 py-8 pt-28 pb-32 max-w-7xl relative z-10">
         <Tabs defaultValue="overview" className="space-y-8">
-          <TabsList className="bg-white/50 backdrop-blur p-1 rounded-xl border shadow-sm w-full md:w-auto grid grid-cols-4 h-auto">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg py-2.5 transition-all">Overview</TabsTrigger>
-            <TabsTrigger id="tab-quotations" value="quotations" className="data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg py-2.5 transition-all">Quotes</TabsTrigger>
-            <TabsTrigger value="proforma" className="data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg py-2.5 transition-all">Proforma</TabsTrigger>
-            <TabsTrigger id="tab-invoices" value="invoices" className="data-[state=active]:bg-slate-900 data-[state=active]:text-white rounded-lg py-2.5 transition-all">Invoices</TabsTrigger>
+          <TabsList className="bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-full border border-white/20 dark:border-slate-800 shadow-sm w-full md:w-auto inline-flex h-auto">
+            <TabsTrigger value="overview" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium">Overview</TabsTrigger>
+            <TabsTrigger id="tab-quotations" value="quotations" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium">Quotes</TabsTrigger>
+            <TabsTrigger value="proforma" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium">Proforma</TabsTrigger>
+            <TabsTrigger id="tab-invoices" value="invoices" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium">Invoices</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -369,28 +387,28 @@ export default function ClientPortal() {
             {quotations
               .filter(q => q.status === 'Sent' || q.status === 'Draft' || q.status === 'Rejected')
               .map((quotation) => (
-                <Card key={quotation.id} className="group hover:shadow-xl transition-all duration-300 border-slate-200/60 overflow-hidden">
-                  <div className={`h-1 w-full ${getStatusColor(quotation.status)}`}></div>
+                <Card key={quotation.id} className="group hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 border-slate-200/60 dark:border-slate-800 bg-white/80 dark:bg-card/80 backdrop-blur-sm overflow-hidden rounded-2xl">
+                  <div className={`h-1.5 w-full ${getStatusColor(quotation.status)}`}></div>
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="font-mono text-xs">#{quotation.id.substring(0, 6)}</Badge>
-                          <span className="text-xs text-muted-foreground">{new Date(quotation.date_created).toLocaleDateString()}</span>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="outline" className="font-mono text-xs bg-slate-50 dark:bg-slate-900/50 px-2 py-0.5 rounded-md">#{quotation.id.substring(0, 6)}</Badge>
+                          <span className="text-xs text-muted-foreground font-medium">{new Date(quotation.date_created).toLocaleDateString()}</span>
                         </div>
-                        <CardTitle className="text-xl">Security System Quote</CardTitle>
+                        <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">Security System Quote</CardTitle>
                       </div>
-                      <Badge className={getStatusColor(quotation.status)}>{quotation.status}</Badge>
+                      <Badge className={cn("px-2.5 py-0.5 rounded-full text-white shadow-sm", getStatusColor(quotation.status))}>{quotation.status}</Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6 pt-2">
-                    <div className="flex justify-between items-end border-b pb-4 border-dashed">
-                      <span className="text-muted-foreground text-sm">Total Value</span>
-                      <span className="text-3xl font-bold text-slate-900 dark:text-white">{formatCurrency(quotation.total_amount)}</span>
+                    <div className="flex justify-between items-end border-b border-slate-100 dark:border-slate-800 pb-4 border-dashed">
+                      <span className="text-muted-foreground text-sm font-medium">Total Value</span>
+                      <span className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{formatCurrency(quotation.total_amount)}</span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <Button variant="outline" className="w-full hover:bg-slate-50 transition-colors" onClick={() => generateQuotePDF({ ...quotation, clients: client }, settings)}>
+                      <Button variant="outline" className="w-full hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors border-slate-200 dark:border-slate-700" onClick={() => generateQuotePDF({ ...quotation, clients: client }, settings)}>
                         <Download className="mr-2 h-4 w-4" />
                         PDF
                       </Button>
@@ -403,8 +421,8 @@ export default function ClientPortal() {
 
                     {quotation.status === 'Sent' && (
                       <div className="text-center">
-                        <button onClick={() => handleDecline(quotation)} className="text-xs text-red-500 hover:underline">
-                          Decline this text
+                        <button onClick={() => handleDecline(quotation)} className="text-xs text-red-500 hover:text-red-600 hover:underline font-medium transition-colors">
+                          Decline this quotation
                         </button>
                       </div>
                     )}
@@ -412,12 +430,12 @@ export default function ClientPortal() {
                 </Card>
               ))}
             {quotations.filter(q => q.status === 'Sent' || q.status === 'Draft').length === 0 && (
-              <div className="col-span-full flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-dashed text-center">
-                <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle className="h-8 w-8 text-slate-300" />
+              <div className="col-span-full flex flex-col items-center justify-center p-16 bg-white/50 dark:bg-card/50 backdrop-blur-sm rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 text-center">
+                <div className="h-20 w-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                  <CheckCircle className="h-10 w-10 text-slate-400" />
                 </div>
-                <h3 className="text-lg font-medium text-slate-900">All caught up!</h3>
-                <p className="text-slate-500">You have no pending quotations to review.</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">All caught up!</h3>
+                <p className="text-slate-500 max-w-sm">You have no pending quotations requiring your attention.</p>
               </div>
             )}
           </TabsContent>
@@ -426,35 +444,35 @@ export default function ClientPortal() {
             {quotations
               .filter(q => q.status === 'Accepted' || q.status === 'Approved')
               .map((quotation) => (
-                <Card key={quotation.id} className="hover:shadow-lg transition-all border-l-4 border-l-green-500 bg-white">
+                <Card key={quotation.id} className="hover:shadow-lg transition-all border-l-4 border-l-green-500 bg-white/80 dark:bg-card/80 backdrop-blur-sm rounded-xl overflow-hidden">
                   <CardHeader>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle className="flex items-center gap-2">
-                          PROFORMA <span className="text-sm font-normal text-muted-foreground">Quotation #{quotation.id.substring(0, 6)}</span>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          PROFORMA <span className="text-sm font-normal text-muted-foreground bg-slate-100 px-2 py-0.5 rounded-md">#{quotation.id.substring(0, 6)}</span>
                         </CardTitle>
-                        <CardDescription>Accepted on {new Date(quotation.accepted_at || quotation.date_created).toLocaleDateString()}</CardDescription>
+                        <CardDescription className="mt-1">Accepted on {new Date(quotation.accepted_at || quotation.date_created).toLocaleDateString()}</CardDescription>
                       </div>
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">Active</Badge>
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 shadow-sm rounded-full">Active</Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center p-4 bg-slate-50 rounded-lg">
-                      <span className="text-muted-foreground">Total Value:</span>
-                      <span className="text-xl font-bold text-slate-900">{formatCurrency(quotation.total_amount)}</span>
+                    <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800">
+                      <span className="text-muted-foreground font-medium">Total Value:</span>
+                      <span className="text-xl font-bold text-slate-900 dark:text-white">{formatCurrency(quotation.total_amount)}</span>
                     </div>
 
                     <div className={cn(
-                      "p-3 rounded text-sm text-center border",
+                      "p-3 rounded-lg text-sm text-center border font-medium",
                       (quotation.status === 'Approved' || quotation.admin_approved)
-                        ? "bg-slate-100 text-slate-800 border-slate-200"
-                        : "bg-yellow-50 text-yellow-800 border-yellow-100"
+                        ? "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                        : "bg-amber-50 text-amber-800 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-900/30"
                     )}>
                       {(quotation.status === 'Approved' || quotation.admin_approved) ? (
                         (() => {
                           const depositRatio = (quotation.payment_type === 'full' ? 100 : (quotation.deposit_percentage || 75)) / 100
                           const balance = quotation.total_amount * (1 - depositRatio)
-                          return <p>Outstanding Balance: <strong>{formatCurrency(balance)}</strong></p>
+                          return <p>Outstanding Balance: <strong className="ml-1">{formatCurrency(balance)}</strong></p>
                         })()
                       ) : (
                         (() => {
@@ -463,15 +481,15 @@ export default function ClientPortal() {
                           return (
                             <p>
                               {quotation.payment_proof ? "Payment Review Pending: " : (quotation.payment_type === 'full' ? "Full Payment Required: " : "Deposit Required: ")}
-                              <strong>{formatCurrency(depositAmount)}</strong>
+                              <strong className="block text-lg mt-1">{formatCurrency(depositAmount)}</strong>
                             </p>
                           )
                         })()
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                      <Button className="w-full" variant="outline" onClick={() => generateQuotePDF({ ...quotation, clients: client }, settings)}>
+                    <div className="flex flex-col gap-2 pt-2">
+                      <Button className="w-full border-slate-200 hover:bg-slate-50" variant="outline" onClick={() => generateQuotePDF({ ...quotation, clients: client }, settings)}>
                         <Download className="mr-2 h-4 w-4" />
                         Download Proforma Invoice
                       </Button>
@@ -496,34 +514,44 @@ export default function ClientPortal() {
             {invoices
               .filter(inv => inv.status !== 'Draft')
               .map((invoice) => (
-                <Card key={invoice.id} className="hover:shadow-lg transition-all border-slate-200">
-                  <CardHeader>
+                <Card key={invoice.id} className="hover:shadow-lg transition-all border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-card/80 backdrop-blur-sm rounded-xl overflow-hidden group">
+                  <div className={`h-1.5 w-full ${getStatusColor(invoice.status)}`}></div>
+                  <CardHeader className="pb-3">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
-                          <span className="font-bold text-slate-500">INV</span>
+                        <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-inner">
+                          <span className="font-bold text-slate-500 dark:text-slate-400 text-xs">INV</span>
                         </div>
                         <div>
-                          <CardTitle className="text-lg">Invoice #{invoice.id.substring(0, 6)}</CardTitle>
-                          <p className="text-xs text-muted-foreground">{new Date(invoice.date_created).toLocaleDateString()}</p>
+                          <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Invoice #{invoice.id.substring(0, 6)}</CardTitle>
+                          <p className="text-xs text-muted-foreground font-medium">{new Date(invoice.date_created).toLocaleDateString()}</p>
                         </div>
                       </div>
-                      <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>
+                      <Badge className={cn("px-2.5 py-0.5 rounded-full shadow-sm", getStatusColor(invoice.status))}>{invoice.status}</Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center py-2 border-y border-dashed">
-                      <span className="text-muted-foreground">Amount Due</span>
-                      <span className="text-xl font-bold">{formatCurrency(invoice.total_amount)}</span>
+                  <CardContent className="space-y-4 pt-2">
+                    <div className="flex justify-between items-center py-3 border-y border-dashed border-slate-100 dark:border-slate-800">
+                      <span className="text-muted-foreground font-medium">Amount Due</span>
+                      <span className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{formatCurrency(invoice.total_amount)}</span>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Button className="w-full" onClick={() => generateInvoicePDF({ ...invoice, clients: client }, settings)}>
+                      <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/10 dark:shadow-none" onClick={() => generateInvoicePDF({ ...invoice, clients: client }, settings)}>
                         <Download className="mr-2 h-4 w-4" /> Download Tax Invoice
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
+            {invoices.filter(inv => inv.status !== 'Draft').length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center p-16 bg-white/50 dark:bg-card/50 backdrop-blur-sm rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 text-center">
+                <div className="h-20 w-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                  <CheckCircle className="h-10 w-10 text-slate-400" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No Invoices Found</h3>
+                <p className="text-slate-500 max-w-sm">There are no invoices available for your account at this time.</p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
@@ -533,21 +561,31 @@ export default function ClientPortal() {
         href={whatsappUrl}
         target="_blank"
         rel="noreferrer"
-        className="fixed bottom-6 right-6 z-50 bg-[#25D366] hover:bg-[#128C7E] text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-50 bg-[#25D366] hover:bg-[#128C7E] text-white p-4 rounded-full shadow-2xl transition-all hover:scale-110 flex items-center justify-center animate-in zoom-in duration-300"
         title="Chat on WhatsApp"
+        aria-label="Chat on WhatsApp"
       >
-        <MessageCircle className="h-7 w-7" />
+        <MessageCircle className="h-7 w-7 fill-current" />
       </a>
 
-      {/* Acceptance Modal - Kept same logic, just styled */}
+      {/* Acceptance Modal - Kept same logic, styling updated */}
       <Dialog open={step > 0} onOpenChange={(open) => !open && setStep(0)}>
-        <DialogContent className="sm:max-w-md">
-          {/* ... (Existing Modal Content logic is fine, maybe slight style tweaks if needed later) ... */}
+        <DialogContent className="sm:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {step === 1 ? 'Sign Acceptance' : 'Next Steps'}
+            <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              {step === 1 ? (
+                <>
+                  <PenTool className="h-5 w-5 text-blue-500" />
+                  Sign Acceptance
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Next Steps
+                </>
+              )}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-500 dark:text-slate-400">
               {step === 1
                 ? 'Please sign below to accept this quotation and proceed to payment.'
                 : 'Quotation accepted! Here are the banking details for the deposit.'}
@@ -556,34 +594,37 @@ export default function ClientPortal() {
 
           {step === 1 && (
             <div className="space-y-4">
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-inner bg-white">
                 <SignaturePad onSave={handleSignatureSave} />
               </div>
-              <p className="text-xs text-muted-foreground text-center bg-slate-50 p-2 rounded">
-                By signing, you agree to the Terms & Conditions outlined in the document.
+              <p className="text-xs text-muted-foreground text-center bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                By signing, you agree to the Terms & Conditions outlined in the quotation document.
               </p>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
-                <Button onClick={submitAcceptance} disabled={!signature} className="bg-green-600 hover:bg-green-700 text-white">Confirm & Sign</Button>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setStep(0)} className="rounded-lg border-slate-200">Cancel</Button>
+                <Button onClick={submitAcceptance} disabled={!signature} className="bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-lg shadow-slate-900/20">Confirm & Sign</Button>
               </DialogFooter>
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-6">
-              <div className="bg-slate-50 border border-slate-100 p-5 rounded-xl text-sm space-y-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                    <span className="font-bold">1</span>
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 p-5 rounded-xl text-sm space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm">
+                    <span className="font-bold text-lg">1</span>
                   </div>
-                  <p className="font-semibold text-lg text-slate-800">Banking Details</p>
+                  <p className="font-bold text-lg text-slate-900 dark:text-white">Banking Details</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pl-10 text-slate-600">
-                  <span className="text-muted-foreground">Bank:</span> <span className="font-medium text-slate-900">{settings.bankName || 'FNB / RMB'}</span>
-                  <span className="text-muted-foreground">Account:</span> <span className="font-medium text-slate-900">{settings.bankAccountNumber || '63182000223'}</span>
-                  <span className="text-muted-foreground">Branch:</span> <span>{settings.bankBranchCode || '250655'}</span>
-                  <span className="text-muted-foreground">Ref:</span> <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-900 select-all">{settings.bankReference || acceptingQuote?.id.substring(0, 6)}</span>
+                <div className="grid grid-cols-[80px_1fr] gap-y-2 gap-x-4 pl-3 text-slate-600 dark:text-slate-300">
+                  <span className="text-muted-foreground font-medium text-right">Bank:</span> <span className="font-semibold text-slate-900 dark:text-white">{settings.bankName || 'FNB / RMB'}</span>
+                  <span className="text-muted-foreground font-medium text-right">Account:</span> <span className="font-semibold text-slate-900 dark:text-white font-mono">{settings.bankAccountNumber || '63182000223'}</span>
+                  <span className="text-muted-foreground font-medium text-right">Branch:</span> <span className="text-slate-900 dark:text-white">{settings.bankBranchCode || '250655'}</span>
+                  <span className="text-muted-foreground font-medium text-right pt-1">Ref:</span>
+                  <span className="font-mono bg-white dark:bg-black px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-200 select-all font-bold tracking-wide w-fit">
+                    {settings.bankReference || acceptingQuote?.id.substring(0, 6)}
+                  </span>
                 </div>
               </div>
 
@@ -636,7 +677,7 @@ export default function ClientPortal() {
       </Dialog>
 
       {/* Contact Support Modal */}
-      < Dialog open={contactOpen} onOpenChange={setContactOpen} >
+      <Dialog open={contactOpen} onOpenChange={setContactOpen} >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Contact Support</DialogTitle>
