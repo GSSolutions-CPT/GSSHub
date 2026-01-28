@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,14 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Plus, FileText, Calendar, Banknote, RefreshCw, AlertCircle } from 'lucide-react'
+import { Plus, FileText, Calendar, RefreshCw, AlertCircle, Search, CreditCard, CheckCircle, ChevronRight, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { useCurrency } from '@/lib/use-currency.jsx'
 
 export default function Contracts() {
+  const { formatCurrency } = useCurrency()
   const [contracts, setContracts] = useState([])
   const [clients, setClients] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     client_id: '',
     description: '',
@@ -26,6 +30,7 @@ export default function Contracts() {
     active: true
   })
 
+  // Fetch Logic Preserved
   const fetchContracts = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -83,6 +88,7 @@ export default function Contracts() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setIsLoading(true)
 
     try {
       const nextBilling = formData.next_billing_date || calculateNextBillingDate(formData.start_date, formData.frequency)
@@ -97,7 +103,6 @@ export default function Contracts() {
 
       if (error) throw error
 
-      // Log activity
       await supabase.from('activity_log').insert([{
         type: 'Contract Created',
         description: `New recurring contract created`,
@@ -119,6 +124,8 @@ export default function Contracts() {
     } catch (error) {
       console.error('Error creating contract:', error)
       toast.error('Error creating contract. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -131,7 +138,6 @@ export default function Contracts() {
 
       if (error) throw error
 
-      // Log activity
       await supabase.from('activity_log').insert([{
         type: 'Contract Status Changed',
         description: `Contract ${!currentStatus ? 'activated' : 'deactivated'}`,
@@ -140,14 +146,16 @@ export default function Contracts() {
       }])
 
       fetchContracts()
+      toast.success(`Contract ${!currentStatus ? 'activated' : 'deactivated'}`)
     } catch (error) {
       console.error('Error updating contract:', error)
+      toast.error('Failed to update status')
     }
   }
 
   const generateInvoice = async (contract) => {
+    const toastId = toast.loading('Generating invoice...')
     try {
-      // Create invoice from contract
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .insert([{
@@ -168,7 +176,6 @@ export default function Contracts() {
 
       const invoiceId = invoiceData[0].id
 
-      // Create invoice line
       const { error: lineError } = await supabase
         .from('invoice_lines')
         .insert([{
@@ -176,12 +183,12 @@ export default function Contracts() {
           quantity: 1,
           unit_price: contract.amount,
           line_total: contract.amount,
-          cost_price: 0
+          cost_price: 0,
+          description: contract.description || 'Recurring Service'
         }])
 
       if (lineError) throw lineError
 
-      // Update next billing date
       const nextBilling = calculateNextBillingDate(contract.next_billing_date, contract.frequency)
       const { error: updateError } = await supabase
         .from('recurring_contracts')
@@ -190,7 +197,6 @@ export default function Contracts() {
 
       if (updateError) throw updateError
 
-      // Log activity
       await supabase.from('activity_log').insert([{
         type: 'Invoice Generated',
         description: `Invoice auto-generated from recurring contract`,
@@ -199,22 +205,14 @@ export default function Contracts() {
       }])
 
       fetchContracts()
-      toast.success('Invoice generated successfully!')
+      toast.success('Invoice generated successfully!', { id: toastId })
     } catch (error) {
       console.error('Error generating invoice:', error)
-      toast.error('Error generating invoice. Please try again.')
+      toast.error('Error generating invoice. Please try again.', { id: toastId })
     }
   }
 
-  const getFrequencyLabel = (frequency) => {
-    const labels = {
-      weekly: 'Weekly',
-      monthly: 'Monthly',
-      quarterly: 'Quarterly',
-      annually: 'Annually'
-    }
-    return labels[frequency] || frequency
-  }
+
 
   const isDueSoon = (date) => {
     const today = new Date()
@@ -229,18 +227,77 @@ export default function Contracts() {
     return dueDate < today
   }
 
+  // Filter Logic
+  const filteredContracts = contracts.filter(contract =>
+    contract.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contract.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  // Stats Logic
+  const activeContracts = contracts.filter(c => c.active)
+  const totalMRR = activeContracts.reduce((sum, c) => {
+    if (c.frequency === 'monthly') return sum + (c.amount || 0)
+    if (c.frequency === 'annually') return sum + ((c.amount || 0) / 12)
+    return sum
+  }, 0)
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Recurring Contracts</h1>
-          <p className="text-muted-foreground mt-1">Manage service agreements and maintenance contracts</p>
+    <div className="space-y-8">
+      {/* Header Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-xl p-6 text-white shadow-lg relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+          <div className="relative z-10">
+            <p className="text-emerald-100 text-sm font-medium flex items-center gap-2">
+              Monthly Recurring Revenue
+              <RefreshCw className="h-4 w-4 opacity-75" />
+            </p>
+            <h3 className="text-3xl font-bold mt-2">{formatCurrency(totalMRR)}</h3>
+            <p className="text-emerald-200 text-xs mt-1">estimated monthly revenue</p>
+          </div>
+          <CreditCard className="absolute right-[-20px] bottom-[-20px] h-32 w-32 text-white opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
         </div>
 
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+          <div className="relative z-10">
+            <p className="text-blue-100 text-sm font-medium flex items-center gap-2">
+              Active Contracts
+              <CheckCircle className="h-4 w-4 opacity-75" />
+            </p>
+            <h3 className="text-3xl font-bold mt-2">{activeContracts.length}</h3>
+            <p className="text-blue-200 text-xs mt-1">active subscriptions</p>
+          </div>
+          <FileText className="absolute right-[-20px] bottom-[-20px] h-32 w-32 text-white opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+          <div className="relative z-10">
+            <p className="text-amber-100 text-sm font-medium flex items-center gap-2">
+              Due Soon
+              <AlertCircle className="h-4 w-4 opacity-75" />
+            </p>
+            <h3 className="text-3xl font-bold mt-2">
+              {contracts.filter(c => c.active && isDueSoon(c.next_billing_date)).length}
+            </h3>
+            <p className="text-amber-100/80 text-xs mt-1">contracts needing attention</p>
+          </div>
+          <Calendar className="absolute right-[-20px] bottom-[-20px] h-32 w-32 text-white opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500" />
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+        <div className="relative flex-1 w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search contracts or clients..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+          />
+        </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20">
               <Plus className="mr-2 h-4 w-4" />
               New Contract
             </Button>
@@ -357,151 +414,100 @@ export default function Contracts() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">Create Contract</Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Contract
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
-            <FileText className="h-5 w-5 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {contracts.filter(c => c.active).length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
-            <Banknote className="h-5 w-5 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              R{contracts
-                .filter(c => c.active && c.frequency === 'monthly')
-                .reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
-                .toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Due This Week</CardTitle>
-            <Calendar className="h-5 w-5 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {contracts.filter(c => c.active && isDueSoon(c.next_billing_date)).length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-            <AlertCircle className="h-5 w-5 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {contracts.filter(c => c.active && isOverdue(c.next_billing_date)).length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Contracts List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {contracts.map((contract) => (
-          <Card key={contract.id} className={`hover:shadow-lg transition-shadow ${!contract.active ? 'opacity-60' : ''}`}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg">
-                    {contract.clients?.name || 'Unknown Client'}
-                  </CardTitle>
-                  {contract.clients?.company && (
-                    <CardDescription>{contract.clients.company}</CardDescription>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Badge className={contract.active ? 'bg-green-500' : 'bg-gray-500'}>
-                    {contract.active ? 'Active' : 'Inactive'}
-                  </Badge>
-                  <Badge variant="outline">
-                    {getFrequencyLabel(contract.frequency)}
+      {/* Contracts Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredContracts.map((contract) => {
+          return (
+            <Card key={contract.id} className="group hover:shadow-xl transition-all duration-300 border-none shadow-sm bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 dark:border dark:border-border overflow-hidden relative">
+              <div className={`absolute top-0 left-0 w-1 h-full ${contract.active ? 'bg-emerald-500' : 'bg-slate-400'}`}></div>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      {contract.clients?.name || 'Unknown Client'}
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    </CardTitle>
+                    <CardDescription className="line-clamp-1">{contract.clients?.company}</CardDescription>
+                  </div>
+                  <Badge variant={contract.active ? 'default' : 'secondary'} className={contract.active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-200' : ''}>
+                    {contract.active ? 'Active' : 'Paused'}
                   </Badge>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  {contract.description}
-                </p>
-
-                <div className="flex justify-between items-center py-2 border-t border-b">
-                  <span className="text-sm text-muted-foreground">Contract Amount:</span>
-                  <span className="text-xl font-bold text-green-600">
-                    R{parseFloat(contract.amount).toFixed(2)}
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="flex items-baseline gap-1 mb-4">
+                  <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                    {formatCurrency(contract.amount)}
+                  </span>
+                  <span className="text-sm text-muted-foreground font-medium capitalize">
+                    /{contract.frequency}
                   </span>
                 </div>
 
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Start Date:</span>
-                    <span>{new Date(contract.start_date).toLocaleDateString()}</span>
+                <div className="space-y-2 text-sm">
+                  <div className="text-sm text-muted-foreground mb-3 line-clamp-2 min-h-[40px]">
+                    {contract.description}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Next Billing:</span>
-                    <span className={`font-medium ${isOverdue(contract.next_billing_date) ? 'text-red-600' : isDueSoon(contract.next_billing_date) ? 'text-orange-600' : ''}`}>
+
+                  <div className="flex items-center justify-between text-muted-foreground bg-slate-50 dark:bg-slate-900/50 p-2 rounded">
+                    <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Next Billing</span>
+                    <span className={`font-medium ${isOverdue(contract.next_billing_date) ? 'text-red-600' : isDueSoon(contract.next_billing_date) ? 'text-amber-600' : 'text-slate-700 dark:text-slate-300'}`}>
                       {new Date(contract.next_billing_date).toLocaleDateString()}
-                      {isOverdue(contract.next_billing_date) && ' (Overdue)'}
-                      {isDueSoon(contract.next_billing_date) && !isOverdue(contract.next_billing_date) && ' (Due Soon)'}
                     </span>
                   </div>
                 </div>
-
-                <div className="flex gap-2 pt-2">
-                  {contract.active && (
-                    <Button
-                      size="sm"
-                      onClick={() => generateInvoice(contract)}
-                      className="flex-1"
-                    >
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Generate Invoice
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => toggleContractStatus(contract.id, contract.active)}
-                  >
-                    {contract.active ? 'Deactivate' : 'Activate'}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+              <CardFooter className="pt-2 flex gap-2 border-t border-slate-100 dark:border-slate-800 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  onClick={() => generateInvoice(contract)}
+                  disabled={!contract.active}
+                >
+                  <RefreshCw className="mr-2 h-3 w-3" />
+                  Invoice
+                </Button>
+                <Button
+                  variant={contract.active ? 'ghost' : 'default'}
+                  size="sm"
+                  className={`flex-1 ${contract.active ? 'text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                  onClick={() => toggleContractStatus(contract.id, contract.active)}
+                >
+                  {contract.active ? 'Pause' : 'Resume'}
+                </Button>
+              </CardFooter>
+            </Card>
+          )
+        })}
       </div>
 
-      {contracts.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              No contracts yet. Create your first recurring contract to get started.
+      {filteredContracts.length === 0 && (
+        <Card className="border-dashed border-2 border-slate-200 dark:border-slate-800 bg-transparent shadow-none">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 p-6 rounded-full mb-4">
+              <FileText className="h-12 w-12 text-emerald-400" />
+            </div>
+            <p className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-1">
+              {searchTerm ? 'No contracts found' : 'No active contracts'}
             </p>
+            <p className="text-muted-foreground text-sm max-w-sm text-center mb-6">
+              {searchTerm ? `Try adjusting your search for "${searchTerm}"` : 'Create your first recurring revenue contract to get started.'}
+            </p>
+            <Button onClick={() => setIsDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Contract
+            </Button>
           </CardContent>
         </Card>
       )}
