@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 export function useSettings() {
     const [settings, setSettings] = useState({})
@@ -63,7 +64,7 @@ export function useSettings() {
             if (error) throw error
         } catch (error) {
             console.error('Error updating setting:', error)
-            // TODO: Toast notification here would be nice but we lack context
+            toast.error('Failed to save settings')
         }
     }
 
