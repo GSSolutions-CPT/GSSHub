@@ -277,507 +277,549 @@ export default function Sales() {
       console.error('Error converting to invoice:', error)
       toast.error('Error converting quotation. Please try again.', { id: toastId })
     }
-  }
+    const handleRequestPayment = async (quotation) => {
+      const toastId = toast.loading('Sending payment request...')
+      try {
+        // 1. Update DB flag
+        const { error } = await supabase
+          .from('quotations')
+          .update({ payment_request_sent: true })
+          .eq('id', quotation.id)
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Draft': return 'bg-gray-500'
-      case 'Sent': return 'bg-blue-500'
-      case 'Approved': return 'bg-green-500'
-      case 'Rejected': return 'bg-red-500'
-      case 'Converted': return 'bg-purple-500'
-      case 'Paid': return 'bg-green-600'
-      case 'Overdue': return 'bg-red-600'
-      case 'Cancelled': return 'bg-gray-600'
-      default: return 'bg-gray-500'
-    }
-  }
+        if (error) throw error
 
-  const handleDelete = async (id, type) => {
-    if (!confirm(`Are you sure you want to delete this ${type}? This cannot be undone.`)) return
+        // 2. Log Activity
+        await supabase.from('activity_log').insert([{
+          type: 'Payment Requested',
+          description: `Outstanding payment requested for Quote #${quotation.id.substring(0, 6)}`,
+          related_entity_id: quotation.id,
+          related_entity_type: 'quotation'
+        }])
 
-    const toastId = toast.loading(`Deleting ${type}...`)
+        // 3. (Optional) Simulate Email Sending - In production, call an Edge Function here
+        console.log('Payment request email triggered for:', quotation.clients?.email)
 
-    try {
-      const table = type === 'quotation' ? 'quotations' : 'invoices'
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
-      if (type === 'quotation') {
         fetchQuotations()
-      } else {
-        fetchInvoices()
+        toast.success('Payment request sent to client!', { id: toastId })
+      } catch (error) {
+        console.error('Error requesting payment:', error)
+        toast.error('Failed to update status', { id: toastId })
       }
-      toast.success(`${type === 'quotation' ? 'Quotation' : 'Invoice'} deleted successfully`, { id: toastId })
-    } catch (error) {
-      console.error('Error deleting sale:', error)
-      toast.error('Error deleting item. Ensure no other records depend on it.', { id: toastId })
     }
-  }
 
-  const handleDownloadPDF = async (sale, type) => {
-    const toastId = toast.loading('Generating PDF...')
-    try {
-      // Fetch line items
-      const table = type === 'quotation' ? 'quotation_lines' : 'invoice_lines'
-      const idColumn = type === 'quotation' ? 'quotation_id' : 'invoice_id'
-
-      const { data: lines, error } = await supabase
-        .from(table)
-        .select('*')
-        .eq(idColumn, sale.id)
-
-      if (error) throw error
-
-      const fullData = { ...sale, lines: lines || [] }
-
-      if (type === 'quotation') {
-        generateQuotePDF(fullData, settings)
-      } else {
-        generateInvoicePDF(fullData, settings)
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'Draft': return 'bg-gray-500'
+        case 'Sent': return 'bg-blue-500'
+        case 'Approved': return 'bg-green-500'
+        case 'Rejected': return 'bg-red-500'
+        case 'Converted': return 'bg-purple-500'
+        case 'Paid': return 'bg-green-600'
+        case 'Overdue': return 'bg-red-600'
+        case 'Cancelled': return 'bg-gray-600'
+        default: return 'bg-gray-500'
       }
-      toast.success('PDF Downloaded', { id: toastId })
-    } catch (error) {
-      console.error('Error generating PDF:', error)
-      toast.error('Failed to generate PDF', { id: toastId })
     }
-  }
 
-  const filteredQuotations = quotations.filter(q =>
-    q.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    q.clients?.company?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+    const handleDelete = async (id, type) => {
+      if (!confirm(`Are you sure you want to delete this ${type}? This cannot be undone.`)) return
 
-  const filteredInvoices = invoices.filter(i =>
-    i.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    i.clients?.company?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+      const toastId = toast.loading(`Deleting ${type}...`)
 
-  const filteredPurchaseOrders = purchaseOrders.filter(po =>
-    po.suppliers?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+      try {
+        const table = type === 'quotation' ? 'quotations' : 'invoices'
+        const { error } = await supabase
+          .from(table)
+          .delete()
+          .eq('id', id)
 
-  const renderSaleCard = (sale, type) => (
-    <Card key={sale.id} className="group hover:shadow-xl transition-all duration-300 border-none shadow-sm bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 dark:border dark:border-border overflow-hidden relative">
-      <div className={`absolute top-0 left-0 w-1 h-full ${getStatusColor(sale.status)}`}></div>
-      <CardHeader className="pb-3 pl-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg flex items-center gap-2 text-slate-800 dark:text-slate-100">
-              {type === 'quotation' ? <FileText className="h-5 w-5 text-blue-500" /> : <Receipt className="h-5 w-5 text-purple-500" />}
-              {sale.clients?.name || 'Unknown Client'}
-            </CardTitle>
-            {sale.clients?.company && (
-              <CardDescription className="text-slate-500 font-medium">{sale.clients.company}</CardDescription>
-            )}
-          </div>
-          <Badge className={`${getStatusColor(sale.status)} text-white shadow-sm px-3 py-1`}>
-            {sale.status}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pl-6">
-        <div className="space-y-4">
-          <div className="flex items-end justify-between border-b border-dashed border-slate-200 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
-              <span>{new Date(sale.date_created).toLocaleDateString()}</span>
+        if (error) throw error
+
+        if (type === 'quotation') {
+          fetchQuotations()
+        } else {
+          fetchInvoices()
+        }
+        toast.success(`${type === 'quotation' ? 'Quotation' : 'Invoice'} deleted successfully`, { id: toastId })
+      } catch (error) {
+        console.error('Error deleting sale:', error)
+        toast.error('Error deleting item. Ensure no other records depend on it.', { id: toastId })
+      }
+    }
+
+    const handleDownloadPDF = async (sale, type) => {
+      const toastId = toast.loading('Generating PDF...')
+      try {
+        // Fetch line items
+        const table = type === 'quotation' ? 'quotation_lines' : 'invoice_lines'
+        const idColumn = type === 'quotation' ? 'quotation_id' : 'invoice_id'
+
+        const { data: lines, error } = await supabase
+          .from(table)
+          .select('*')
+          .eq(idColumn, sale.id)
+
+        if (error) throw error
+
+        const fullData = { ...sale, lines: lines || [] }
+
+        if (type === 'quotation') {
+          generateQuotePDF(fullData, settings)
+        } else {
+          generateInvoicePDF(fullData, settings)
+        }
+        toast.success('PDF Downloaded', { id: toastId })
+      } catch (error) {
+        console.error('Error generating PDF:', error)
+        toast.error('Failed to generate PDF', { id: toastId })
+      }
+    }
+
+    const filteredQuotations = quotations.filter(q =>
+      q.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      q.clients?.company?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const filteredInvoices = invoices.filter(i =>
+      i.clients?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      i.clients?.company?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const filteredPurchaseOrders = purchaseOrders.filter(po =>
+      po.suppliers?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const renderSaleCard = (sale, type) => (
+      <Card key={sale.id} className="group hover:shadow-xl transition-all duration-300 border-none shadow-sm bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 dark:border dark:border-border overflow-hidden relative">
+        <div className={`absolute top-0 left-0 w-1 h-full ${getStatusColor(sale.status)}`}></div>
+        <CardHeader className="pb-3 pl-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <CardTitle className="text-lg flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                {type === 'quotation' ? <FileText className="h-5 w-5 text-blue-500" /> : <Receipt className="h-5 w-5 text-purple-500" />}
+                {sale.clients?.name || 'Unknown Client'}
+              </CardTitle>
+              {sale.clients?.company && (
+                <CardDescription className="text-slate-500 font-medium">{sale.clients.company}</CardDescription>
+              )}
             </div>
-            <div className="flex flex-col items-end">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Total</span>
-              <div className="flex items-center gap-1 text-xl font-bold text-slate-900 dark:text-white">
-                <span className="text-xs text-muted-foreground self-start mt-1">R</span>
-                {formatCurrency(sale.total_amount).replace('R', '')}
+            <Badge className={`${getStatusColor(sale.status)} text-white shadow-sm px-3 py-1`}>
+              {sale.status}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="pl-6">
+          <div className="space-y-4">
+            <div className="flex items-end justify-between border-b border-dashed border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>{new Date(sale.date_created).toLocaleDateString()}</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Total</span>
+                <div className="flex items-center gap-1 text-xl font-bold text-slate-900 dark:text-white">
+                  <span className="text-xs text-muted-foreground self-start mt-1">R</span>
+                  {formatCurrency(sale.total_amount).replace('R', '')}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-            {sale.profit_estimate && (
-              <div>
-                Profit: <span className="text-green-600 font-medium">{formatCurrency(sale.profit_estimate)}</span>
-              </div>
-            )}
-            {type === 'quotation' && sale.valid_until && (
-              <div>Valid: {new Date(sale.valid_until).toLocaleDateString()}</div>
-            )}
-            {type === 'invoice' && sale.due_date && (
-              <div>Due: {new Date(sale.due_date).toLocaleDateString()}</div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 pt-2">
-            {/* Primary Actions based on status */}
-            {type === 'quotation' && (
-              <>
-                {['Draft', 'Sent', 'Accepted', 'Approved'].includes(sale.status) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full hover:bg-blue-50 dark:hover:bg-blue-900/20 border-blue-200 text-blue-700"
-                    onClick={() => navigate(`/create-sale?edit=${sale.id}&type=quotation`)}
-                  >
-                    Edit
-                  </Button>
-                )}
-                {sale.status === 'Draft' && (
-                  <Button size="sm" onClick={() => updateStatus('quotation', sale.id, 'Sent')} className="w-full bg-blue-600 hover:bg-blue-700">Send</Button>
-                )}
-                {sale.status === 'Sent' && (
-                  <Button size="sm" onClick={() => updateStatus('quotation', sale.id, 'Approved')} className="w-full bg-green-600 hover:bg-green-700">Approve</Button>
-                )}
-                {(sale.status === 'Approved' || sale.status === 'Accepted') && (
-                  <Button size="sm" onClick={() => convertToInvoice(sale)} className="w-full bg-purple-600 hover:bg-purple-700">Convert</Button>
-                )}
-              </>
-            )}
-
-            {type === 'invoice' && (
-              <>
-                {sale.status !== 'Paid' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => navigate(`/create-sale?edit=${sale.id}&type=invoice`)}
-                  >
-                    Edit
-                  </Button>
-                )}
-                {sale.status === 'Draft' && (
-                  <Button size="sm" onClick={() => updateStatus('invoice', sale.id, 'Sent')} className="w-full">Send</Button>
-                )}
-                {(sale.status === 'Sent' || sale.status === 'Overdue') && (
-                  <Button size="sm" onClick={() => updateStatus('invoice', sale.id, 'Paid')} className="w-full bg-green-600 hover:bg-green-700">Mark Paid</Button>
-                )}
-              </>
-            )}
-
-            <Button
-              size="sm"
-              variant="ghost"
-              className="w-full text-muted-foreground hover:text-foreground"
-              onClick={() => handleDownloadPDF(sale, type)}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-
-            {!(type === 'invoice' && sale.status === 'Paid') && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full text-muted-foreground hover:text-red-500 hover:bg-red-50"
-                onClick={() => handleDelete(sale.id, type)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-
-            {sale.payment_proof && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full text-green-600 hover:bg-green-50"
-                onClick={() => downloadProof(sale.payment_proof, `Proof_${sale.id.substring(0, 6)}`)}
-                title="Download Proof"
-              >
-                <CheckCircle className="h-4 w-4" />
-              </Button>
-            )}
-
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-
-  return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
-          <div className="relative z-10">
-            <p className="text-blue-100 text-sm font-medium">Active Quotes</p>
-            <h3 className="text-3xl font-bold mt-1">{activeQuotes.length}</h3>
-            <p className="text-blue-100 text-xs mt-2">Value: {formatCurrency(activeQuoteValue)}</p>
-          </div>
-          <FileText className="absolute right-[-10px] bottom-[-10px] h-24 w-24 text-white opacity-10 rotate-12" />
-        </div>
-        <div className="bg-gradient-to-r from-purple-600 to-purple-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
-          <div className="relative z-10">
-            <p className="text-purple-100 text-sm font-medium">Outstanding Invoices</p>
-            <h3 className="text-3xl font-bold mt-1">{outstandingInvoices.length}</h3>
-            <p className="text-purple-100 text-xs mt-2">Due: {formatCurrency(outstandingValue)}</p>
-          </div>
-          <AlertCircle className="absolute right-[-10px] bottom-[-10px] h-24 w-24 text-white opacity-10 rotate-12" />
-        </div>
-        <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
-          <div className="relative z-10">
-            <p className="text-emerald-100 text-sm font-medium">Revenue (All Time)</p>
-            <h3 className="text-3xl font-bold mt-1">{formatCurrency(totalRevenue)}</h3>
-            <p className="text-emerald-100 text-xs mt-2">{paidInvoices.length} Paid Invoices</p>
-          </div>
-          <Banknote className="absolute right-[-10px] bottom-[-10px] h-24 w-24 text-white opacity-10 rotate-12" />
-        </div>
-      </div>
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by client..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <Button onClick={() => navigate('/contracts')} variant="outline">
-            <FileSignature className="mr-2 h-4 w-4" />
-            Contracts
-          </Button>
-          <Button onClick={() => navigate('/create-purchase-order')} variant="outline">
-            <Package className="mr-2 h-4 w-4" />
-            Create Purchase Order
-          </Button>
-          <Button onClick={() => navigate('/create-sale')}>
-            Create New Sale
-          </Button>
-        </div>
-      </div>
-
-      {/* Tabs for Quotations, Proforma, and Invoices */}
-      <Tabs defaultValue="quotations" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="quotations">Quotes</TabsTrigger>
-          <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
-          <TabsTrigger value="pending" className="relative">
-            Pending Review
-            {quotations.filter(q => q.status === 'Pending Review').length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="proforma">Proforma</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="quotations" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredQuotations
-            .filter(q => q.status === 'Draft' || q.status === 'Sent' || q.status === 'Rejected' || q.status === 'Cancelled')
-            .map((quotation) => renderSaleCard(quotation, 'quotation'))}
-          {filteredQuotations.filter(q => q.status === 'Draft' || q.status === 'Sent' || q.status === 'Rejected' || q.status === 'Cancelled').length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full mb-4">
-                <FileText className="h-8 w-8 text-slate-400" />
-              </div>
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">No active quotations</h3>
-              <p className="mb-6 max-w-sm text-center">Create a new quote to get started with your sales pipeline.</p>
-              <Button onClick={() => navigate('/create-sale')}>Create Quote</Button>
+            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+              {sale.profit_estimate && (
+                <div>
+                  Profit: <span className="text-green-600 font-medium">{formatCurrency(sale.profit_estimate)}</span>
+                </div>
+              )}
+              {type === 'quotation' && sale.valid_until && (
+                <div>Valid: {new Date(sale.valid_until).toLocaleDateString()}</div>
+              )}
+              {type === 'invoice' && sale.due_date && (
+                <div>Due: {new Date(sale.due_date).toLocaleDateString()}</div>
+              )}
             </div>
-          )}
-        </TabsContent>
 
-        <TabsContent value="pending" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredQuotations
-            .filter(q => q.status === 'Pending Review')
-            .map((quotation) => (
-              <Card key={quotation.id} className="border-l-4 border-l-yellow-500 shadow-md">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>#{quotation.id.substring(0, 6)}</CardTitle>
-                      <CardDescription>{quotation.clients?.name}</CardDescription>
-                    </div>
-                    <Badge className="bg-yellow-500 text-white shadow-sm animate-pulse">Action Required</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center bg-muted p-2 rounded">
-                    <span className="text-muted-foreground text-sm">Amount:</span>
-                    <span className="font-bold">{formatCurrency(quotation.total_amount)}</span>
-                  </div>
-
-
-
-                  {quotation.payment_proof && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground">Proof of Payment</p>
-
-                      {quotation.payment_proof.startsWith('data:') ? (
-                        <div className="relative h-32 w-full rounded-md overflow-hidden border bg-black/5 cursor-pointer group" onClick={() => window.open(quotation.payment_proof)}>
-                          <img src={quotation.payment_proof} alt="Proof" className="object-contain w-full h-full" />
-
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-white text-xs">Click to Zoom</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <a href={quotation.payment_proof} target="_blank" rel="noopener noreferrer" className="text-primary underline">View Proof</a>
-                      )}
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-2"
-                        onClick={() => downloadProof(quotation.payment_proof, `PaymentProof_${quotation.id.substring(0, 6)}`)}
-                      >
-                        <Download className="mr-2 h-4 w-4" /> Download Proof
-                      </Button>
-                    </div>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              {/* Primary Actions based on status */}
+              {type === 'quotation' && (
+                <>
+                  {['Draft', 'Sent', 'Accepted', 'Approved'].includes(sale.status) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full hover:bg-blue-50 dark:hover:bg-blue-900/20 border-blue-200 text-blue-700"
+                      onClick={() => navigate(`/create-sale?edit=${sale.id}&type=quotation`)}
+                    >
+                      Edit
+                    </Button>
+                  )}
+                  {sale.status === 'Draft' && (
+                    <Button size="sm" onClick={() => updateStatus('quotation', sale.id, 'Sent')} className="w-full bg-blue-600 hover:bg-blue-700">Send</Button>
+                  )}
+                  {sale.status === 'Sent' && (
+                    <Button size="sm" onClick={() => updateStatus('quotation', sale.id, 'Approved')} className="w-full bg-green-600 hover:bg-green-700">Approve</Button>
                   )}
 
+                  {/* Payment Request Workflow */}
+                  {(sale.status === 'Approved' || sale.status === 'Accepted') && (
+                    <>
+                      {!sale.payment_request_sent ? (
+                        <Button
+                          size="sm"
+                          onClick={() => handleRequestPayment(sale)}
+                          className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                        >
+                          Request Payment
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => convertToInvoice(sale)} className="w-full bg-purple-600 hover:bg-purple-700">Convert</Button>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button size="sm" onClick={() => handleConfirmPayment(quotation)}>
-                      <CheckCircle className="mr-2 h-4 w-4" /> Approve & Book
+              {type === 'invoice' && (
+                <>
+                  {sale.status !== 'Paid' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate(`/create-sale?edit=${sale.id}&type=invoice`)}
+                    >
+                      Edit
                     </Button>
-                    <Button size="sm" variant="destructive" onClick={() => updateStatus('quotation', quotation.id, 'Rejected')}>
-                      Reject
-                    </Button>
+                  )}
+                  {sale.status === 'Draft' && (
+                    <Button size="sm" onClick={() => updateStatus('invoice', sale.id, 'Sent')} className="w-full">Send</Button>
+                  )}
+                  {(sale.status === 'Sent' || sale.status === 'Overdue') && (
+                    <Button size="sm" onClick={() => updateStatus('invoice', sale.id, 'Paid')} className="w-full bg-green-600 hover:bg-green-700">Mark Paid</Button>
+                  )}
+                </>
+              )}
+
+              <Button
+                size="sm"
+                variant="ghost"
+                className="w-full text-muted-foreground hover:text-foreground"
+                onClick={() => handleDownloadPDF(sale, type)}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+
+              {!(type === 'invoice' && sale.status === 'Paid') && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full text-muted-foreground hover:text-red-500 hover:bg-red-50"
+                  onClick={() => handleDelete(sale.id, type)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+
+              {sale.payment_proof && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="w-full text-green-600 hover:bg-green-50"
+                  onClick={() => downloadProof(sale.payment_proof, `Proof_${sale.id.substring(0, 6)}`)}
+                  title="Download Proof"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                </Button>
+              )}
+
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        {/* Header Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div className="relative z-10">
+              <p className="text-blue-100 text-sm font-medium">Active Quotes</p>
+              <h3 className="text-3xl font-bold mt-1">{activeQuotes.length}</h3>
+              <p className="text-blue-100 text-xs mt-2">Value: {formatCurrency(activeQuoteValue)}</p>
+            </div>
+            <FileText className="absolute right-[-10px] bottom-[-10px] h-24 w-24 text-white opacity-10 rotate-12" />
+          </div>
+          <div className="bg-gradient-to-r from-purple-600 to-purple-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div className="relative z-10">
+              <p className="text-purple-100 text-sm font-medium">Outstanding Invoices</p>
+              <h3 className="text-3xl font-bold mt-1">{outstandingInvoices.length}</h3>
+              <p className="text-purple-100 text-xs mt-2">Due: {formatCurrency(outstandingValue)}</p>
+            </div>
+            <AlertCircle className="absolute right-[-10px] bottom-[-10px] h-24 w-24 text-white opacity-10 rotate-12" />
+          </div>
+          <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div className="relative z-10">
+              <p className="text-emerald-100 text-sm font-medium">Revenue (All Time)</p>
+              <h3 className="text-3xl font-bold mt-1">{formatCurrency(totalRevenue)}</h3>
+              <p className="text-emerald-100 text-xs mt-2">{paidInvoices.length} Paid Invoices</p>
+            </div>
+            <Banknote className="absolute right-[-10px] bottom-[-10px] h-24 w-24 text-white opacity-10 rotate-12" />
+          </div>
+        </div>
+        {/* Header Actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by client..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/contracts')} variant="outline">
+              <FileSignature className="mr-2 h-4 w-4" />
+              Contracts
+            </Button>
+            <Button onClick={() => navigate('/create-purchase-order')} variant="outline">
+              <Package className="mr-2 h-4 w-4" />
+              Create Purchase Order
+            </Button>
+            <Button onClick={() => navigate('/create-sale')}>
+              Create New Sale
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabs for Quotations, Proforma, and Invoices */}
+        <Tabs defaultValue="quotations" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="quotations">Quotes</TabsTrigger>
+            <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
+            <TabsTrigger value="pending" className="relative">
+              Pending Review
+              {quotations.filter(q => q.status === 'Pending Review').length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="proforma">Proforma</TabsTrigger>
+            <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="quotations" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredQuotations
+              .filter(q => q.status === 'Draft' || q.status === 'Sent' || q.status === 'Rejected' || q.status === 'Cancelled')
+              .map((quotation) => renderSaleCard(quotation, 'quotation'))}
+            {filteredQuotations.filter(q => q.status === 'Draft' || q.status === 'Sent' || q.status === 'Rejected' || q.status === 'Cancelled').length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full mb-4">
+                  <FileText className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">No active quotations</h3>
+                <p className="mb-6 max-w-sm text-center">Create a new quote to get started with your sales pipeline.</p>
+                <Button onClick={() => navigate('/create-sale')}>Create Quote</Button>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="pending" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredQuotations
+              .filter(q => q.status === 'Pending Review')
+              .map((quotation) => (
+                <Card key={quotation.id} className="border-l-4 border-l-yellow-500 shadow-md">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle>#{quotation.id.substring(0, 6)}</CardTitle>
+                        <CardDescription>{quotation.clients?.name}</CardDescription>
+                      </div>
+                      <Badge className="bg-yellow-500 text-white shadow-sm animate-pulse">Action Required</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center bg-muted p-2 rounded">
+                      <span className="text-muted-foreground text-sm">Amount:</span>
+                      <span className="font-bold">{formatCurrency(quotation.total_amount)}</span>
+                    </div>
+
+
+
+                    {quotation.payment_proof && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground">Proof of Payment</p>
+
+                        {quotation.payment_proof.startsWith('data:') ? (
+                          <div className="relative h-32 w-full rounded-md overflow-hidden border bg-black/5 cursor-pointer group" onClick={() => window.open(quotation.payment_proof)}>
+                            <img src={quotation.payment_proof} alt="Proof" className="object-contain w-full h-full" />
+
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-white text-xs">Click to Zoom</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <a href={quotation.payment_proof} target="_blank" rel="noopener noreferrer" className="text-primary underline">View Proof</a>
+                        )}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={() => downloadProof(quotation.payment_proof, `PaymentProof_${quotation.id.substring(0, 6)}`)}
+                        >
+                          <Download className="mr-2 h-4 w-4" /> Download Proof
+                        </Button>
+                      </div>
+                    )}
+
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button size="sm" onClick={() => handleConfirmPayment(quotation)}>
+                        <CheckCircle className="mr-2 h-4 w-4" /> Approve & Book
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => updateStatus('quotation', quotation.id, 'Rejected')}>
+                        Reject
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            {filteredQuotations.filter(q => q.status === 'Pending Review').length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-full mb-4">
+                  <CheckCircle className="h-8 w-8 text-green-500" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">All clear!</h3>
+                <p className="text-center">No quotations are currently pending review.</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="proforma" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredQuotations
+              .filter(q => q.status === 'Accepted' || q.status === 'Approved')
+              .map((quotation) => renderSaleCard(quotation, 'quotation'))}
+            {filteredQuotations.filter(q => q.status === 'Accepted' || q.status === 'Approved').length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full mb-4">
+                  <FileText className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">No accepted quotes</h3>
+                <p className="text-center">Approved quotations converted to Proforma invoices will appear here.</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="invoices" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredInvoices.map((invoice) => renderSaleCard(invoice, 'invoice'))}
+            {filteredInvoices.length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="bg-purple-100 dark:bg-purple-900/30 p-4 rounded-full mb-4">
+                  <Receipt className="h-8 w-8 text-purple-500" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">No invoices generated</h3>
+                <p className="mb-6 max-w-sm text-center">Invoices from converted quotes will appear here.</p>
+                <Button variant="outline" onClick={() => navigate('/create-sale?type=invoice')}>Draft Invoice</Button>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="purchase-orders" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPurchaseOrders.map((po) => (
+              <Card key={po.id} className="group hover:shadow-xl transition-all duration-300 border-none shadow-sm bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 dark:border dark:border-border overflow-hidden relative">
+                <div className={`absolute top-0 left-0 w-1 h-full bg-blue-500`}></div>
+                <CardHeader className="pb-3 pl-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex flex-col">
+                      <CardTitle className="text-lg flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                        <Package className="h-5 w-5 text-indigo-500" />
+                        {po.suppliers?.name || 'Unknown Supplier'}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <CardDescription className="text-slate-500 font-medium">Purchase Order</CardDescription>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="xs" className="h-5 px-2 text-muted-foreground text-xs hover:text-blue-600" onClick={() => navigate(`/create-purchase-order?id=${po.id}`)}>
+                            Edit
+                          </Button>
+                          <span className="text-muted-foreground text-[10px]">•</span>
+                          <Button variant="ghost" size="xs" className="h-5 px-2 text-destructive text-xs hover:text-white hover:bg-destructive" onClick={() => handleDeletePO(po.id)}>
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <Badge className="bg-blue-500 text-white shadow-sm px-3 py-1">
+                      {po.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pl-6">
+                  <div className="space-y-4">
+                    <div className="flex items-end justify-between border-b border-dashed border-slate-200 dark:border-slate-800 pb-3">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>{new Date(po.date_created).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-xs text-muted-foreground uppercase tracking-wider">Total</span>
+                        <div className="flex items-center gap-1 text-xl font-bold text-slate-900 dark:text-white">
+                          <span className="text-xs text-muted-foreground self-start mt-1">R</span>
+                          {formatCurrency(po.total_amount).replace('R', '')}
+                        </div>
+                      </div>
+                    </div>
+
+                    {po.expected_date && (
+                      <div className="text-xs text-muted-foreground">
+                        Expected: {new Date(po.expected_date).toLocaleDateString()}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-2 pt-2">
+                      <Button
+                        size="sm"
+                        variant="default" // keep default or use outline with color? Default blue pops well here
+                        className="w-full bg-indigo-600 hover:bg-indigo-700"
+                        onClick={() => handleDownloadPO(po)}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Purchase Order
+                      </Button>
+
+                      {po.pdf_url && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                          onClick={() => window.open(po.pdf_url, '_blank')}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          View Source Quote
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ))}
-          {filteredQuotations.filter(q => q.status === 'Pending Review').length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-              <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-full mb-4">
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              </div>
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">All clear!</h3>
-              <p className="text-center">No quotations are currently pending review.</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="proforma" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredQuotations
-            .filter(q => q.status === 'Accepted' || q.status === 'Approved')
-            .map((quotation) => renderSaleCard(quotation, 'quotation'))}
-          {filteredQuotations.filter(q => q.status === 'Accepted' || q.status === 'Approved').length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-              <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-full mb-4">
-                <FileText className="h-8 w-8 text-slate-400" />
-              </div>
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">No accepted quotes</h3>
-              <p className="text-center">Approved quotations converted to Proforma invoices will appear here.</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="invoices" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredInvoices.map((invoice) => renderSaleCard(invoice, 'invoice'))}
-          {filteredInvoices.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-              <div className="bg-purple-100 dark:bg-purple-900/30 p-4 rounded-full mb-4">
-                <Receipt className="h-8 w-8 text-purple-500" />
-              </div>
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">No invoices generated</h3>
-              <p className="mb-6 max-w-sm text-center">Invoices from converted quotes will appear here.</p>
-              <Button variant="outline" onClick={() => navigate('/create-sale?type=invoice')}>Draft Invoice</Button>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="purchase-orders" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPurchaseOrders.map((po) => (
-            <Card key={po.id} className="group hover:shadow-xl transition-all duration-300 border-none shadow-sm bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 dark:border dark:border-border overflow-hidden relative">
-              <div className={`absolute top-0 left-0 w-1 h-full bg-blue-500`}></div>
-              <CardHeader className="pb-3 pl-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex flex-col">
-                    <CardTitle className="text-lg flex items-center gap-2 text-slate-800 dark:text-slate-100">
-                      <Package className="h-5 w-5 text-indigo-500" />
-                      {po.suppliers?.name || 'Unknown Supplier'}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <CardDescription className="text-slate-500 font-medium">Purchase Order</CardDescription>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="xs" className="h-5 px-2 text-muted-foreground text-xs hover:text-blue-600" onClick={() => navigate(`/create-purchase-order?id=${po.id}`)}>
-                          Edit
-                        </Button>
-                        <span className="text-muted-foreground text-[10px]">•</span>
-                        <Button variant="ghost" size="xs" className="h-5 px-2 text-destructive text-xs hover:text-white hover:bg-destructive" onClick={() => handleDeletePO(po.id)}>
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  <Badge className="bg-blue-500 text-white shadow-sm px-3 py-1">
-                    {po.status}
-                  </Badge>
+            {filteredPurchaseOrders.length === 0 && (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-full mb-4">
+                  <Package className="h-8 w-8 text-blue-500" />
                 </div>
-              </CardHeader>
-              <CardContent className="pl-6">
-                <div className="space-y-4">
-                  <div className="flex items-end justify-between border-b border-dashed border-slate-200 dark:border-slate-800 pb-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>{new Date(po.date_created).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-xs text-muted-foreground uppercase tracking-wider">Total</span>
-                      <div className="flex items-center gap-1 text-xl font-bold text-slate-900 dark:text-white">
-                        <span className="text-xs text-muted-foreground self-start mt-1">R</span>
-                        {formatCurrency(po.total_amount).replace('R', '')}
-                      </div>
-                    </div>
-                  </div>
-
-                  {po.expected_date && (
-                    <div className="text-xs text-muted-foreground">
-                      Expected: {new Date(po.expected_date).toLocaleDateString()}
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="default" // keep default or use outline with color? Default blue pops well here
-                      className="w-full bg-indigo-600 hover:bg-indigo-700"
-                      onClick={() => handleDownloadPO(po)}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download Purchase Order
-                    </Button>
-
-                    {po.pdf_url && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                        onClick={() => window.open(po.pdf_url, '_blank')}
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        View Source Quote
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {filteredPurchaseOrders.length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-              <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-full mb-4">
-                <Package className="h-8 w-8 text-blue-500" />
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">No purchase orders</h3>
+                <p className="mb-6 max-w-sm text-center">Manage your supplier orders here.</p>
+                <Button onClick={() => navigate('/create-purchase-order')}>Create New Order</Button>
               </div>
-              <h3 className="text-lg font-medium text-slate-900 dark:text-slate-200">No purchase orders</h3>
-              <p className="mb-6 max-w-sm text-center">Manage your supplier orders here.</p>
-              <Button onClick={() => navigate('/create-purchase-order')}>Create New Order</Button>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    )
+  }
 
