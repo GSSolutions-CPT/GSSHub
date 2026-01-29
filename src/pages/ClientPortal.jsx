@@ -19,7 +19,6 @@ export default function ClientPortal() {
   const { formatCurrency } = useCurrency()
   const { settings } = useSettings()
   const [searchParams] = useSearchParams()
-  const [searchParams] = useSearchParams()
   const clientId = searchParams.get('client')
 
   useEffect(() => {
