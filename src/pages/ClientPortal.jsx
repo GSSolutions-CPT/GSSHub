@@ -552,15 +552,42 @@ export default function ClientPortal() {
                         Download Proforma Invoice
                       </Button>
 
-                      {quotation.payment_proof && (
+                      {quotation.payment_proof && !quotation.final_payment_proof && (
                         <Button
                           variant="ghost"
                           className="w-full text-green-600 hover:text-green-700 hover:bg-green-50"
                           onClick={() => downloadProof(quotation.payment_proof, `PaymentProof_${quotation.id.substring(0, 6)}`)}
                         >
                           <CheckCircle className="mr-2 h-4 w-4" />
-                          Payment Proof Uploaded
+                          Deposit Proof Uploaded
                         </Button>
+                      )}
+
+                      {/* Final Payment Button */}
+                      {(quotation.status === 'Approved' || quotation.admin_approved) && !quotation.final_payment_approved && (
+                        <>
+                          {!quotation.final_payment_proof ? (
+                            <Button
+                              className="w-full bg-slate-900 hover:bg-slate-800 text-white shadow-md"
+                              onClick={() => {
+                                setAcceptingQuote(quotation)
+                                setStep(4)
+                              }}
+                            >
+                              <CreditCard className="mr-2 h-4 w-4" />
+                              Complete Payment
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              className="w-full text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                              onClick={() => downloadProof(quotation.final_payment_proof, `FinalProof_${quotation.id.substring(0, 6)}`)}
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Final Proof Uploaded
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </CardContent>
