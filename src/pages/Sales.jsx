@@ -175,7 +175,7 @@ export default function Sales() {
     try {
       const { error } = await supabase
         .from('quotations')
-        .update({ status: 'Accepted' })
+        .update({ status: 'Accepted', admin_approved: true })
         .eq('id', quotation.id)
 
       if (error) throw error
