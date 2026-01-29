@@ -193,6 +193,30 @@ export default function Clients() {
                 Enter the client&apos;s information below
               </DialogDescription>
             </DialogHeader>
+
+            {editingClient && (
+              <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg my-2 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div className="text-sm">
+                  <span className="font-medium text-slate-700 dark:text-slate-300 block">Client Portal Access</span>
+                  <p className="text-xs text-muted-foreground">Share this link with your client.</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 bg-white dark:bg-slate-800"
+                  onClick={(e) => {
+                    e.preventDefault() // Prevent form submission
+                    const portalLink = `${window.location.origin}/portal?client=${editingClient.id}`
+                    navigator.clipboard.writeText(portalLink)
+                    toast.success('Professional link copied!')
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 text-blue-500" />
+                  Copy Link
+                </Button>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit}>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
