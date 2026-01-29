@@ -798,27 +798,28 @@ export default function ClientPortal() {
                     </label>
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
-                </DialogFooter>
               </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
+              </DialogFooter>
+            </div>
           )}
 
-              {step === 3 && (
-                <div className="text-center py-8 space-y-4">
-                  <div className="flex justify-center mb-6">
-                    <div className="h-24 w-24 bg-green-100 rounded-full flex items-center justify-center animate-in zoom-in duration-500">
-                      <CheckCircle className="h-12 w-12 text-green-600" />
-                    </div>
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900">Submission Received!</h3>
-                  <p className="text-slate-500 max-w-xs mx-auto">
-                    Thank you! We have received your signature and payment proof. Our team will review your submission shortly.
-                  </p>
-                  <Button onClick={() => setStep(0)} className="w-full mt-4">Return to Dashboard</Button>
+          {step === 3 && (
+            <div className="text-center py-8 space-y-4">
+              <div className="flex justify-center mb-6">
+                <div className="h-24 w-24 bg-green-100 rounded-full flex items-center justify-center animate-in zoom-in duration-500">
+                  <CheckCircle className="h-12 w-12 text-green-600" />
                 </div>
-              )}
-            </DialogContent>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900">Submission Received!</h3>
+              <p className="text-slate-500 max-w-xs mx-auto">
+                Thank you! We have received your signature and payment proof. Our team will review your submission shortly.
+              </p>
+              <Button onClick={() => setStep(0)} className="w-full mt-4">Return to Dashboard</Button>
+            </div>
+          )}
+        </DialogContent>
       </Dialog>
 
       {/* Contact Support Modal */}
