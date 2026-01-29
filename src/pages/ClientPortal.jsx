@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Download, CheckCircle, Upload, MessageCircle, Phone, Mail, HelpCircle, PenTool } from 'lucide-react'
+import { Download, CheckCircle, Upload, MessageCircle, Phone, Mail, HelpCircle, PenTool, CreditCard } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSearchParams } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
@@ -725,65 +725,12 @@ export default function ClientPortal() {
                   <p className="text-sm text-slate-500 mb-3">
                     Please make a <strong>{acceptingQuote?.payment_type === 'full' ? 'Full Payment' : `${acceptingQuote?.deposit_percentage || 75}% deposit`} ({formatCurrency((acceptingQuote?.total_amount || 0) * ((acceptingQuote?.payment_type === 'full' ? 100 : (acceptingQuote?.deposit_percentage || 75)) / 100))})</strong> to secure your booking.
                   </p>
-                    <label htmlFor="proof-upload-initial" className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
-                      <Upload className="h-10 w-10 text-slate-300 mb-3" />
-                      <p className="text-sm font-medium text-slate-600">Click to upload or drag file here</p>
-                      <input
-                        id="proof-upload-initial"
-                        name="proof-upload-initial"
-                        type="file"
-                        accept="image/*,application/pdf"
-                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                        onChange={(e) => {
-                          const file = e.target.files[0]
-                          if (!file) return
-                          const reader = new FileReader()
-                          reader.onload = async (event) => {
-                            if (step === 2) {
-                              // Initial Acceptance Upload
-                              await submitFinalAcceptance(event.target.result)
-                            } else if (step === 4) {
-                              // Final Payment Upload
-                              await submitFinalPaymentProof(event.target.result)
-                            }
-                          }
-                          reader.readAsDataURL(file)
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
-              </DialogFooter>
-            </div>
-          )}
-
-
-
-        {step === 4 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 bg-amber-100 rounded-full flex items-center justify-center text-amber-600">
-                  <Upload className="h-4 w-4" />
-                </div>
-                <p className="font-semibold text-slate-800">Upload Final Proof of Payment</p>
-              </div>
-
-              <div className="pl-10">
-                <p className="text-sm text-slate-500 mb-3">
-                  Please upload the proof for your <strong>Outstanding Balance</strong>.
-                </p>
-                <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center gap-3 hover:bg-slate-50 transition-colors cursor-pointer relative">
-                  <label htmlFor="proof-upload-final" className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
+                  <label htmlFor="proof-upload-initial" className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
                     <Upload className="h-10 w-10 text-slate-300 mb-3" />
                     <p className="text-sm font-medium text-slate-600">Click to upload or drag file here</p>
                     <input
-                      id="proof-upload-final"
-                      name="proof-upload-final"
+                      id="proof-upload-initial"
+                      name="proof-upload-initial"
                       type="file"
                       accept="image/*,application/pdf"
                       className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
@@ -792,7 +739,13 @@ export default function ClientPortal() {
                         if (!file) return
                         const reader = new FileReader()
                         reader.onload = async (event) => {
-                          await submitFinalPaymentProof(event.target.result)
+                          if (step === 2) {
+                            // Initial Acceptance Upload
+                            await submitFinalAcceptance(event.target.result)
+                          } else if (step === 4) {
+                            // Final Payment Upload
+                            await submitFinalPaymentProof(event.target.result)
+                          }
                         }
                         reader.readAsDataURL(file)
                       }}
@@ -800,31 +753,75 @@ export default function ClientPortal() {
                   </label>
                 </div>
               </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
+              </DialogFooter>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
-            </DialogFooter>
-          </div>
-        )}
+          )}
 
-        {step === 3 && (
-          <div className="text-center py-8 space-y-4">
-            <div className="flex justify-center mb-6">
-              <div className="h-24 w-24 bg-green-100 rounded-full flex items-center justify-center animate-in zoom-in duration-500">
-                <CheckCircle className="h-12 w-12 text-green-600" />
+
+
+          {step === 4 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 bg-amber-100 rounded-full flex items-center justify-center text-amber-600">
+                    <Upload className="h-4 w-4" />
+                  </div>
+                  <p className="font-semibold text-slate-800">Upload Final Proof of Payment</p>
+                </div>
+
+                <div className="pl-10">
+                  <p className="text-sm text-slate-500 mb-3">
+                    Please upload the proof for your <strong>Outstanding Balance</strong>.
+                  </p>
+                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center gap-3 hover:bg-slate-50 transition-colors cursor-pointer relative">
+                    <label htmlFor="proof-upload-final" className="cursor-pointer flex flex-col items-center justify-center w-full h-full">
+                      <Upload className="h-10 w-10 text-slate-300 mb-3" />
+                      <p className="text-sm font-medium text-slate-600">Click to upload or drag file here</p>
+                      <input
+                        id="proof-upload-final"
+                        name="proof-upload-final"
+                        type="file"
+                        accept="image/*,application/pdf"
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files[0]
+                          if (!file) return
+                          const reader = new FileReader()
+                          reader.onload = async (event) => {
+                            await submitFinalPaymentProof(event.target.result)
+                          }
+                          reader.readAsDataURL(file)
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
+                </DialogFooter>
               </div>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900">Submission Received!</h3>
-            <p className="text-slate-500 max-w-xs mx-auto">
-              Thank you! We have received your signature and payment proof. Our team will review your submission shortly.
-            </p>
-            <Button onClick={() => setStep(0)} className="w-full mt-4">Return to Dashboard</Button>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          )}
 
-      {/* Contact Support Modal */ }
+              {step === 3 && (
+                <div className="text-center py-8 space-y-4">
+                  <div className="flex justify-center mb-6">
+                    <div className="h-24 w-24 bg-green-100 rounded-full flex items-center justify-center animate-in zoom-in duration-500">
+                      <CheckCircle className="h-12 w-12 text-green-600" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900">Submission Received!</h3>
+                  <p className="text-slate-500 max-w-xs mx-auto">
+                    Thank you! We have received your signature and payment proof. Our team will review your submission shortly.
+                  </p>
+                  <Button onClick={() => setStep(0)} className="w-full mt-4">Return to Dashboard</Button>
+                </div>
+              )}
+            </DialogContent>
+      </Dialog>
+
+      {/* Contact Support Modal */}
       <Dialog open={contactOpen} onOpenChange={setContactOpen} >
         <DialogContent>
           <DialogHeader>
