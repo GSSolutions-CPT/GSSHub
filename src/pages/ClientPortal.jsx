@@ -251,6 +251,9 @@ export default function ClientPortal() {
       quotations
         .filter(q => q.status === 'Accepted' || q.status === 'Approved')
         .reduce((sum, q) => {
+          // If final payment is approved, nothing is outstanding on the Quote itself
+          if (q.final_payment_approved) return sum
+
           const isApproved = q.status === 'Approved' || q.admin_approved
           const depositRatio = (q.payment_type === 'full' ? 100 : (q.deposit_percentage || 75)) / 100
           if (isApproved) {
@@ -267,6 +270,9 @@ export default function ClientPortal() {
     const pendingActions = []
     if (activeQuotes > 0) pendingActions.push({ type: 'quote', count: activeQuotes, label: 'Review Pending Quotes' })
     if (totalOutstanding > 0) pendingActions.push({ type: 'invoice', count: 1, label: 'Settle Outstanding Invoices' })
+
+    const recentSuccesses = quotations
+      .filter(q => q.final_payment_approved)
 
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
@@ -295,6 +301,32 @@ export default function ClientPortal() {
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-500/30 transition-all duration-1000"></div>
           <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl group-hover:bg-purple-500/30 transition-all duration-1000"></div>
         </div>
+
+        {/* Success / Notifications */}
+        {recentSuccesses.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-foreground flex items-center gap-2">
+              <span className="w-1.5 h-6 bg-green-500 rounded-full"></span>
+              Recent Updates
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {recentSuccesses.map(q => (
+                <div key={q.id} className="bg-green-50/50 dark:bg-green-900/10 backdrop-blur-sm border border-green-100 dark:border-green-900/30 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex justify-between items-center group relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500"></div>
+                  <div>
+                    <p className="font-semibold text-foreground flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Payment Verified
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Final payment for Quote <strong>#{q.id.substring(0, 6)}</strong> has been approved.
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Action Center */}
         {pendingActions.length > 0 && (
