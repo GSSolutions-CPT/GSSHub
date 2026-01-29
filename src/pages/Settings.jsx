@@ -397,157 +397,202 @@ export default function Settings() {
 
         {/* Preferences Tab: Theme + Currency + Legal */}
         <TabsContent value="preferences" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="border-none shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-purple-500/50"></div>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Palette className="h-5 w-5 text-purple-500" />
-                  System Appearance
-                </CardTitle>
-                <CardDescription>Customize the look and feel.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">Theme</Label>
-                    <p className="text-sm text-muted-foreground">Switch between Light and Dark mode.</p>
-                  </div>
-                  <div className="flex items-center gap-2 bg-slate-200 dark:bg-slate-950 p-1 rounded-lg">
-                    <Button
-                      variant={theme === 'light' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setTheme('light')}
-                      className="rounded-md"
-                    >
-                      Light
-                    </Button>
-                    <Button
-                      variant={theme === 'dark' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setTheme('dark')}
-                      className="rounded-md"
-                    >
-                      Dark
-                    </Button>
-                  </div>
+          <Card className="border-none shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-purple-500/50"></div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-purple-500" />
+                System Preferences
+              </CardTitle>
+              <CardDescription>Customize your experience.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Dark Mode</Label>
+                  <p className="text-sm text-muted-foreground">Toggle theme</p>
                 </div>
-                <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">Currency</Label>
-                    <p className="text-sm text-muted-foreground">Default currency for financials.</p>
-                  </div>
-                  <Select value={currency} onValueChange={updateCurrency}>
-                    <SelectTrigger className="w-[120px] bg-white dark:bg-slate-900"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ZAR">ZAR (R)</SelectItem>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="GBP">GBP (£)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-              <Palette className="absolute -right-6 -bottom-6 h-32 w-32 text-slate-100 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform duration-500" />
-            </Card>
-
-            <Card className="border-none shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-amber-500/50"></div>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-amber-500" />
-                  Legal Terms
-                </CardTitle>
-                <CardDescription>Appended to Quotes and Invoices.</CardDescription>
-              </CardHeader>
-              <CardContent className="relative z-10">
-                <Textarea
-                  className="min-h-[200px] bg-white/50 dark:bg-slate-800/50 resize-y"
-                  placeholder="Enter your standard terms and conditions here..."
-                  value={settings.legalTerms || ''}
-                  onChange={(e) => updateSetting('legalTerms', e.target.value)}
+                <Button variant="outline" size="sm" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                  {theme === 'dark' ? 'Dark' : 'Light'}
+                </Button>
+              </div>
+              <div className="grid gap-2">
+                <Label>Currency</Label>
+                <Select value={currency} onValueChange={updateCurrency}>
+                  <SelectTrigger className="bg-white/50 dark:bg-slate-800/50">
+                    <SelectValue placeholder="Select Currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ZAR">South African Rand (ZAR)</SelectItem>
+                    <SelectItem value="USD">US Dollar (USD)</SelectItem>
+                    <SelectItem value="EUR">Euro (EUR)</SelectItem>
+                    <SelectItem value="GBP">British Pound (GBP)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Default Quote Validity (Days)</Label>
+                <Input
+                  type="number"
+                  value={settings.defaultQuoteValidityDays || '14'}
+                  onChange={(e) => updateSetting('defaultQuoteValidityDays', e.target.value)}
+                  placeholder="14"
+                  className="bg-white/50 dark:bg-slate-800/50"
                 />
-                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                  <FileText className="h-3 w-3" />
-                  Visible on all generated PDF documents.
-                </p>
-              </CardContent>
-              <FileText className="absolute -right-6 -bottom-6 h-32 w-32 text-slate-100 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform duration-500" />
-            </Card>
-          </div>
-        </TabsContent>
+                <p className="text-xs text-muted-foreground">Days before a quote expires.</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-purple-500/50"></div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-purple-500" />
+                System Appearance
+              </CardTitle>
+              <CardDescription>Customize the look and feel.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Theme</Label>
+                  <p className="text-sm text-muted-foreground">Switch between Light and Dark mode.</p>
+                </div>
+                <div className="flex items-center gap-2 bg-slate-200 dark:bg-slate-950 p-1 rounded-lg">
+                  <Button
+                    variant={theme === 'light' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setTheme('light')}
+                    className="rounded-md"
+                  >
+                    Light
+                  </Button>
+                  <Button
+                    variant={theme === 'dark' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setTheme('dark')}
+                    className="rounded-md"
+                  >
+                    Dark
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Currency</Label>
+                  <p className="text-sm text-muted-foreground">Default currency for financials.</p>
+                </div>
+                <Select value={currency} onValueChange={updateCurrency}>
+                  <SelectTrigger className="w-[120px] bg-white dark:bg-slate-900"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ZAR">ZAR (R)</SelectItem>
+                    <SelectItem value="USD">USD ($)</SelectItem>
+                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                    <SelectItem value="GBP">GBP (£)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+            <Palette className="absolute -right-6 -bottom-6 h-32 w-32 text-slate-100 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform duration-500" />
+          </Card>
 
-        {/* Data Management Tab */}
-        <TabsContent value="data" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="border-none shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-rose-500/50"></div>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-rose-500" />
-                  Import Data
-                </CardTitle>
-                <CardDescription>Bulk upload via CSV.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6 relative z-10">
-                <div className="space-y-2">
-                  <Label>Import Clients</Label>
-                  <div className="flex items-center gap-2">
-                    <Input type="file" accept=".csv" onChange={(e) => e.target.files?.[0] && handleImportClients(e.target.files[0])} disabled={importing} className="bg-white/50 dark:bg-slate-800/50" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Import Products</Label>
-                  <div className="flex items-center gap-2">
-                    <Input type="file" accept=".csv" onChange={(e) => e.target.files?.[0] && handleImportProducts(e.target.files[0])} disabled={importing} className="bg-white/50 dark:bg-slate-800/50" />
-                  </div>
-                </div>
-              </CardContent>
-              <Upload className="absolute -right-6 -bottom-6 h-32 w-32 text-slate-100 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform duration-500" />
-            </Card>
+          <Card className="border-none shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-amber-500/50"></div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-amber-500" />
+                Legal Terms
+              </CardTitle>
+              <CardDescription>Appended to Quotes and Invoices.</CardDescription>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <Textarea
+                className="min-h-[200px] bg-white/50 dark:bg-slate-800/50 resize-y"
+                placeholder="Enter your standard terms and conditions here..."
+                value={settings.legalTerms || ''}
+                onChange={(e) => updateSetting('legalTerms', e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                Visible on all generated PDF documents.
+              </p>
+            </CardContent>
+            <FileText className="absolute -right-6 -bottom-6 h-32 w-32 text-slate-100 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform duration-500" />
+          </Card>
+        </div>
+      </TabsContent>
 
-            <Card className="border-none shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500/50"></div>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Download className="h-5 w-5 text-indigo-500" />
-                  Export Data
-                </CardTitle>
-                <CardDescription>Download your data in CSV or JSON.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 relative z-10">
-                <div className="grid grid-cols-2 gap-3">
-                  <Button variant="outline" className="h-auto py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => exportData('clients', 'clients.csv')} disabled={exporting}>
-                    <div className="flex flex-col items-center gap-1">
-                      <Users className="h-4 w-4 mb-1" />
-                      Clients
-                    </div>
-                  </Button>
-                  <Button variant="outline" className="h-auto py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => exportData('products', 'products.csv')} disabled={exporting}>
-                    <div className="flex flex-col items-center gap-1">
-                      <Database className="h-4 w-4 mb-1" />
-                      Products
-                    </div>
-                  </Button>
-                  <Button variant="outline" className="h-auto py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => exportData('invoices', 'invoices.csv')} disabled={exporting}>
-                    <div className="flex flex-col items-center gap-1">
-                      <FileText className="h-4 w-4 mb-1" />
-                      Invoices
-                    </div>
-                  </Button>
-                  <Button variant="outline" className="h-auto py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => exportData('jobs', 'jobs.csv')} disabled={exporting}>
-                    <div className="flex flex-col items-center gap-1">
-                      <Building className="h-4 w-4 mb-1" />
-                      Jobs
-                    </div>
-                  </Button>
+      {/* Data Management Tab */}
+      <TabsContent value="data" className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card className="border-none shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-rose-500/50"></div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5 text-rose-500" />
+                Import Data
+              </CardTitle>
+              <CardDescription>Bulk upload via CSV.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 relative z-10">
+              <div className="space-y-2">
+                <Label>Import Clients</Label>
+                <div className="flex items-center gap-2">
+                  <Input type="file" accept=".csv" onChange={(e) => e.target.files?.[0] && handleImportClients(e.target.files[0])} disabled={importing} className="bg-white/50 dark:bg-slate-800/50" />
                 </div>
-              </CardContent>
-              <Download className="absolute -right-6 -bottom-6 h-32 w-32 text-slate-100 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform duration-500" />
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Import Products</Label>
+                <div className="flex items-center gap-2">
+                  <Input type="file" accept=".csv" onChange={(e) => e.target.files?.[0] && handleImportProducts(e.target.files[0])} disabled={importing} className="bg-white/50 dark:bg-slate-800/50" />
+                </div>
+              </div>
+            </CardContent>
+            <Upload className="absolute -right-6 -bottom-6 h-32 w-32 text-slate-100 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform duration-500" />
+          </Card>
+
+          <Card className="border-none shadow-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500/50"></div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-5 w-5 text-indigo-500" />
+                Export Data
+              </CardTitle>
+              <CardDescription>Download your data in CSV or JSON.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 relative z-10">
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="h-auto py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => exportData('clients', 'clients.csv')} disabled={exporting}>
+                  <div className="flex flex-col items-center gap-1">
+                    <Users className="h-4 w-4 mb-1" />
+                    Clients
+                  </div>
+                </Button>
+                <Button variant="outline" className="h-auto py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => exportData('products', 'products.csv')} disabled={exporting}>
+                  <div className="flex flex-col items-center gap-1">
+                    <Database className="h-4 w-4 mb-1" />
+                    Products
+                  </div>
+                </Button>
+                <Button variant="outline" className="h-auto py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => exportData('invoices', 'invoices.csv')} disabled={exporting}>
+                  <div className="flex flex-col items-center gap-1">
+                    <FileText className="h-4 w-4 mb-1" />
+                    Invoices
+                  </div>
+                </Button>
+                <Button variant="outline" className="h-auto py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => exportData('jobs', 'jobs.csv')} disabled={exporting}>
+                  <div className="flex flex-col items-center gap-1">
+                    <Building className="h-4 w-4 mb-1" />
+                    Jobs
+                  </div>
+                </Button>
+              </div>
+            </CardContent>
+            <Download className="absolute -right-6 -bottom-6 h-32 w-32 text-slate-100 dark:text-slate-800 opacity-50 group-hover:scale-110 transition-transform duration-500" />
+          </Card>
+        </div>
+      </TabsContent>
+    </Tabs>
+    </div >
   )
 }

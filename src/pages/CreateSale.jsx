@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { SmartEstimator } from '@/components/SmartEstimator'
 import { useCurrency } from '@/lib/use-currency'
+import { useSettings } from '@/lib/use-settings'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -20,6 +21,7 @@ export default function CreateSale() {
   const [searchParams] = useSearchParams()
   const defaultType = searchParams.get('type')
   const { formatCurrency } = useCurrency()
+  const { settings } = useSettings()
   const [isLoading, setIsLoading] = useState(false)
   const [mode, setMode] = useState(defaultType === 'invoice' ? 'invoice' : 'quotation') // 'quotation' or 'invoice'
   const [clients, setClients] = useState([])
@@ -69,6 +71,16 @@ export default function CreateSale() {
     fetchClients()
     fetchProducts()
   }, [fetchClients, fetchProducts])
+
+  // Set default validity for quotations
+  useEffect(() => {
+    if (mode === 'quotation' && !formData.valid_until && settings) {
+      const days = parseInt(settings.defaultQuoteValidityDays) || 14
+      const date = new Date()
+      date.setDate(date.getDate() + days)
+      setFormData(prev => ({ ...prev, valid_until: date.toISOString().split('T')[0] }))
+    }
+  }, [mode, settings, formData.valid_until])
 
   const addLineItem = () => {
     setLineItems([...lineItems, { product_id: '', quantity: 1, unit_price: 0, cost_price: 0, description: '' }])
