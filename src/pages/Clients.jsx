@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Plus, Search, Mail, Phone, Building2, MapPin, ExternalLink, Users, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { shareLink } from '@/lib/share-utils'
 import { toast } from 'sonner'
 
 export default function Clients() {
@@ -207,12 +208,11 @@ export default function Clients() {
                   onClick={(e) => {
                     e.preventDefault() // Prevent form submission
                     const portalLink = `${window.location.origin}/portal?client=${editingClient.id}`
-                    navigator.clipboard.writeText(portalLink)
-                    toast.success('Professional link copied!')
+                    shareLink('GSS Client Portal', 'Access your client portal here:', portalLink)
                   }}
                 >
                   <ExternalLink className="h-4 w-4 text-blue-500" />
-                  Copy Link
+                  Share Link
                 </Button>
               </div>
             )}
@@ -336,12 +336,11 @@ export default function Clients() {
                     className="w-full border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 group-hover:border-blue-200 dark:group-hover:border-blue-900/50 transition-colors"
                     onClick={() => {
                       const portalLink = `${window.location.origin}/portal?client=${client.id}`
-                      navigator.clipboard.writeText(portalLink)
-                      toast.success('Professional link copied!')
+                      shareLink('GSS Client Portal', 'Access your client portal here:', portalLink)
                     }}
                   >
                     <ExternalLink className="mr-2 h-4 w-4 text-blue-500" />
-                    Client Portal Link
+                    Share Portal Link
                   </Button>
                 </div>
                 <div className="text-[10px] text-center text-muted-foreground/50 pt-1">

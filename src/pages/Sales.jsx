@@ -8,6 +8,7 @@ import { Search, FileText, Receipt, Banknote, Calendar, Download, Trash2, CheckC
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF, generatePurchaseOrderPDF } from '@/lib/pdf-service'
+import { shareLink } from '@/lib/share-utils'
 import { useCurrency } from '@/lib/use-currency.jsx'
 import { toast } from 'sonner'
 import { useSettings } from '@/lib/use-settings.jsx'
@@ -439,8 +440,7 @@ export default function Sales() {
               onClick={(e) => {
                 e.stopPropagation()
                 const link = `${window.location.origin}/portal?client=${sale.client_id}`
-                navigator.clipboard.writeText(link)
-                toast.success('Professional link copied!')
+                shareLink('GSS Client Portal', 'Access your client portal here:', link)
               }}
             >
               <Share2 className="h-4 w-4" />
