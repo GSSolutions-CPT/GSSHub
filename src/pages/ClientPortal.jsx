@@ -129,17 +129,7 @@ export default function ClientPortal() {
     document.body.removeChild(link)
   }
 
-  const handleProofUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = async (event) => {
-      const base64String = event.target.result
-      await submitFinalAcceptance(base64String)
-    }
-    reader.readAsDataURL(file)
-  }
 
   const submitFinalAcceptance = async (paymentProofBase64) => {
     const toastId = toast.loading('Submitting acceptance and payment proof...')

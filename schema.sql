@@ -127,6 +127,7 @@ CREATE TABLE expenses (
     amount NUMERIC(10, 2) NOT NULL,
     description TEXT,
     date DATE NOT NULL,
+    receipt_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
