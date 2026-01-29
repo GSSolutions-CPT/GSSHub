@@ -53,6 +53,16 @@ CREATE TABLE IF NOT EXISTS quotations (
     vat_applicable BOOLEAN DEFAULT FALSE,
     trade_subtotal NUMERIC(10, 2),
     profit_estimate NUMERIC(10, 2),
+    -- New columns for Client Portal & Workflows
+    admin_approved BOOLEAN DEFAULT FALSE,
+    payment_request_sent BOOLEAN DEFAULT FALSE,
+    accepted_at TIMESTAMP WITH TIME ZONE,
+    client_signature TEXT,
+    payment_proof TEXT,
+    payment_type TEXT DEFAULT 'full', -- 'full' or 'deposit'
+    deposit_percentage NUMERIC(5, 2),
+    final_payment_proof TEXT,
+    final_payment_approved BOOLEAN DEFAULT FALSE,
     metadata JSONB
 );
 

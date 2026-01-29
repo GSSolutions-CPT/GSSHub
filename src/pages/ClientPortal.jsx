@@ -180,6 +180,37 @@ export default function ClientPortal() {
     }
   }
 
+  const submitFinalPaymentProof = async (proofBase64) => {
+    const toastId = toast.loading('Uploading final payment proof...')
+    try {
+      if (!proofBase64) throw new Error('File is required')
+
+      const { error } = await supabase
+        .from('quotations')
+        .update({
+          final_payment_proof: proofBase64,
+          // final_payment_approved: false // defaults to false anyway
+        })
+        .eq('id', acceptingQuote.id)
+
+      if (error) throw error
+
+      await supabase.from('activity_log').insert([{
+        type: 'Final Payment Proof Uploaded',
+        description: `Client uploaded final payment proof for quotation #${acceptingQuote.id.substring(0, 6)}`,
+        related_entity_id: acceptingQuote.id,
+        related_entity_type: 'quotation'
+      }])
+
+      setStep(3) // Reuse Success Message
+      fetchClientData()
+      toast.success('Final proof uploaded successfully!', { id: toastId })
+    } catch (error) {
+      console.error('Error uploading final proof:', error)
+      toast.error(`Failed to upload: ${error.message}`, { id: toastId })
+    }
+  }
+
 
 
   const handleDecline = async (quote) => {
@@ -647,12 +678,68 @@ export default function ClientPortal() {
                       type="file"
                       accept="image/*,application/pdf"
                       className="absolute inset-0 opacity-0 cursor-pointer"
-                      onChange={handleProofUpload}
+                      onChange={(e) => {
+                        const file = e.target.files[0]
+                        if (!file) return
+                        const reader = new FileReader()
+                        reader.onload = async (event) => {
+                          if (step === 2) {
+                            // Initial Acceptance Upload
+                            await submitFinalAcceptance(event.target.result)
+                          } else if (step === 4) {
+                            // Final Payment Upload
+                            await submitFinalPaymentProof(event.target.result)
+                          }
+                        }
+                        reader.readAsDataURL(file)
+                      }}
                     />
                   </div>
                 </div>
               </div>
 
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
+              </DialogFooter>
+            </div>
+          )}
+
+
+
+          {step === 4 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 bg-amber-100 rounded-full flex items-center justify-center text-amber-600">
+                    <Upload className="h-4 w-4" />
+                  </div>
+                  <p className="font-semibold text-slate-800">Upload Final Proof of Payment</p>
+                </div>
+
+                <div className="pl-10">
+                  <p className="text-sm text-slate-500 mb-3">
+                    Please upload the proof for your <strong>Outstanding Balance</strong>.
+                  </p>
+                  <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 flex flex-col items-center justify-center gap-3 hover:bg-slate-50 transition-colors cursor-pointer relative">
+                    <Upload className="h-10 w-10 text-slate-300" />
+                    <p className="text-sm font-medium text-slate-600">Click to upload or drag file here</p>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files[0]
+                        if (!file) return
+                        const reader = new FileReader()
+                        reader.onload = async (event) => {
+                          await submitFinalPaymentProof(event.target.result)
+                        }
+                        reader.readAsDataURL(file)
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setStep(0)}>Cancel</Button>
               </DialogFooter>
