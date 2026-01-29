@@ -438,9 +438,9 @@ export default function Sales() {
               title="Copy Client Portal Link"
               onClick={(e) => {
                 e.stopPropagation()
-                const link = `${window.location.origin}/portal?client=${sale.client_id}&token=secure_token_${sale.client_id}`
+                const link = `${window.location.origin}/portal?client=${sale.client_id}`
                 navigator.clipboard.writeText(link)
-                toast.success('Portal link copied!')
+                toast.success('Professional link copied!')
               }}
             >
               <Share2 className="h-4 w-4" />

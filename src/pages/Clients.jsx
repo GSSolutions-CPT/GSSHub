@@ -311,9 +311,9 @@ export default function Clients() {
                     variant="outline"
                     className="w-full border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 group-hover:border-blue-200 dark:group-hover:border-blue-900/50 transition-colors"
                     onClick={() => {
-                      const portalLink = `${window.location.origin}/portal?client=${client.id}&token=secure_token_${client.id}`
+                      const portalLink = `${window.location.origin}/portal?client=${client.id}`
                       navigator.clipboard.writeText(portalLink)
-                      toast.success('Portal link copied to clipboard!')
+                      toast.success('Professional link copied!')
                     }}
                   >
                     <ExternalLink className="mr-2 h-4 w-4 text-blue-500" />
