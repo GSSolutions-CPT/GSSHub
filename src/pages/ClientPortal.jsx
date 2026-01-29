@@ -19,8 +19,14 @@ export default function ClientPortal() {
   const { formatCurrency } = useCurrency()
   const { settings } = useSettings()
   const [searchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const clientId = searchParams.get('client')
-  const accessToken = searchParams.get('token')
+
+  useEffect(() => {
+    if (!clientId) {
+      setLoading(false)
+    }
+  }, [clientId])
 
   const [client, setClient] = useState(null)
   const [quotations, setQuotations] = useState([])
@@ -90,10 +96,10 @@ export default function ClientPortal() {
   }, [clientId])
 
   useEffect(() => {
-    if (clientId && accessToken) {
+    if (clientId) {
       fetchClientData()
     }
-  }, [clientId, accessToken, fetchClientData])
+  }, [clientId, fetchClientData])
 
   const initiateAcceptance = (quote) => {
     setAcceptingQuote(quote)
