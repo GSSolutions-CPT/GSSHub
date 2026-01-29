@@ -1,4 +1,5 @@
 import { useState, useEffect, Suspense, lazy, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,10 +29,23 @@ export default function Financials() {
   })
   const [uploading, setUploading] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setMonth(new Date().getMonth() - 6)).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   })
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      setIsDialogOpen(true)
+      // Optional: Clear the param so it doesn't reopen on refresh, 
+      // but keeping it might be fine for now. 
+      // Better to clear it after opening.
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('action')
+      setSearchParams(newParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const fetchExpenses = useCallback(async () => {
     try {

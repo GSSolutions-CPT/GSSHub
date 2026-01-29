@@ -151,10 +151,16 @@ export default function Dashboard() {
             <Plus className="h-4 w-4" /> Create New Sale
           </button>
           <button
-            onClick={() => navigate('/clients')} // Redirecting to clients list to add client is standard pattern, or a modal? Let's assume navigating to clients page is safer for now or if there is a create client route? No create client route seen, usually handled in Clients page.
+            onClick={() => navigate('/clients')}
             className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2 rounded-lg transition-all border border-white/10 text-sm font-medium"
           >
             <UserPlus className="h-4 w-4" /> Add Client
+          </button>
+          <button
+            onClick={() => navigate('/financials?action=new')}
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2 rounded-lg transition-all border border-white/10 text-sm font-medium"
+          >
+            <Receipt className="h-4 w-4" /> Add Expense
           </button>
         </div>
 
