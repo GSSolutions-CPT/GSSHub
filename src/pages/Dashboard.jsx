@@ -1,7 +1,7 @@
 import { useState, useEffect, Suspense, lazy, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Banknote, TrendingUp, Users, AlertCircle, Activity, FileText, Receipt, Briefcase, Package, FileSignature, Plus, UserPlus, FilePlus } from 'lucide-react'
+import { Banknote, TrendingUp, Users, AlertCircle, Activity, FileText, Receipt, Briefcase, Package, FileSignature, Plus, UserPlus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useCurrency } from '@/lib/use-currency.jsx'
 
