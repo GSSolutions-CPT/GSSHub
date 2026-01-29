@@ -370,12 +370,10 @@ export default function ClientPortal() {
       <div className="fixed top-40 -left-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
 
       <header className="fixed top-0 left-0 right-0 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md border-b border-white/20 dark:border-slate-800/50 z-50">
-        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
+        <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-gradient-to-br from-slate-900 to-slate-700 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-slate-900/20">
-              GS
-            </div>
-            <div>
+            <img src="/gss-logo-full.png" alt="Global Security Solutions" className="h-10 md:h-12 w-auto object-contain" />
+            <div className="hidden md:block">
               <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-none tracking-tight">Client Portal</h1>
               <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Global Security Solutions</p>
             </div>
@@ -391,14 +389,16 @@ export default function ClientPortal() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 sm:px-6 py-8 pt-28 pb-32 max-w-7xl relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 py-8 pt-24 pb-32 max-w-7xl relative z-10">
         <Tabs defaultValue="overview" className="space-y-8">
-          <TabsList className="bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-full border border-white/20 dark:border-slate-800 shadow-sm w-full md:w-auto inline-flex h-auto">
-            <TabsTrigger value="overview" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium">Overview</TabsTrigger>
-            <TabsTrigger id="tab-quotations" value="quotations" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium">Quotes</TabsTrigger>
-            <TabsTrigger value="proforma" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium">Proforma</TabsTrigger>
-            <TabsTrigger id="tab-invoices" value="invoices" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium">Invoices</TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+            <TabsList className="bg-slate-200/50 dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-full border border-white/20 dark:border-slate-800 shadow-sm w-max md:w-auto inline-flex h-auto">
+              <TabsTrigger value="overview" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium whitespace-nowrap">Overview</TabsTrigger>
+              <TabsTrigger id="tab-quotations" value="quotations" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium whitespace-nowrap">Quotes</TabsTrigger>
+              <TabsTrigger value="proforma" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium whitespace-nowrap">Proforma</TabsTrigger>
+              <TabsTrigger id="tab-invoices" value="invoices" className="rounded-full px-6 py-2.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md transition-all font-medium whitespace-nowrap">Invoices</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview">
             <DashboardOverview />

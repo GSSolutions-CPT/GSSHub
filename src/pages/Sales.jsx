@@ -430,9 +430,25 @@ export default function Sales() {
               <CardDescription className="text-slate-500 font-medium">{sale.clients.company}</CardDescription>
             )}
           </div>
-          <Badge className={`${getStatusColor(sale.status)} text-white shadow-sm px-3 py-1`}>
-            {sale.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Copy Client Portal Link"
+              onClick={(e) => {
+                e.stopPropagation()
+                const link = `${window.location.origin}/portal?client=${sale.client_id}&token=secure_token_${sale.client_id}`
+                navigator.clipboard.writeText(link)
+                toast.success('Portal link copied!')
+              }}
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+            <Badge className={`${getStatusColor(sale.status)} text-white shadow-sm px-3 py-1`}>
+              {sale.status}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pl-6">
@@ -614,27 +630,28 @@ export default function Sales() {
         </div>
       </div>
       {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="relative flex-1 max-w-md">
+      {/* Header Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by client..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 w-full"
           />
         </div>
 
-        <div className="flex gap-2">
-          <Button onClick={() => navigate('/create-sale')}>
+        <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          <Button onClick={() => navigate('/create-sale')} className="flex-1 md:flex-none">
             Create New Sale
           </Button>
-          <Button onClick={() => navigate('/create-purchase-order')} variant="outline">
-            <Package className="mr-2 h-4 w-4" />
-            Create Purchase Order
+          <Button onClick={() => navigate('/create-purchase-order')} variant="outline" className="flex-1 md:flex-none">
+            <Package className="mr-2 h-4 w-4 md:hidden lg:inline" />
+            <span className="md:hidden lg:inline">Create </span>PO
           </Button>
-          <Button onClick={() => navigate('/contracts')} variant="outline">
-            <FileSignature className="mr-2 h-4 w-4" />
+          <Button onClick={() => navigate('/contracts')} variant="outline" className="flex-1 md:flex-none">
+            <FileSignature className="mr-2 h-4 w-4 md:hidden lg:inline" />
             Contracts
           </Button>
         </div>
@@ -642,21 +659,23 @@ export default function Sales() {
 
       {/* Tabs for Quotations, Proforma, and Invoices */}
       <Tabs defaultValue="pending" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="pending" className="relative">
-            Pending Review Quotes
-            {quotations.filter(q => q.status === 'Pending Review').length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="quotations">Quotes</TabsTrigger>
-          <TabsTrigger value="proforma">Proforma Invoices</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
-          <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="w-max inline-flex">
+            <TabsTrigger value="pending" className="relative">
+              Pending Review Quotes
+              {quotations.filter(q => q.status === 'Pending Review').length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="quotations">Quotes</TabsTrigger>
+            <TabsTrigger value="proforma">Proforma Invoices</TabsTrigger>
+            <TabsTrigger value="invoices">Invoices</TabsTrigger>
+            <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="quotations" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredQuotations

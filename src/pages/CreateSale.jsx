@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Plus, Trash2, FileText, Receipt, Package, Loader2, User, Calendar, Percent, ChevronLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { SmartEstimator } from '@/components/SmartEstimator'
 import { useCurrency } from '@/lib/use-currency'
 import { toast } from 'sonner'
@@ -17,9 +17,11 @@ import { cn } from '@/lib/utils'
 
 export default function CreateSale() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const defaultType = searchParams.get('type')
   const { formatCurrency } = useCurrency()
   const [isLoading, setIsLoading] = useState(false)
-  const [mode, setMode] = useState('quotation') // 'quotation' or 'invoice'
+  const [mode, setMode] = useState(defaultType === 'invoice' ? 'invoice' : 'quotation') // 'quotation' or 'invoice'
   const [clients, setClients] = useState([])
   const [products, setProducts] = useState([])
   const [formData, setFormData] = useState({
