@@ -2,7 +2,8 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 // --- BRAND CONFIGURATION ---
-const COLORS = {
+// --- BRAND CONFIGURATION ---
+const DEFAULT_COLORS = {
     PRIMARY: [37, 99, 235],     // #2563eb (Security Blue)
     DARK: [15, 23, 42],         // #0f172a (Slate 900)
     LIGHT: [239, 246, 255],     // #eff6ff (Blue 50)
@@ -12,18 +13,37 @@ const COLORS = {
     WHITE: [255, 255, 255]
 }
 
-const COMPANY_DETAILS = {
-    name: "Global Security Solutions",
-    tagline: "PROFESSIONAL SECURITY SERVICES",
-    address: "66 Robyn Rd, Durbanville",
-    phone: "062 955 8559",
-    email: "Kyle@GlobalSecuritySolutions.co.za",
-    website: "globalsecuritysolutions.co.za"
+const hexToRgb = (hex) => {
+    if (!hex) return null
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+    ] : null
 }
 
 // --- MAIN GENERATOR FUNCTION ---
-const generatePDF = async (docType, data) => {
-    console.log('Generating PDF for:', docType, data)
+const generatePDF = async (docType, data, settings = {}) => {
+    console.log('Generating PDF for:', docType, data, settings)
+    const COLORS = { ...DEFAULT_COLORS }
+
+    // Apply dynamic primary color
+    if (settings.primaryColor) {
+        const rgb = hexToRgb(settings.primaryColor)
+        if (rgb) COLORS.PRIMARY = rgb
+    }
+
+    // Company Config
+    const company = {
+        name: settings.companyName || "Global Security Solutions",
+        address: settings.companyAddress || "66 Robyn Rd, Durbanville",
+        phone: settings.companyPhone || "062 955 8559",
+        email: settings.companyEmail || "Kyle@GlobalSecuritySolutions.co.za",
+        vat: settings.companyVat || "",
+        website: "globalsecuritysolutions.co.za" // Could be added to settings later
+    }
+
     try {
         // Initialize PDF (A4 Portrait)
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
@@ -44,8 +64,13 @@ const generatePDF = async (docType, data) => {
 
         // Logo Handling
         try {
-            // Assumes logo.png is in your public folder
-            const logoUrl = window.location.origin + '/logo.png'
+            // Use settings logo or fallback
+            const logoUrl = settings.logoUrl || (window.location.origin + '/logo.png')
+
+            // If it's a relative path/local asset, prepend origin if needed, 
+            // but settings.logoUrl from Supabase is absolute.
+            // window.location.origin might be needed for '/logo.png'.
+
             const img = await fetchImage(logoUrl)
 
             // Calculate aspect ratio
@@ -55,23 +80,26 @@ const generatePDF = async (docType, data) => {
 
             doc.addImage(img, 'PNG', 14, 5, logoWidth, logoHeight)
         } catch (e) {
+            console.warn('Logo load failed, using text fallback', e)
             // Fallback Text Logo
             doc.setFontSize(22)
             doc.setTextColor(...COLORS.PRIMARY)
             doc.setFont('helvetica', 'bold')
-            doc.text('GSS', 14, 25)
+            doc.text(company.name.substring(0, 3).toUpperCase(), 14, 25)
         }
 
         // Contact Info (Right Aligned)
         const rightX = pageWidth - 14
         doc.setTextColor(203, 213, 225) // Slate 300
         doc.setFontSize(9)
-        doc.text(COMPANY_DETAILS.address, rightX, 10, { align: 'right' })
-        doc.text(COMPANY_DETAILS.phone, rightX, 15, { align: 'right' })
+        doc.text(company.address, rightX, 10, { align: 'right' })
+        doc.text(company.phone, rightX, 15, { align: 'right' })
         doc.setTextColor(...COLORS.PRIMARY)
-        doc.text(COMPANY_DETAILS.email, rightX, 20, { align: 'right' })
+        doc.text(company.email, rightX, 20, { align: 'right' })
         doc.setTextColor(203, 213, 225)
-        doc.text(COMPANY_DETAILS.website, rightX, 25, { align: 'right' })
+        if (company.vat) {
+            doc.text(`VAT: ${company.vat}`, rightX, 25, { align: 'right' })
+        }
 
         // ==========================================
         // 2. BLUE BANNER STRIP
@@ -119,19 +147,21 @@ const generatePDF = async (docType, data) => {
         const contactPerson = docType === 'Purchase Order' ? data.suppliers?.contact_person : data.clients?.contact_person
         const clientPhone = docType === 'Purchase Order' ? data.suppliers?.phone : data.clients?.phone
         const clientAddr = docType === 'Purchase Order' ? data.suppliers?.address : data.clients?.address
+        const clientCompany = docType === 'Purchase Order' ? '' : data.clients?.company
 
         doc.setTextColor(...COLORS.TEXT_DARK)
         doc.setFontSize(10)
-        doc.text(clientName, 18, cardY + 14)
+        doc.text(clientCompany || clientName, 18, cardY + 14)
 
         doc.setTextColor(...COLORS.TEXT_GRAY)
         doc.setFontSize(9)
         doc.setFont('helvetica', 'normal')
         let clientY = cardY + 19
+        if (clientCompany && clientName !== clientCompany) { doc.text(clientName, 18, clientY); clientY += 4 }
         if (contactPerson) { doc.text(`Attn: ${contactPerson}`, 18, clientY); clientY += 4 }
         if (clientPhone) { doc.text(clientPhone, 18, clientY); clientY += 4 }
         if (clientAddr) {
-            const splitAddr = doc.splitTextToSize(clientAddr, colW - 10)
+            const splitAddr = doc.splitTextToSize(clientAddr.substring(0, 50) + (clientAddr.length > 50 ? '...' : ''), colW - 10)
             doc.text(splitAddr, 18, clientY)
         }
 
@@ -150,11 +180,11 @@ const generatePDF = async (docType, data) => {
         doc.setFontSize(10)
 
         if (docType === 'Purchase Order') {
-            doc.text(COMPANY_DETAILS.name, refX + 4, cardY + 14)
+            doc.text(company.name, refX + 4, cardY + 14)
             doc.setFontSize(9)
             doc.setTextColor(...COLORS.TEXT_GRAY)
             doc.setFont('helvetica', 'normal')
-            doc.text(COMPANY_DETAILS.address, refX + 4, cardY + 19)
+            doc.text(company.address, refX + 4, cardY + 19)
         } else {
             const refText = data.metadata?.reference || 'Security System Installation'
             const splitRef = doc.splitTextToSize(refText, colW - 10)
@@ -246,25 +276,28 @@ const generatePDF = async (docType, data) => {
             const lineH = 5
 
             doc.setFont('helvetica', 'normal'); doc.text('Bank:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text('FNB/RMB', valX, bankY);
+            doc.setFont('helvetica', 'bold'); doc.text(settings.bankName || 'FNB/RMB', valX, bankY);
             bankY += lineH;
 
             doc.setFont('helvetica', 'normal'); doc.text('Holder:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text('Global Security Solutions', valX, bankY);
+            doc.setFont('helvetica', 'bold'); doc.text(settings.bankAccountHolder || company.name, valX, bankY);
             bankY += lineH;
 
             doc.setFont('helvetica', 'normal'); doc.text('Account:', labelX, bankY);
             doc.setTextColor(...COLORS.PRIMARY); doc.setFont('helvetica', 'bold');
-            doc.text('63182000223', valX, bankY);
+            doc.text(settings.bankAccountNumber || '63182000223', valX, bankY);
             doc.setTextColor(...COLORS.WHITE);
             bankY += lineH;
 
             doc.setFont('helvetica', 'normal'); doc.text('Branch:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text('250655', valX, bankY);
-            bankY += lineH;
+            doc.setFont('helvetica', 'bold'); doc.text(settings.bankBranchCode || '250655', valX, bankY);
 
-            doc.setFont('helvetica', 'normal'); doc.text('Type:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text('First Business Zero', valX, bankY);
+            // Optional: Type
+            if (settings.bankAccountType) {
+                bankY += lineH;
+                doc.setFont('helvetica', 'normal'); doc.text('Type:', labelX, bankY);
+                doc.setFont('helvetica', 'bold'); doc.text(settings.bankAccountType, valX, bankY);
+            }
         }
 
         // --- Totals ---
@@ -272,8 +305,17 @@ const generatePDF = async (docType, data) => {
         let currentTotalY = finalY + 5
 
         const totalVal = parseFloat(data.total_amount || 0)
+
+        let taxRate = 0.15
+        if (settings.taxRate) {
+            taxRate = parseFloat(settings.taxRate) / 100
+        }
+
         // Calculate VAT backwards (Assumption: Total includes VAT)
-        const subtotalVal = totalVal / (data.vat_applicable ? 1.15 : 1)
+        // If vat_applicable is false, then total is just subtotal.
+        // If vat_applicable is true, then total = subtotal * (1 + rate) -> subtotal = total / (1 + rate)
+
+        const subtotalVal = totalVal / (data.vat_applicable ? (1 + taxRate) : 1)
         const vatVal = data.vat_applicable ? (totalVal - subtotalVal) : 0
 
         const depositVal = parseFloat(data.deposit_amount || 0)
@@ -288,7 +330,7 @@ const generatePDF = async (docType, data) => {
         currentTotalY += 6
 
         // VAT
-        doc.text(data.vat_applicable ? 'VAT (15%)' : 'VAT (0%)', totalsX, currentTotalY)
+        doc.text(data.vat_applicable ? `VAT (${(taxRate * 100).toFixed(0)}%)` : 'VAT (0%)', totalsX, currentTotalY)
         doc.text(`R${vatVal.toFixed(2)}`, rightX, currentTotalY, { align: 'right' })
         currentTotalY += 10
 
@@ -331,52 +373,55 @@ const generatePDF = async (docType, data) => {
             doc.setFontSize(14)
             doc.text('TERMS & CONDITIONS', 14, 17)
             doc.setFontSize(9)
-            doc.setTextColor(148, 163, 184)
-            doc.text('Agreement governing the provision and installation of premium security systems.', rightX, 17, { align: 'right' })
+            doc.text('Standard Terms of Service', rightX, 17, { align: 'right' })
 
             let termY = 40
             const bottomMargin = 30
-            const terms = [
-                { t: '1. Scope of Services', c: 'We agree to supply and install the security equipment ("System") as specified in the signed Quotation at the address provided ("Site"). The scope includes the physical installation of components, system configuration, basic user training upon handover, and any other services explicitly detailed in the Quotation. Services may include: Intruder Detection, CCTV, Access Control, Electric Fencing, Gate and Garage Automation, Smart Home and System Integration.' },
-                { t: '2. System Specifications', c: 'The make, model, quantity, and specific capabilities of all System components will be detailed in the formal Quotation. We reserve the right to propose a substitution of components with items of equal or superior quality and specification if the quoted items become unavailable. Such a substitution will only be made subject to your prior written approval.' },
-                { t: '3. Installation Procedures', c: '3.1 Site Access: You shall provide us with safe, unimpeded access to the Site during agreed-upon working hours.\n3.2 Customer Obligations: You are responsible for ensuring the Site is ready for installation, including providing a stable 230V AC power supply. You must inform us of concealed utilities.\n3.3 Timeline: Estimates only. We are not liable for delays beyond our control.\n3.4 Completion & Handover: Installation is deemed complete upon successful testing. Acceptance is confirmed by signing our job completion form or by using the system.' },
-                { t: '4. Warranties', c: '4.1 Workmanship: 12-month warranty on installation workmanship. Covers faults directly resulting from installation.\n4.2 Equipment: Manufacturer warranty applies. We facilitate claims.\n4.3 Exclusions: Misuse, neglect, Acts of God (lightning, surge), third-party service failures, consumables (batteries, fuses).' },
-                { t: '5. Payment Terms', c: `5.1 Deposit: ${data.payment_type === 'full' ? '100% payment' : (data.deposit_percentage || 75) + '% deposit'} required on acceptance to secure equipment.\n5.2 Final Payment: ${data.payment_type === 'full' ? '0%' : (100 - (data.deposit_percentage || 75)) + '%'} due upon completion and handover.\n5.3 Ownership: Equipment remains property of Global Security Solutions until fully paid. We reserve right to remove system if unpaid.\n5.4 Late Payments: Interest charged on overdue accounts at prime plus 5%.` },
-                { t: '6. Data Privacy', c: '6.1 Compliance: We handle data in compliance with POPIA.\n6.2 System Data: You are the Data Controller for CCTV footage/logs. You are solely responsible for lawful use.\n6.3 Remote Access: Required for maintenance; done only with your explicit consent.' },
-                { t: '7. Maintenance & Support', c: '7.1 Post-Warranty Service: Service calls requested after warranty period are chargeable at standard rates.\n7.2 Maintenance Contracts: Available for ongoing care.\n7.3 Call-Outs: Standard fees apply for on-site support outside warranty.' },
-                { t: '8. Limitation of Liability', c: '8.1 No Guarantee: Systems are deterrents, not guarantees against loss. GSS is not an insurer.\n8.2 Indemnity: Not liable for loss/damage unless gross negligence is proven.\n8.3 Maximum Liability: Limited to the total contract value.' },
-                { t: '9. Termination', c: `9.1 By You: ${data.payment_type === 'full' ? 'Payment' : (data.deposit_percentage || 75) + '% deposit'} is non-refundable if work commenced. Costs for work done are due.\n9.2 By Us: We may terminate for non-payment or breach.` },
-                { t: '10. General', c: '10.1 Governing Law: Republic of South Africa.\n10.2 Dispute Resolution: Cape Town courts jurisdiction.\n10.3 Entire Agreement: This document + Quotation supersedes all prior communications.' }
-            ]
+
+            // Custom Terms from Settings or Default
+            let termsContent = settings.legalTerms
+
+            if (!termsContent) {
+                // Default Terms if none provided
+                termsContent = `1. Scope of Services
+We agree to supply and install the equipment as specified.
+
+2. Ownership
+Equipment remains property of ${company.name} until fully paid.
+
+3. Payment
+Payment is due as per agreed terms. Late payments may incur interest.
+
+4. Warranty
+Standard manufacturer warranties apply. Workmanship is guaranteed for 12 months.`
+            }
 
             // Preamble
             doc.setFontSize(8)
             doc.setTextColor(100, 116, 139) // Slate 500
-            const preamble = "These Terms and Conditions (\"Agreement\") govern the provision and installation of security systems and related services (\"Services\") by Global Security Solutions (\"we,\" \"us,\" \"our\") to the customer (\"you,\" \"your\"). This Agreement, together with the official Quotation provided, constitutes the entire contract between both parties."
-            const preambleLines = doc.splitTextToSize(preamble, pageWidth - 28)
-            doc.text(preambleLines, 14, termY)
-            termY += (preambleLines.length * 3.5) + 8
+            const preamble = `These Terms and Conditions govern the provision services by ${company.name} to the customer.`
+            doc.text(preamble, 14, termY)
+            termY += 10
 
+            doc.setFontSize(9)
             doc.setTextColor(...COLORS.TEXT_DARK)
-            terms.forEach(term => {
-                // Check Page Break
-                if (termY > pageHeight - bottomMargin - 10) {
+            doc.setFont('helvetica', 'normal')
+
+            // Simple text wrapping for the whole block if it's just a blob of text
+            const splitTerms = doc.splitTextToSize(termsContent, pageWidth - 28)
+
+            // Check if it fits, else handle simple pagination
+            // For simplicity, we just dump it, but let's try to paginate if needed
+            let currentLine = 0
+            while (currentLine < splitTerms.length) {
+                if (termY > pageHeight - bottomMargin) {
                     doc.addPage()
                     termY = 20
                 }
-
-                doc.setFontSize(9)
-                doc.setFont('helvetica', 'bold')
-                doc.setTextColor(...COLORS.PRIMARY)
-                doc.text(term.t, 14, termY)
-
-                doc.setFontSize(8)
-                doc.setFont('helvetica', 'normal')
-                doc.setTextColor(60, 60, 60)
-                const lines = doc.splitTextToSize(term.c, pageWidth - 28)
-                doc.text(lines, 14, termY + 4)
-                termY += (lines.length * 3.5) + 6
-            })
+                doc.text(splitTerms[currentLine], 14, termY)
+                termY += 5
+                currentLine++
+            }
 
             // Acceptance Block
             const finalPageHeight = doc.internal.pageSize.getHeight()
@@ -420,7 +465,7 @@ const generatePDF = async (docType, data) => {
 
             doc.setFontSize(8)
             doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.text(`Web: ${COMPANY_DETAILS.website}   |   Email: ${COMPANY_DETAILS.email}   |   ${COMPANY_DETAILS.phone}`, pageWidth / 2, pH - 10, { align: 'center' })
+            doc.text(`Web: ${company.website || ''}   |   Email: ${company.email}   |   ${company.phone}`, pageWidth / 2, pH - 10, { align: 'center' })
             doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pH - 10, { align: 'right' })
         }
 

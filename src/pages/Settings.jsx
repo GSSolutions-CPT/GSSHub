@@ -153,6 +153,33 @@ export default function Settings() {
     })
   }
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `logo-${Math.random()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('organization-assets')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('organization-assets')
+        .getPublicUrl(filePath)
+
+      updateSetting('logoUrl', publicUrl)
+      alert('Logo uploaded successfully!')
+    } catch (error) {
+      console.error('Error uploading logo:', error)
+      alert('Error uploading logo')
+    }
+  }
+
   const exportData = async (table, filename, format = 'csv') => {
     setExporting(true)
     try {
@@ -261,8 +288,27 @@ export default function Settings() {
                   <Input value={settings.companyName || ''} onChange={(e) => updateSetting('companyName', e.target.value)} placeholder="Company Name" className="bg-white/50 dark:bg-slate-800/50" />
                 </div>
                 <div className="grid gap-2">
+                  <Label>Company Logo</Label>
+                  <div className="flex items-center gap-4">
+                    {settings.logoUrl && (
+                      <img src={settings.logoUrl} alt="Logo" className="h-16 w-16 object-contain bg-white rounded-md border p-1" />
+                    )}
+                    <Input type="file" accept="image/*" onChange={handleLogoUpload} className="bg-white/50 dark:bg-slate-800/50" />
+                  </div>
+                </div>
+                <div className="grid gap-2">
                   <Label>Phone Number</Label>
                   <Input value={settings.companyPhone || ''} onChange={(e) => updateSetting('companyPhone', e.target.value)} placeholder="Phone" className="bg-white/50 dark:bg-slate-800/50" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>WhatsApp Number</Label>
+                  <Input
+                    value={settings.whatsappNumber || settings.companyPhone || ''}
+                    onChange={(e) => updateSetting('whatsappNumber', e.target.value)}
+                    placeholder="e.g. 062 123 4567"
+                    className="bg-white/50 dark:bg-slate-800/50"
+                  />
+                  <p className="text-xs text-muted-foreground">Used for &apos;Chat on WhatsApp&apos; links. Defaults to Phone Number if empty.</p>
                 </div>
                 <div className="grid gap-2">
                   <Label>Email Address</Label>
@@ -430,6 +476,36 @@ export default function Settings() {
                       <SelectItem value="GBP">British Pound (GBP)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Primary Brand Color</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="color"
+                      value={settings.primaryColor || '#2563eb'}
+                      onChange={(e) => updateSetting('primaryColor', e.target.value)}
+                      className="w-12 h-12 p-1 cursor-pointer"
+                    />
+                    <Input
+                      type="text"
+                      value={settings.primaryColor || '#2563eb'}
+                      onChange={(e) => updateSetting('primaryColor', e.target.value)}
+                      placeholder="#2563eb"
+                      className="flex-1 bg-white/50 dark:bg-slate-800/50"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>VAT / Tax Rate (%)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={settings.taxRate || '15'}
+                    onChange={(e) => updateSetting('taxRate', e.target.value)}
+                    placeholder="15"
+                    className="bg-white/50 dark:bg-slate-800/50"
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label>Default Quote Validity (Days)</Label>

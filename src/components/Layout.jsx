@@ -14,9 +14,11 @@ import {
     X
 } from 'lucide-react'
 import { CurrencyProvider } from '@/lib/use-currency'
+import { useSettings } from '@/lib/use-settings'
 
 export default function Layout() {
     const { signOut, user } = useAuth()
+    const { settings } = useSettings()
     const navigate = useNavigate()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -46,8 +48,8 @@ export default function Layout() {
                     <div className="container mx-auto px-4 h-16 flex items-center justify-between">
                         {/* Logo */}
                         <div className="flex items-center gap-2">
-                            <img src="/logo.png" alt="GSS Logo" className="h-8 w-auto mb-1" />
-                            {/* <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hidden md:inline-block">GSS Hub</span> */}
+                            <img src={settings.logoUrl || "/logo.png"} alt="Logo" className="h-8 w-auto mb-1" />
+                            {/* <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent hidden md:inline-block">{settings.companyName || 'GSS Hub'}</span> */}
                         </div>
 
                         {/* Desktop Navigation */}

@@ -121,7 +121,8 @@ export default function CreateSale() {
     }, 0)
 
     const profit = subtotal - tradeSubtotal
-    const vat = formData.vat_applicable ? subtotal * 0.15 : 0
+    const taxRate = (parseFloat(settings.taxRate) || 15) / 100
+    const vat = formData.vat_applicable ? subtotal * taxRate : 0
     const total = subtotal + vat
 
     return { subtotal, tradeSubtotal, profit, vat, total }
@@ -582,7 +583,7 @@ export default function CreateSale() {
                 </div>
                 {formData.vat_applicable && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">VAT (15%)</span>
+                    <span className="text-muted-foreground">VAT ({settings.taxRate || 15}%)</span>
                     <span>{formatCurrency(totals.vat)}</span>
                   </div>
                 )}
@@ -598,7 +599,7 @@ export default function CreateSale() {
               <div className="bg-slate-100 dark:bg-slate-900 rounded-lg p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Percent className="h-4 w-4 text-muted-foreground" />
-                  <Label htmlFor="vat-toggle" className="text-sm cursor-pointer">Add VAT (15%)</Label>
+                  <Label htmlFor="vat-toggle" className="text-sm cursor-pointer">Add VAT ({settings.taxRate || 15}%)</Label>
                 </div>
                 <Switch
                   id="vat-toggle"
