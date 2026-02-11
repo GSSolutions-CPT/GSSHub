@@ -16,6 +16,14 @@ export default function Clients() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingClient, setEditingClient] = useState(null)
 
+  // Calculate Stats
+  const totalClients = clients.length
+  const newThisMonth = clients.filter(c => {
+    const clientDate = new Date(c.created_at)
+    const now = new Date()
+    return clientDate.getMonth() === now.getMonth() && clientDate.getFullYear() === now.getFullYear()
+  }).length
+
   const fetchClients = useCallback(async () => {
     try {
       const { data, error } = await supabase
