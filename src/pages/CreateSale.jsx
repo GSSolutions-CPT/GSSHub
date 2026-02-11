@@ -15,6 +15,7 @@ import { useSettings } from '@/lib/use-settings'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { ClientDialog } from '@/components/ClientDialog'
 
 export default function CreateSale() {
   const navigate = useNavigate()
@@ -361,22 +362,36 @@ export default function CreateSale() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="client_id">Select Client</Label>
-                <Select
-                  value={formData.client_id}
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                >
-                  <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                    <SelectValue placeholder="Choose a client..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        <span className="font-medium">{client.name}</span>
-                        {client.company && <span className="text-muted-foreground ml-2">({client.company})</span>}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.client_id}
+                    onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                  >
+                    <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex-1">
+                      <SelectValue placeholder="Choose a client..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          <span className="font-medium">{client.name}</span>
+                          {client.company && <span className="text-muted-foreground ml-2">({client.company})</span>}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <ClientDialog
+                    onSuccess={(newClient) => {
+                      setClients(prev => [newClient, ...prev])
+                      setFormData(prev => ({ ...prev, client_id: newClient.id }))
+                    }}
+                    trigger={
+                      <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" type="button">
+                        <Plus className="h-5 w-5" />
+                      </Button>
+                    }
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
