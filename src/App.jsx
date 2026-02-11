@@ -9,6 +9,7 @@ const Layout = lazy(() => import('./components/Layout.jsx'))
 const Login = lazy(() => import('./pages/Login.jsx'))
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Clients = lazy(() => import('./pages/Clients.jsx'))
+const ClientDetails = lazy(() => import('./pages/ClientDetails.jsx'))
 const Products = lazy(() => import('./pages/Products.jsx'))
 const CreateSale = lazy(() => import('./pages/CreateSale.jsx'))
 const CreatePurchaseOrder = lazy(() => import('./pages/CreatePurchaseOrder.jsx'))
@@ -40,6 +41,7 @@ function App() {
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="clients" element={<Clients />} />
+                <Route path="clients/:id" element={<ClientDetails />} />
                 <Route path="products" element={<Products />} />
                 <Route path="create-sale" element={<CreateSale />} />
                 <Route path="create-purchase-order" element={<CreatePurchaseOrder />} />
