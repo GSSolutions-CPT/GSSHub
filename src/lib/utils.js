@@ -49,3 +49,10 @@ export function hexToHsl(hex) {
 
     return `${h} ${s}% ${l}%`
 }
+
+export function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-ZA', {
+        style: 'currency',
+        currency: 'ZAR',
+    }).format(amount)
+}
