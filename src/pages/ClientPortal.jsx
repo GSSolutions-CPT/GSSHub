@@ -523,7 +523,7 @@ export default function ClientPortal() {
             <img src={settings.logoUrl || "/gss-logo-full.png"} alt={settings.companyName || "Global Security Solutions"} className="h-10 md:h-12 w-auto object-contain" />
             <div className="hidden md:block">
               <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-none tracking-tight">Client Portal</h1>
-              <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mt-0.5">{settings.companyName || 'Global Security Solutions'}</p>
+              <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mt-0.5">{settings.companyName || 'Global Security Solutions'} v2.0</p>
             </div>
           </div>
           <div className="flex gap-4 items-center">
