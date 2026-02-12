@@ -302,22 +302,7 @@ const generatePDF = async (docType, data, settings = {}) => {
         }
 
 
-        // ==========================================
-        // 5. GLOBAL FOOTER (Page Numbers)
-        // ==========================================
-        const pageCount = doc.internal.getNumberOfPages()
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i)
-            const pH = doc.internal.pageSize.getHeight()
 
-            // Subtle footer line
-            doc.setDrawColor(...COLORS.BORDER)
-            doc.setLineWidth(0.1)
-            doc.line(margin, pH - 15, pageWidth - margin, pH - 15)
-
-            text(company.website || company.email, margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED })
-            text(`Page ${i} of ${pageCount}`, pageWidth - margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED, align: 'right' })
-        }
 
         // ==========================================
         // 6. TERMS (New Page if Needed)
@@ -402,6 +387,23 @@ const generatePDF = async (docType, data, settings = {}) => {
                     }
                 }
             }
+        }
+
+        // ==========================================
+        // 7. GLOBAL FOOTER (Page Numbers)
+        // ==========================================
+        const pageCount = doc.internal.getNumberOfPages()
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i)
+            const pH = doc.internal.pageSize.getHeight()
+
+            // Subtle footer line
+            doc.setDrawColor(...COLORS.BORDER)
+            doc.setLineWidth(0.1)
+            doc.line(margin, pH - 15, pageWidth - margin, pH - 15)
+
+            text(company.website || company.email, margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED })
+            text(`Page ${i} of ${pageCount}`, pageWidth - margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED, align: 'right' })
         }
 
         doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
