@@ -4,13 +4,13 @@ import autoTable from 'jspdf-autotable'
 // --- BRAND CONFIGURATION ---
 // --- BRAND CONFIGURATION ---
 const DEFAULT_COLORS = {
-    PRIMARY: [37, 99, 235],     // #2563eb (Security Blue)
+    PRIMARY: [37, 99, 235],     // #2563eb (Security Blue) - Default
+    SECONDARY: [71, 85, 105],   // #475569 (Slate 600)
     DARK: [15, 23, 42],         // #0f172a (Slate 900)
-    LIGHT: [239, 246, 255],     // #eff6ff (Blue 50)
-    GRAY_BG: [248, 250, 252],   // #f8fafc (Slate 50)
-    TEXT_DARK: [30, 41, 59],    // #1e293b (Slate 800)
-    TEXT_GRAY: [100, 116, 139], // #64748b (Slate 500)
-    WHITE: [255, 255, 255]
+    LIGHT: [241, 245, 249],     // #f1f5f9 (Slate 100)
+    WHITE: [255, 255, 255],
+    TEXT_MAIN: [30, 41, 59],    // #1e293b
+    TEXT_MUTED: [100, 116, 139] // #64748b
 }
 
 const hexToRgb = (hex) => {
@@ -41,171 +41,175 @@ const generatePDF = async (docType, data, settings = {}) => {
         phone: settings.companyPhone || "062 955 8559",
         email: settings.companyEmail || "Kyle@GlobalSecuritySolutions.co.za",
         vat: settings.companyVat || "",
-        website: "globalsecuritysolutions.co.za" // Could be added to settings later
+        website: "globalsecuritysolutions.co.za"
     }
 
     try {
-        // Initialize PDF (A4 Portrait)
+        // Initialize PDF (A4 Portrait) - Margins: Left/Right 15mm
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
-        const pageWidth = doc.internal.pageSize.getWidth()
-        const pageHeight = doc.internal.pageSize.getHeight()
+        const pageWidth = doc.internal.pageSize.getWidth() // 210mm
+        const pageHeight = doc.internal.pageSize.getHeight() // 297mm
+        const margin = 15
+        const contentWidth = pageWidth - (margin * 2)
 
-        // Helper: Draw Rounded Card Background
-        const drawCard = (x, y, w, h, color) => {
+        // Helper: Styled Text
+        const text = (str, x, y, options = {}) => {
+            const { size = 10, color = COLORS.TEXT_MAIN, font = 'helvetica', style = 'normal', align = 'left' } = options
+            doc.setFontSize(size)
+            doc.setTextColor(...color)
+            doc.setFont(font, style)
+            doc.text(String(str), x, y, { align })
+        }
+
+        // Helper: Draw Section Background
+        const drawSectionBg = (y, h, color) => {
             doc.setFillColor(...color)
-            doc.roundedRect(x, y, w, h, 2, 2, 'F')
+            doc.rect(0, y, pageWidth, h, 'F')
         }
 
         // ==========================================
         // 1. HEADER SECTION
         // ==========================================
-        doc.setFillColor(...COLORS.DARK)
-        doc.rect(0, 0, pageWidth, 35, 'F')
+        // Background Strip
+        drawSectionBg(0, 40, COLORS.DARK)
 
         // Logo Handling
         try {
-            // Use settings logo or fallback
             const logoUrl = settings.logoUrl || (window.location.origin + '/logo.png')
-
-            // If it's a relative path/local asset, prepend origin if needed, 
-            // but settings.logoUrl from Supabase is absolute.
-            // window.location.origin might be needed for '/logo.png'.
-
             const img = await fetchImage(logoUrl)
 
-            // Calculate aspect ratio
+            // Fixed height, auto width to maintain aspect ratio
+            const logoH = 20
             const imgProps = doc.getImageProperties(img)
-            const logoWidth = 40
-            const logoHeight = (imgProps.height * logoWidth) / imgProps.width
+            const logoW = (imgProps.width * logoH) / imgProps.height
 
-            doc.addImage(img, 'PNG', 14, 5, logoWidth, logoHeight)
+            doc.addImage(img, 'PNG', margin, 10, logoW, logoH)
         } catch (e) {
-            console.warn('Logo load failed, using text fallback', e)
-            // Fallback Text Logo
-            doc.setFontSize(22)
-            doc.setTextColor(...COLORS.PRIMARY)
-            doc.setFont('helvetica', 'bold')
-            doc.text(company.name.substring(0, 3).toUpperCase(), 14, 25)
+            console.warn('Logo load failed', e)
+            text(company.name, margin, 22, { size: 18, color: COLORS.WHITE, style: 'bold' })
         }
 
-        // Contact Info (Right Aligned)
-        const rightX = pageWidth - 14
-        doc.setTextColor(203, 213, 225) // Slate 300
-        doc.setFontSize(9)
-        doc.text(company.address, rightX, 10, { align: 'right' })
-        doc.text(company.phone, rightX, 15, { align: 'right' })
-        doc.setTextColor(...COLORS.PRIMARY)
-        doc.text(company.email, rightX, 20, { align: 'right' })
-        doc.setTextColor(203, 213, 225)
+        // Company Details (Right Aligned in Header)
+        const headerTextX = pageWidth - margin
+        let headerY = 12
+        text(company.address, headerTextX, headerY, { align: 'right', color: COLORS.LIGHT, size: 9 })
+        headerY += 5
+        text(company.email, headerTextX, headerY, { align: 'right', color: COLORS.LIGHT, size: 9 })
+        headerY += 5
+        text(company.phone, headerTextX, headerY, { align: 'right', color: COLORS.LIGHT, size: 9 })
         if (company.vat) {
-            doc.text(`VAT: ${company.vat}`, rightX, 25, { align: 'right' })
+            headerY += 5
+            text(`VAT: ${company.vat}`, headerTextX, headerY, { align: 'right', color: COLORS.LIGHT, size: 9 })
         }
 
         // ==========================================
-        // 2. BLUE BANNER STRIP
+        // 2. DOCUMENT TITLE STRIP
         // ==========================================
-        doc.setFillColor(...COLORS.PRIMARY)
-        doc.rect(0, 35, pageWidth, 8, 'F')
+        drawSectionBg(40, 15, COLORS.PRIMARY)
 
-        // Determine Title
+        // Title
         let titleText = docType.toUpperCase()
         if (docType === 'Invoice') titleText = data.vat_applicable ? 'TAX INVOICE' : 'INVOICE'
         if (docType === 'Quotation' && (data.status === 'Accepted')) titleText = 'PROFORMA INVOICE'
 
-        doc.setFontSize(12)
-        doc.setTextColor(...COLORS.WHITE)
-        doc.setFont('helvetica', 'bold')
-        doc.text(titleText, 14, 40.5)
+        text(titleText, margin, 50, { size: 14, color: COLORS.WHITE, style: 'bold', font: 'helvetica' })
 
-        // Meta Data
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
+        // Meta (Doc Number & Date)
         const dateValue = new Date(data.date_created).toLocaleDateString()
-        doc.text(`NR: ${data.id.substring(0, 8)}   |   DATE: ${dateValue}`, rightX, 40.5, { align: 'right' })
+        const metaText = `NUMBER: ${data.id.substring(0, 8).toUpperCase()}    |    DATE: ${dateValue}`
+        text(metaText, pageWidth - margin, 50, { align: 'right', size: 10, color: COLORS.WHITE, style: 'bold' })
+
 
         // ==========================================
-        // 3. INFO CARDS
+        // 3. INFORMATION GRID
         // ==========================================
-        const cardY = 55
-        const cardH = 35
-        const colGap = 10
-        const colW = (pageWidth - 28 - colGap) / 2
+        const gridY = 70
+        const colW = contentWidth / 2 - 5
 
-        // --- Card 1: Bill To (Light Blue) ---
-        drawCard(14, cardY, colW, cardH, COLORS.LIGHT)
-        doc.setDrawColor(...COLORS.PRIMARY)
-        doc.setLineWidth(1)
-        doc.line(14, cardY + 2, 14, cardY + cardH - 2)
+        // LEFT COLUMN: BILL TO
+        text(docType === 'Purchase Order' ? 'VENDOR' : 'BILL TO', margin, gridY, { size: 9, color: COLORS.TEXT_MUTED, style: 'bold' })
 
-        doc.setTextColor(...COLORS.PRIMARY)
-        doc.setFontSize(8)
-        doc.setFont('helvetica', 'bold')
-        doc.text(docType === 'Purchase Order' ? 'VENDOR' : 'BILL TO', 18, cardY + 8)
-
-        // Client Details
         const clientName = docType === 'Purchase Order' ? (data.suppliers?.name || 'Unknown Supplier') : (data.clients?.name || 'Unknown Client')
         const contactPerson = docType === 'Purchase Order' ? data.suppliers?.contact_person : data.clients?.contact_person
+        if (contactPerson) {
+            // Optional: Display contact person
+        } // Not displaying contact person in main block to save space, or maybe add if space permits
+        const clientEmail = docType === 'Purchase Order' ? data.suppliers?.email : data.clients?.email
         const clientPhone = docType === 'Purchase Order' ? data.suppliers?.phone : data.clients?.phone
         const clientAddr = docType === 'Purchase Order' ? data.suppliers?.address : data.clients?.address
         const clientCompany = docType === 'Purchase Order' ? '' : data.clients?.company
 
-        doc.setTextColor(...COLORS.TEXT_DARK)
-        doc.setFontSize(10)
-        doc.text(clientCompany || clientName, 18, cardY + 14)
+        let clientY = gridY + 6
 
-        doc.setTextColor(...COLORS.TEXT_GRAY)
-        doc.setFontSize(9)
+        // Primary Name (Company or Individual)
+        text(clientCompany || clientName, margin, clientY, { size: 11, style: 'bold', color: COLORS.TEXT_MAIN })
+        clientY += 5
+
+        doc.setFontSize(10)
+        doc.setTextColor(...COLORS.TEXT_MAIN)
         doc.setFont('helvetica', 'normal')
-        let clientY = cardY + 19
-        if (clientCompany && clientName !== clientCompany) { doc.text(clientName, 18, clientY); clientY += 4 }
-        if (contactPerson) { doc.text(`Attn: ${contactPerson}`, 18, clientY); clientY += 4 }
-        if (clientPhone) { doc.text(clientPhone, 18, clientY); clientY += 4 }
-        if (clientAddr) {
-            const splitAddr = doc.splitTextToSize(clientAddr.substring(0, 50) + (clientAddr.length > 50 ? '...' : ''), colW - 10)
-            doc.text(splitAddr, 18, clientY)
+
+        // If company, show contact person
+        if (clientCompany && clientName !== clientCompany) {
+            doc.text(`Attn: ${clientName}`, margin, clientY)
+            clientY += 5
         }
 
-        // --- Card 2: Reference (Gray) ---
-        const refX = 14 + colW + colGap
-        drawCard(refX, cardY, colW, cardH, COLORS.GRAY_BG)
-        doc.setDrawColor(148, 163, 184)
-        doc.line(refX, cardY + 2, refX, cardY + cardH - 2)
+        if (clientEmail) { doc.text(clientEmail, margin, clientY); clientY += 5 }
+        if (clientPhone) { doc.text(clientPhone, margin, clientY); clientY += 5 }
 
-        doc.setTextColor(...COLORS.TEXT_GRAY)
-        doc.setFontSize(8)
-        doc.setFont('helvetica', 'bold')
-        doc.text(docType === 'Purchase Order' ? 'SHIP TO' : 'PROJECT REFERENCE', refX + 4, cardY + 8)
+        if (clientAddr) {
+            const splitAddr = doc.splitTextToSize(clientAddr, colW)
+            doc.text(splitAddr, margin, clientY)
+        }
 
-        doc.setTextColor(...COLORS.TEXT_DARK)
-        doc.setFontSize(10)
+        // RIGHT COLUMN: DETAILS / SHIP TO
+        const rightColX = pageWidth - margin - colW
+
+        text(docType === 'Purchase Order' ? 'SHIP TO' : 'PROJECT DETAILS', rightColX, gridY, { size: 9, color: COLORS.TEXT_MUTED, style: 'bold' })
+
+        let refY = gridY + 6
 
         if (docType === 'Purchase Order') {
-            doc.text(company.name, refX + 4, cardY + 14)
-            doc.setFontSize(9)
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.setFont('helvetica', 'normal')
-            doc.text(company.address, refX + 4, cardY + 19)
+            text(company.name, rightColX, refY, { size: 11, style: 'bold', color: COLORS.TEXT_MAIN })
+            refY += 5
+            doc.setFontSize(10); doc.setTextColor(...COLORS.TEXT_MAIN); doc.setFont('helvetica', 'normal')
+            const splitSite = doc.splitTextToSize(company.address, colW)
+            doc.text(splitSite, rightColX, refY)
         } else {
-            const refText = data.metadata?.reference || 'Security System Installation'
-            const splitRef = doc.splitTextToSize(refText, colW - 10)
-            doc.text(splitRef, refX + 4, cardY + 14)
+            // Reference
+            if (data.metadata?.reference) {
+                text("Reference:", rightColX, refY, { size: 9, color: COLORS.TEXT_MUTED })
+                const splitRef = doc.splitTextToSize(data.metadata.reference, colW - 25)
+                doc.setTextColor(...COLORS.TEXT_MAIN)
+                doc.text(splitRef, rightColX + 22, refY)
+                refY += (splitRef.length * 5) + 2
+            }
 
-            // Payment Terms Label
-            doc.setFontSize(8)
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.text('Payment Terms:', refX + 4, cardY + 28)
-            doc.setTextColor(...COLORS.PRIMARY)
-            doc.setFont('helvetica', 'bold')
+            // Validity (Quotes) or Due Date (Invoices)
+            if (docType === 'Quotation' && data.valid_until) {
+                text("Valid Until:", rightColX, refY, { size: 9, color: COLORS.TEXT_MUTED })
+                text(new Date(data.valid_until).toLocaleDateString(), rightColX + 22, refY, { size: 9, color: COLORS.TEXT_MAIN })
+                refY += 6
+            }
+            if (docType === 'Invoice' && data.due_date) {
+                text("Due Date:", rightColX, refY, { size: 9, color: COLORS.TEXT_MUTED })
+                text(new Date(data.due_date).toLocaleDateString(), rightColX + 22, refY, { size: 9, color: COLORS.TEXT_MAIN })
+                refY += 6
+            }
+
+            // Payment Terms
+            text("Terms:", rightColX, refY, { size: 9, color: COLORS.TEXT_MUTED })
             const termText = data.payment_type === 'full'
                 ? '100% Upfront'
-                : `${data.deposit_percentage || 75}% Deposit / ${100 - (data.deposit_percentage || 75)}% on Completion`
-            doc.text(termText, refX + 30, cardY + 28)
+                : `${data.deposit_percentage || 75}% Deposit`
+            text(termText, rightColX + 22, refY, { size: 9, color: COLORS.PRIMARY, style: 'bold' })
         }
 
         // ==========================================
-        // 4. PRICING TABLE
+        // 4. ITEMS TABLE
         // ==========================================
-        const tableY = cardY + cardH + 10
+        const tableY = Math.max(clientY, refY) + 10
 
         const tableRows = []
         if (data.lines && data.lines.length > 0) {
@@ -213,263 +217,217 @@ const generatePDF = async (docType, data, settings = {}) => {
                 tableRows.push([
                     line.description || 'Item',
                     line.quantity,
-                    `R${parseFloat(line.unit_price || 0).toFixed(2)}`,
-                    `R${parseFloat(line.line_total || 0).toFixed(2)}`
+                    `R ${parseFloat(line.unit_price || 0).toFixed(2)}`,
+                    `R ${parseFloat(line.line_total || 0).toFixed(2)}`
                 ])
             })
         } else {
-            // Fallback if no lines
-            tableRows.push([`Total ${docType} Amount`, '1', `R${parseFloat(data.total_amount || 0).toFixed(2)}`, `R${parseFloat(data.total_amount || 0).toFixed(2)}`])
+            tableRows.push([`Total ${docType} Amount`, '1', `R ${parseFloat(data.total_amount || 0).toFixed(2)}`, `R ${parseFloat(data.total_amount || 0).toFixed(2)}`])
         }
 
         autoTable(doc, {
             startY: tableY,
-            head: [["Description", "Qty", "Unit Price", "Total"]],
+            head: [["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"]],
             body: tableRows,
-            theme: 'plain',
+            theme: 'grid',
             headStyles: {
-                fillColor: COLORS.GRAY_BG,
-                textColor: COLORS.TEXT_GRAY,
+                fillColor: COLORS.PRIMARY,
+                textColor: COLORS.WHITE,
                 fontSize: 9,
                 fontStyle: 'bold',
                 halign: 'left',
-                cellPadding: 4
+                cellPadding: { top: 3, bottom: 2, left: 3, right: 3 }
             },
             bodyStyles: {
-                textColor: COLORS.TEXT_DARK,
-                fontSize: 10,
-                cellPadding: 4,
-                valign: 'middle'
-            },
-            alternateRowStyles: {
-                fillColor: COLORS.LIGHT
+                textColor: COLORS.TEXT_MAIN,
+                fontSize: 9,
+                cellPadding: 3,
+                valign: 'middle',
+                lineColor: [226, 232, 240] // Slate 200
             },
             columnStyles: {
                 0: { cellWidth: 'auto' },
-                1: { cellWidth: 20, halign: 'center' },
-                2: { cellWidth: 35, halign: 'right' },
+                1: { cellWidth: 15, halign: 'center' },
+                2: { cellWidth: 30, halign: 'right' },
                 3: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
+            },
+            didDrawPage: () => {
+                // Header is already drawn
             }
         })
 
         // ==========================================
         // 5. FOOTER SECTION (Bank & Totals)
         // ==========================================
-        const finalY = doc.lastAutoTable.finalY + 10
+        let finalY = doc.lastAutoTable.finalY + 10
 
-        // --- Banking Card ---
-        if (docType !== 'Purchase Order') {
-            const bankWidth = 110
-            drawCard(14, finalY, bankWidth, 32, COLORS.DARK)
-
-            doc.setTextColor(...COLORS.PRIMARY)
-            doc.setFontSize(9)
-            doc.setFont('helvetica', 'bold')
-            doc.text('BANKING DETAILS', 20, finalY + 8)
-
-            doc.setTextColor(...COLORS.WHITE)
-            doc.setFontSize(9)
-
-            const labelX = 20
-            const valX = 60
-            let bankY = finalY + 15
-            const lineH = 5
-
-            doc.setFont('helvetica', 'normal'); doc.text('Bank:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text(settings.bankName || 'FNB/RMB', valX, bankY);
-            bankY += lineH;
-
-            doc.setFont('helvetica', 'normal'); doc.text('Holder:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text(settings.bankAccountHolder || company.name, valX, bankY);
-            bankY += lineH;
-
-            doc.setFont('helvetica', 'normal'); doc.text('Account:', labelX, bankY);
-            doc.setTextColor(...COLORS.PRIMARY); doc.setFont('helvetica', 'bold');
-            doc.text(settings.bankAccountNumber || '63182000223', valX, bankY);
-            doc.setTextColor(...COLORS.WHITE);
-            bankY += lineH;
-
-            doc.setFont('helvetica', 'normal'); doc.text('Branch:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text(settings.bankBranchCode || '250655', valX, bankY);
-
-            // Optional: Type
-            if (settings.bankAccountType) {
-                bankY += lineH;
-                doc.setFont('helvetica', 'normal'); doc.text('Type:', labelX, bankY);
-                doc.setFont('helvetica', 'bold'); doc.text(settings.bankAccountType, valX, bankY);
-            }
+        // Ensure we don't start too close to bottom
+        if (finalY > pageHeight - 60) {
+            doc.addPage()
+            finalY = 20
         }
 
-        // --- Totals ---
-        const totalsX = 140
-        let currentTotalY = finalY + 5
+        // --- Totals Calculation ---
+        let taxRate = 0.15
+        if (settings.taxRate) taxRate = parseFloat(settings.taxRate) / 100
 
         const totalVal = parseFloat(data.total_amount || 0)
+        let subtotalVal = totalVal
+        let vatVal = 0
 
-        let taxRate = 0.15
-        if (settings.taxRate) {
-            taxRate = parseFloat(settings.taxRate) / 100
+        if (data.vat_applicable) {
+            subtotalVal = totalVal / (1 + taxRate)
+            vatVal = totalVal - subtotalVal
         }
-
-        // Calculate VAT backwards (Assumption: Total includes VAT)
-        // If vat_applicable is false, then total is just subtotal.
-        // If vat_applicable is true, then total = subtotal * (1 + rate) -> subtotal = total / (1 + rate)
-
-        const subtotalVal = totalVal / (data.vat_applicable ? (1 + taxRate) : 1)
-        const vatVal = data.vat_applicable ? (totalVal - subtotalVal) : 0
 
         const depositVal = parseFloat(data.deposit_amount || 0)
         const balanceDue = totalVal - depositVal
 
-        doc.setTextColor(...COLORS.TEXT_GRAY)
-        doc.setFontSize(10)
 
-        // Subtotal
-        doc.text('Subtotal', totalsX, currentTotalY)
-        doc.text(`R${subtotalVal.toFixed(2)}`, rightX, currentTotalY, { align: 'right' })
-        currentTotalY += 6
+        // --- Banking Details Box (Left Side) ---
+        if (docType !== 'Purchase Order') {
+            const bankBoxW = 90
+            const bankBoxH = 35
 
-        // VAT
-        doc.text(data.vat_applicable ? `VAT (${(taxRate * 100).toFixed(0)}%)` : 'VAT (0%)', totalsX, currentTotalY)
-        doc.text(`R${vatVal.toFixed(2)}`, rightX, currentTotalY, { align: 'right' })
-        currentTotalY += 10
+            doc.setFillColor(...COLORS.LIGHT)
+            doc.roundedRect(margin, finalY, bankBoxW, bankBoxH, 2, 2, 'F')
 
-        // Grand Total Box
-        doc.setFillColor(...COLORS.PRIMARY)
-        doc.roundedRect(totalsX - 5, currentTotalY - 6, (rightX - totalsX) + 10, 12, 1, 1, 'F')
+            // Header
+            doc.setFillColor(...COLORS.SECONDARY)
+            doc.roundedRect(margin, finalY, bankBoxW, 7, 2, 2, 'F')
+            // Fix corners? simplified: just draw rect
+            doc.rect(margin, finalY + 5, bankBoxW, 2, 'F') // filler to square off bottom corners of header
 
-        doc.setTextColor(...COLORS.WHITE)
-        doc.setFont('helvetica', 'bold')
-        doc.text('GRAND TOTAL', totalsX, currentTotalY + 2)
-        doc.setFontSize(12)
-        doc.text(`R${totalVal.toFixed(2)}`, rightX, currentTotalY + 2, { align: 'right' })
+            text("BANKING DETAILS", margin + 3, finalY + 4.5, { size: 8, color: COLORS.WHITE, style: 'bold' })
 
-        // Deposit / Balance
+            // Details
+            let bankY = finalY + 11
+            const bankLabelX = margin + 3
+            const bankValX = margin + 30
+
+            const bankRow = (label, value) => {
+                text(label, bankLabelX, bankY, { size: 8, color: COLORS.TEXT_MUTED })
+                text(value, bankValX, bankY, { size: 8, color: COLORS.TEXT_MAIN, style: 'bold' })
+                bankY += 5
+            }
+
+            bankRow("Bank:", settings.bankName || 'FNB')
+            bankRow("Branch:", settings.bankBranchCode || '250655')
+            bankRow("Account:", settings.bankAccountNumber || '63182000223')
+            bankRow("Reference:", settings.bankReference || data.id.substring(0, 8))
+        }
+
+        // --- Totals Box (Right Side) ---
+        const totalsW = 80
+        const totalsX = pageWidth - margin - totalsW
+        let totalsY = finalY
+
+        const totalRow = (label, value, isBold = false, isGrand = false) => {
+            text(label, totalsX, totalsY, { size: isGrand ? 11 : 9, color: isGrand ? COLORS.TEXT_MAIN : COLORS.TEXT_MUTED, style: (isGrand || isBold) ? 'bold' : 'normal' })
+            text(value, pageWidth - margin, totalsY, { align: 'right', size: isGrand ? 12 : 9, color: isGrand ? COLORS.PRIMARY : COLORS.TEXT_MAIN, style: (isGrand || isBold) ? 'bold' : 'normal' })
+            totalsY += isGrand ? 8 : 6
+        }
+
+        totalRow("Subtotal", `R ${subtotalVal.toFixed(2)}`)
+        totalRow(data.vat_applicable ? `VAT (${(taxRate * 100).toFixed(0)}%)` : "VAT (0%)", `R ${vatVal.toFixed(2)}`)
+
+        // Dotted Line
+        doc.setDrawColor(...COLORS.SECONDARY)
+        doc.setLineWidth(0.1)
+        doc.setLineDash([1, 1], 0)
+        doc.line(totalsX, totalsY - 2, pageWidth - margin, totalsY - 2)
+        doc.setLineDash([])
+        totalsY += 2
+
+        totalRow("TOTAL", `R ${totalVal.toFixed(2)}`, true, true)
+
         if (depositVal > 0) {
-            currentTotalY += 12
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.setFontSize(9)
-            doc.setFont('helvetica', 'normal')
-            doc.text('Less Deposit:', totalsX, currentTotalY)
-            doc.text(`(R${depositVal.toFixed(2)})`, rightX, currentTotalY, { align: 'right' })
+            totalsY += 2
+            totalRow("Paid / Deposit", `(R ${depositVal.toFixed(2)})`)
 
-            currentTotalY += 6
-            doc.setTextColor(...COLORS.TEXT_DARK)
-            doc.setFont('helvetica', 'bold')
-            doc.text('Balance Due:', totalsX, currentTotalY)
-            doc.text(`R${balanceDue.toFixed(2)}`, rightX, currentTotalY, { align: 'right' })
+            // Balance Highlight
+            doc.setFillColor(...COLORS.LIGHT)
+            doc.roundedRect(totalsX - 2, totalsY - 4, totalsW + 2, 10, 1, 1, 'F')
+            totalsY += 2
+            text("BALANCE DUE", totalsX + 2, totalsY, { size: 10, style: 'bold', color: COLORS.TEXT_MAIN })
+            text(`R ${balanceDue.toFixed(2)}`, pageWidth - margin - 2, totalsY, { align: 'right', size: 10, style: 'bold', color: COLORS.PRIMARY })
         }
 
         // ==========================================
-        // 6. TERMS & CONDITIONS (Page 2)
+        // 6. TERMS (Separate Page if needed, or inline)
         // ==========================================
+
         if (docType !== 'Purchase Order') {
-            doc.addPage()
 
-            // Header for T&C Page
-            doc.setFillColor(...COLORS.DARK)
-            doc.rect(0, 0, pageWidth, 25, 'F')
-            doc.setTextColor(...COLORS.WHITE)
-            doc.setFontSize(14)
-            doc.text('TERMS & CONDITIONS', 14, 17)
-            doc.setFontSize(9)
-            doc.text('Standard Terms of Service', rightX, 17, { align: 'right' })
+            const terms = settings.legalTerms || "Standard Terms and Conditions apply. Please request a copy if required. Goods remain property of the supplier until paid in full."
 
-            let termY = 40
-            const bottomMargin = 30
-
-            // Custom Terms from Settings or Default
-            let termsContent = settings.legalTerms
-
-            if (!termsContent) {
-                // Default Terms if none provided
-                termsContent = `1. Scope of Services
-We agree to supply and install the equipment as specified.
-
-2. Ownership
-Equipment remains property of ${company.name} until fully paid.
-
-3. Payment
-Payment is due as per agreed terms. Late payments may incur interest.
-
-4. Warranty
-Standard manufacturer warranties apply. Workmanship is guaranteed for 12 months.`
+            // Heading
+            let termsY = finalY + 45
+            if (termsY > pageHeight - 30) {
+                doc.addPage()
+                termsY = 20
             }
 
-            // Preamble
-            doc.setFontSize(8)
-            doc.setTextColor(100, 116, 139) // Slate 500
-            const preamble = `These Terms and Conditions govern the provision services by ${company.name} to the customer.`
-            doc.text(preamble, 14, termY)
-            termY += 10
+            text("TERMS AND CONDITIONS", margin, termsY, { size: 9, style: 'bold', color: COLORS.TEXT_MAIN })
+            termsY += 5
 
-            doc.setFontSize(9)
-            doc.setTextColor(...COLORS.TEXT_DARK)
+            doc.setFontSize(8)
+            doc.setTextColor(...COLORS.TEXT_MUTED)
             doc.setFont('helvetica', 'normal')
 
-            // Simple text wrapping for the whole block if it's just a blob of text
-            const splitTerms = doc.splitTextToSize(termsContent, pageWidth - 28)
+            const splitTerms = doc.splitTextToSize(terms, contentWidth)
+            doc.text(splitTerms, margin, termsY)
 
-            // Check if it fits, else handle simple pagination
-            // For simplicity, we just dump it, but let's try to paginate if needed
-            let currentLine = 0
-            while (currentLine < splitTerms.length) {
-                if (termY > pageHeight - bottomMargin) {
-                    doc.addPage()
-                    termY = 20
-                }
-                doc.text(splitTerms[currentLine], 14, termY)
-                termY += 5
-                currentLine++
+            // Signature Section
+            const sigY = pageHeight - 40
+
+            // Check if we need new page for signature
+            if (termsY + splitTerms.length * 4 > sigY - 20) {
+                doc.addPage()
             }
 
-            // Acceptance Block
-            const finalPageHeight = doc.internal.pageSize.getHeight()
-            doc.setDrawColor(200, 200, 200)
-            doc.line(14, finalPageHeight - 40, pageWidth - 14, finalPageHeight - 40)
+            // Signature Lines
+            doc.setDrawColor(...COLORS.SECONDARY)
+            doc.setLineWidth(0.5)
 
-            doc.setFontSize(9)
-            doc.setTextColor(...COLORS.TEXT_DARK)
-            doc.text('I acknowledge I have read and agree to these terms.', pageWidth / 2, finalPageHeight - 35, { align: 'center' })
+            const sigLineY = pageHeight - 30
+            const sigW = 70
 
-            doc.line(14, finalPageHeight - 20, 80, finalPageHeight - 20)
-            doc.setFontSize(8)
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.text('CLIENT SIGNATURE', 14, finalPageHeight - 15)
+            doc.line(margin, sigLineY, margin + sigW, sigLineY) // Client
+            text("CLIENT SIGNATURE", margin, sigLineY + 5, { size: 7, color: COLORS.TEXT_MUTED })
 
-            doc.line(120, finalPageHeight - 20, 180, finalPageHeight - 20)
-            doc.text('DATE', 120, finalPageHeight - 15)
+            doc.line(pageWidth - margin - sigW, sigLineY, pageWidth - margin, sigLineY) // Date
+            text("DATE", pageWidth - margin - sigW, sigLineY + 5, { size: 7, color: COLORS.TEXT_MUTED })
 
-            // Render Digital Signature if available
+            // Digital Signature Render
             if (data.client_signature) {
                 try {
-                    doc.addImage(data.client_signature, 'PNG', 14, finalPageHeight - 38, 50, 18)
-                    doc.setFontSize(6)
-                    doc.setTextColor(0, 128, 0)
-                    doc.text(`Digitally Signed: ${new Date(data.accepted_at || new Date()).toLocaleString()}`, 14, finalPageHeight - 12)
+                    doc.addImage(data.client_signature, 'PNG', margin + 5, sigLineY - 15, 40, 15)
+                    text(`Digital ID: ${data.id}`, margin, sigLineY + 9, { size: 6, color: COLORS.TEXT_MUTED })
                 } catch (e) {
-                    console.warn('Error rendering signature:', e)
+                    console.log('Sig render error', e)
                 }
             }
         }
 
-        // --- GLOBAL FOOTER ---
+        // ==========================================
+        // 7. PAGE NUMBERS
+        // ==========================================
         const pageCount = doc.internal.getNumberOfPages()
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i)
-            const pH = doc.internal.pageSize.getHeight()
 
-            doc.setDrawColor(200, 200, 200)
+            // Footer Line
+            doc.setDrawColor(...COLORS.LIGHT)
             doc.setLineWidth(0.5)
-            doc.line(14, pH - 15, pageWidth - 14, pH - 15)
+            doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
 
-            doc.setFontSize(8)
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.text(`Web: ${company.website || ''}   |   Email: ${company.email}   |   ${company.phone}`, pageWidth / 2, pH - 10, { align: 'center' })
-            doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pH - 10, { align: 'right' })
+            // Text
+            const footerText = `${company.name}  |  ${company.website || company.email}`
+            text(footerText, margin, pageHeight - 10, { size: 8, color: COLORS.TEXT_MUTED })
+            text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right', size: 8, color: COLORS.TEXT_MUTED })
         }
 
-        // Output
         doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
 
     } catch (error) {
