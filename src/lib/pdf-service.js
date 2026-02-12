@@ -391,27 +391,28 @@ const generatePDF = async (docType, data, settings = {}) => {
                     }
                 }
             }
-
-            doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
-
-        } catch (error) {
-            console.error('PDF Generation Error:', error)
-            alert(`Failed to generate PDF: ${error.message}`)
         }
+
+        doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
+
+    } catch (error) {
+        console.error('PDF Generation Error:', error)
+        alert(`Failed to generate PDF: ${error.message}`)
     }
+}
 
 // Helper to fetch logo
 const fetchImage = (url) => {
-        return new Promise((resolve, reject) => {
-            const img = new Image()
-            img.crossOrigin = "Anonymous"
-            img.src = url
-            img.onload = () => resolve(img)
-            img.onerror = reject
-        })
-    }
+    return new Promise((resolve, reject) => {
+        const img = new Image()
+        img.crossOrigin = "Anonymous"
+        img.src = url
+        img.onload = () => resolve(img)
+        img.onerror = reject
+    })
+}
 
-    // Export functions for your CRM
-    export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
-    export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)
-    export const generatePurchaseOrderPDF = (po, settings) => generatePDF('Purchase Order', po, settings)
+// Export functions for your CRM
+export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
+export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)
+export const generatePurchaseOrderPDF = (po, settings) => generatePDF('Purchase Order', po, settings)
