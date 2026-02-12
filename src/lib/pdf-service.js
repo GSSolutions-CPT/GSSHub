@@ -344,31 +344,42 @@ const generatePDF = async (docType, data, settings = {}) => {
                 text("TERMS AND CONDITIONS", margin, termsY, { size: 9, style: 'bold', color: COLORS.TEXT_MAIN })
                 termsY += 5
 
-                doc.setFontSize(7) // Reduced from 8 to 7
+                doc.setFontSize(7)
                 doc.setTextColor(...COLORS.TEXT_MUTED)
                 doc.setFont('helvetica', 'normal')
 
-                const splitTerms = doc.splitTextToSize(terms, contentW)
-                doc.text(splitTerms, margin, termsY) // default line spacing is sufficient
+                // Two Column Layout
+                const gap = 10
+                const colWidth = (contentW - gap) / 2
+
+                // Split text into lines that fit in one column
+                const allLines = doc.splitTextToSize(terms, colWidth)
+
+                // Calculate split point (approx half)
+                // We want to balance the columns, so we take total lines / 2
+                const splitIndex = Math.ceil(allLines.length / 2)
+
+                const leftCol = allLines.slice(0, splitIndex)
+                const rightCol = allLines.slice(splitIndex)
+
+                doc.text(leftCol, margin, termsY)
+                doc.text(rightCol, margin + colWidth + gap, termsY)
+
+                // Content Height is determined by the longer column (usually left due to ceil)
+                const textHeight = leftCol.length * 3 // approx 3mm per line (with 7pt font)
 
                 // Signature Section
-                const textHeight = splitTerms.length * 3 // approx 3mm per line
-
                 // Check if we need new page for signature
                 // If terms + sig lines don't fit, add page
                 if (termsY + textHeight + 30 > pageHeight - 20) {
                     doc.addPage()
                     // If we added a page, signatures go to top
-                    // We could also move the footer of the terms to this page if we wanted complex splitting,
-                    // but for now, just putting signatures on new page is better than overlapping.
-                    // However, the Goal is to fit them on Page 1.
                 }
 
                 // Signature Lines Position
                 // If we are on a new page (from the check above), start at top
                 let currentY = termsY + textHeight + 20
                 if (currentY > pageHeight - 30) {
-                    // The check above should have caught this, but just in case
                     currentY = 30
                 }
 
