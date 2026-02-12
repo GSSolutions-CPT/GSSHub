@@ -19,6 +19,7 @@ const Financials = lazy(() => import('./pages/Financials.jsx'))
 const ClientPortal = lazy(() => import('./pages/ClientPortal.jsx'))
 const Contracts = lazy(() => import('./pages/Contracts.jsx'))
 const Settings = lazy(() => import('./pages/Settings.jsx'))
+const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 
 
 function App() {
@@ -51,6 +52,9 @@ function App() {
                 <Route path="financials" element={<Financials />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
+
+              {/* Catch-all 404 */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </Router>

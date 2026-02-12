@@ -135,7 +135,7 @@ export default function Clients() {
       {/* Clients Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredClients.map((client) => (
-          <Card key={client.id} className="group hover:shadow-xl transition-all duration-300 border-none shadow-sm bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 dark:border dark:border-border overflow-hidden relative cursor-pointer" onClick={() => navigate(`/ clients / ${client.id} `)}>
+          <Card key={client.id} className="group hover:shadow-xl transition-all duration-300 border-none shadow-sm bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 dark:border dark:border-border overflow-hidden relative cursor-pointer" onClick={() => navigate(`/clients/${client.id}`)}>
             <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
             <CardHeader className="pb-3 pl-6">
               <div className="flex justify-between items-start">
