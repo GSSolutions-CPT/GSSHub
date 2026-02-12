@@ -348,12 +348,15 @@ const generatePDF = async (docType, data, settings = {}) => {
                 doc.setTextColor(...COLORS.TEXT_MUTED)
                 doc.setFont('helvetica', 'normal')
 
+                // Ensure terms is a string
+                const termsStr = Array.isArray(terms) ? terms.join('\n') : String(terms)
+
                 // Two Column Layout
                 const gap = 10
                 const colWidth = (contentW - gap) / 2
 
                 // Split text into lines that fit in one column
-                const allLines = doc.splitTextToSize(terms, colWidth)
+                const allLines = doc.splitTextToSize(termsStr, colWidth)
 
                 // Calculate split point (approx half)
                 // We want to balance the columns, so we take total lines / 2
@@ -365,8 +368,14 @@ const generatePDF = async (docType, data, settings = {}) => {
                 doc.text(leftCol, margin, termsY)
                 doc.text(rightCol, margin + colWidth + gap, termsY)
 
-                // Content Height is determined by the longer column (usually left due to ceil)
-                const textHeight = leftCol.length * 3 // approx 3mm per line (with 7pt font)
+                // Draw Vertical Divider Line
+                const termsHeight = leftCol.length * 3 // approx 3mm line height
+                doc.setDrawColor(...COLORS.BORDER)
+                doc.setLineWidth(0.1)
+                doc.line(margin + colWidth + (gap / 2), termsY, margin + colWidth + (gap / 2), termsY + termsHeight)
+
+                // Update Y for signature (based on column height)
+                const textHeight = termsHeight
 
                 // Signature Section
                 // Check if we need new page for signature
