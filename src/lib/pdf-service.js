@@ -325,21 +325,12 @@ const generatePDF = async (docType, data, settings = {}) => {
         if (docType !== 'Purchase Order') {
             const terms = settings.legalTerms || null
             if (terms) {
-                // If there's barely any space left on main page, break
-                if (finalY + 60 > pageHeight - 30) {
-                    doc.addPage()
-                    finalY = 20
-                } else {
-                    finalY += 30 // Gap after banking/totals
-                }
+                // Always add a new page for Terms & Conditions
+                doc.addPage()
+                finalY = 20
 
-                // If on new page, reset Y
                 // Heading
-                let termsY = finalY + 20 // Reduced from 45 to 20 to save space
-                if (termsY > pageHeight - 30) {
-                    doc.addPage()
-                    termsY = 20
-                }
+                let termsY = finalY
 
                 text("TERMS AND CONDITIONS", margin, termsY, { size: 9, style: 'bold', color: COLORS.TEXT_MAIN })
                 termsY += 5
