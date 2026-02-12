@@ -334,64 +334,84 @@ const generatePDF = async (docType, data, settings = {}) => {
                 }
 
                 // If on new page, reset Y
-                let y = (finalY > 200) ? 20 : finalY
-                if (y === 20) {
-                    // Add header for new page? Nah, simple is better
-                }
-
-                text("TERMS & CONDITIONS", margin, y, { size: 8, style: 'bold', color: COLORS.TEXT_MUTED })
-                y += 5
-                doc.setFontSize(7)
-                doc.setTextColor(...COLORS.TEXT_MUTED)
-                const splitTerms = doc.splitTextToSize(terms, contentW)
-                doc.text(splitTerms, margin, y)
-                y += (splitTerms.length * 3.5) + 10
-
-                // Signatures
-                if (y > pageHeight - 40) {
+                // Heading
+                let termsY = finalY + 20 // Reduced from 45 to 20 to save space
+                if (termsY > pageHeight - 30) {
                     doc.addPage()
-                    y = 30
+                    termsY = 20
                 }
 
-                // Signature Lines
-                doc.setDrawColor(...COLORS.BORDER)
-                doc.setLineWidth(0.5)
+                text("TERMS AND CONDITIONS", margin, termsY, { size: 9, style: 'bold', color: COLORS.TEXT_MAIN })
+                termsY += 5
 
-                doc.line(margin, y + 15, margin + 60, y + 15)
-                text("CLIENT SIGNATURE", margin, y + 20, { size: 7, color: COLORS.TEXT_MUTED })
+                doc.setFontSize(7) // Reduced from 8 to 7
+                doc.setTextColor(...COLORS.TEXT_MUTED)
+                doc.setFont('helvetica', 'normal')
 
-                doc.line(pageWidth - margin - 60, y + 15, pageWidth - margin, y + 15)
-                text("DATE", pageWidth - margin - 60, y + 20, { size: 7, color: COLORS.TEXT_MUTED })
+                const splitTerms = doc.splitTextToSize(terms, contentW)
+                doc.text(splitTerms, margin, termsY) // default line spacing is sufficient
 
-                // Digital Sig
+                // Signature Section
+                const textHeight = splitTerms.length * 3 // approx 3mm per line
+
+                // Check if we need new page for signature
+                // If terms + sig lines don't fit, add page
+                if (termsY + textHeight + 30 > pageHeight - 20) {
+                    doc.addPage()
+                    // If we added a page, signatures go to top
+                    // We could also move the footer of the terms to this page if we wanted complex splitting,
+                    // but for now, just putting signatures on new page is better than overlapping.
+                    // However, the Goal is to fit them on Page 1.
+                }
+
+                // Signature Lines Position
+                // If we are on a new page (from the check above), start at top
+                let currentY = termsY + textHeight + 20
+                if (currentY > pageHeight - 30) {
+                    // The check above should have caught this, but just in case
+                    currentY = 30
+                }
+
+                const sigLineY = currentY
+                const sigW = 70
+
+                doc.line(margin, sigLineY, margin + sigW, sigLineY) // Client
+                text("CLIENT SIGNATURE", margin, sigLineY + 5, { size: 7, color: COLORS.TEXT_MUTED })
+
+                doc.line(pageWidth - margin - sigW, sigLineY, pageWidth - margin, sigLineY) // Date
+                text("DATE", pageWidth - margin - sigW, sigLineY + 5, { size: 7, color: COLORS.TEXT_MUTED })
+
+                // Digital Signature Render
                 if (data.client_signature) {
                     try {
-                        doc.addImage(data.client_signature, 'PNG', margin + 5, y, 40, 14)
-                    } catch (err) { console.log(err) }
+                        doc.addImage(data.client_signature, 'PNG', margin + 5, sigLineY - 15, 40, 15)
+                        text(`Digital ID: ${data.id}`, margin, sigLineY + 9, { size: 6, color: COLORS.TEXT_MUTED })
+                    } catch (e) {
+                        console.log('Sig render error', e)
+                    }
                 }
             }
+
+            doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
+
+        } catch (error) {
+            console.error('PDF Generation Error:', error)
+            alert(`Failed to generate PDF: ${error.message}`)
         }
-
-        doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
-
-    } catch (error) {
-        console.error('PDF Generation Error:', error)
-        alert(`Failed to generate PDF: ${error.message}`)
     }
-}
 
 // Helper to fetch logo
 const fetchImage = (url) => {
-    return new Promise((resolve, reject) => {
-        const img = new Image()
-        img.crossOrigin = "Anonymous"
-        img.src = url
-        img.onload = () => resolve(img)
-        img.onerror = reject
-    })
-}
+        return new Promise((resolve, reject) => {
+            const img = new Image()
+            img.crossOrigin = "Anonymous"
+            img.src = url
+            img.onload = () => resolve(img)
+            img.onerror = reject
+        })
+    }
 
-// Export functions for your CRM
-export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
-export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)
-export const generatePurchaseOrderPDF = (po, settings) => generatePDF('Purchase Order', po, settings)
+    // Export functions for your CRM
+    export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
+    export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)
+    export const generatePurchaseOrderPDF = (po, settings) => generatePDF('Purchase Order', po, settings)
