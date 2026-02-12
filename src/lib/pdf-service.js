@@ -377,93 +377,77 @@ const generatePDF = async (docType, data, settings = {}) => {
                 doc.line(pageWidth - margin - sigW, sigLineY, pageWidth - margin, sigLineY) // Date
                 text("DATE", pageWidth - margin - sigW, sigLineY + 5, { size: 7, color: COLORS.TEXT_MUTED })
 
-<<<<<<< HEAD
-            doc.line(14, finalPageHeight - 20, 80, finalPageHeight - 20)
-            doc.setFontSize(8)
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.text('CLIENT SIGNATURE', 14, finalPageHeight - 15)
 
-            doc.line(120, finalPageHeight - 20, 180, finalPageHeight - 20)
-            doc.text('DATE', 120, finalPageHeight - 15)
 
-            // Render Digital Signature if available
-            if (data.client_signature) {
-                try {
-                    // Check if it's a URL or base64 (Storage URLs start with http)
-                    // If it's a URL, we need to fetch it first
-                    let signatureImg = data.client_signature
-                    if (data.client_signature.startsWith('http')) {
-                        const imgObj = await fetchImage(data.client_signature)
-                        signatureImg = imgObj
-                    }
-
-                    doc.addImage(signatureImg, 'PNG', 14, finalPageHeight - 38, 50, 18)
-                    doc.setFontSize(6)
-                    doc.setTextColor(0, 128, 0)
-                    doc.text(`Digitally Signed: ${new Date(data.accepted_at || new Date()).toLocaleString()}`, 14, finalPageHeight - 12)
-                } catch (e) {
-                    console.warn('Error rendering signature:', e)
-                    doc.setFontSize(8)
-                    doc.setTextColor(255, 0, 0)
-                    doc.text('(Signature could not be loaded)', 14, finalPageHeight - 30)
-=======
-                // Digital Signature Render
+                // Render Digital Signature if available
                 if (data.client_signature) {
                     try {
-                        doc.addImage(data.client_signature, 'PNG', margin + 5, sigLineY - 15, 40, 15)
-                        text(`Digital ID: ${data.id}`, margin, sigLineY + 9, { size: 6, color: COLORS.TEXT_MUTED })
+                        // Check if it's a URL or base64 (Storage URLs start with http)
+                        // If it's a URL, we need to fetch it first
+                        let signatureImg = data.client_signature
+                        if (data.client_signature.startsWith('http')) {
+                            const imgObj = await fetchImage(data.client_signature)
+                            signatureImg = imgObj
+                        }
+
+                        doc.addImage(signatureImg, 'PNG', 14, finalPageHeight - 38, 50, 18)
+                        doc.setFontSize(6)
+                        doc.setTextColor(0, 128, 0)
+                        doc.text(`Digitally Signed: ${new Date(data.accepted_at || new Date()).toLocaleString()}`, 14, finalPageHeight - 12)
                     } catch (e) {
-                        console.log('Sig render error', e)
+                        console.warn('Error rendering signature:', e)
+                        doc.setFontSize(8)
+                        doc.setTextColor(255, 0, 0)
+                        doc.text('(Signature could not be loaded)', 14, finalPageHeight - 30)
+
                     }
->>>>>>> 5da6dc33641efd451cdaea3395d8a4fb7894a428
                 }
             }
+
+            // ==========================================
+            // 7. GLOBAL FOOTER (Page Numbers)
+            // ==========================================
+            const pageCount = doc.internal.getNumberOfPages()
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i)
+                const pH = doc.internal.pageSize.getHeight()
+
+                // Subtle footer line
+                doc.setDrawColor(...COLORS.BORDER)
+                doc.setLineWidth(0.1)
+                doc.line(margin, pH - 15, pageWidth - margin, pH - 15)
+
+                text(company.website || company.email, margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED })
+                text(`Page ${i} of ${pageCount}`, pageWidth - margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED, align: 'right' })
+            }
+
+            doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
+
+        } catch (error) {
+            console.error('PDF Generation Error:', error)
+            alert(`Failed to generate PDF: ${error.message}`)
         }
-
-        // ==========================================
-        // 7. GLOBAL FOOTER (Page Numbers)
-        // ==========================================
-        const pageCount = doc.internal.getNumberOfPages()
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i)
-            const pH = doc.internal.pageSize.getHeight()
-
-            // Subtle footer line
-            doc.setDrawColor(...COLORS.BORDER)
-            doc.setLineWidth(0.1)
-            doc.line(margin, pH - 15, pageWidth - margin, pH - 15)
-
-            text(company.website || company.email, margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED })
-            text(`Page ${i} of ${pageCount}`, pageWidth - margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED, align: 'right' })
-        }
-
-        doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
-
-    } catch (error) {
-        console.error('PDF Generation Error:', error)
-        alert(`Failed to generate PDF: ${error.message}`)
     }
-}
 
 // Helper to fetch logo or images from URL
 const fetchImage = (url) => {
-    return new Promise((resolve, reject) => {
-        if (!url) {
-            reject(new Error('No URL provided'))
-            return
-        }
-        const img = new Image()
-        img.crossOrigin = "Anonymous"
-        img.src = url
-        img.onload = () => resolve(img)
-        img.onerror = (e) => {
-            console.error('Failed to load image:', url, e)
-            reject(new Error(`Failed to load image from ${url}`))
-        }
-    })
-}
+        return new Promise((resolve, reject) => {
+            if (!url) {
+                reject(new Error('No URL provided'))
+                return
+            }
+            const img = new Image()
+            img.crossOrigin = "Anonymous"
+            img.src = url
+            img.onload = () => resolve(img)
+            img.onerror = (e) => {
+                console.error('Failed to load image:', url, e)
+                reject(new Error(`Failed to load image from ${url}`))
+            }
+        })
+    }
 
-// Export functions for your CRM
-export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
-export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)
-export const generatePurchaseOrderPDF = (po, settings) => generatePDF('Purchase Order', po, settings)
+    // Export functions for your CRM
+    export const generateInvoicePDF = (invoice, settings) => generatePDF('Invoice', invoice, settings)
+    export const generateQuotePDF = (quote, settings) => generatePDF('Quotation', quote, settings)
+    export const generatePurchaseOrderPDF = (po, settings) => generatePDF('Purchase Order', po, settings)
