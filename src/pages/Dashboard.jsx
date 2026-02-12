@@ -162,6 +162,12 @@ export default function Dashboard() {
           >
             <Receipt className="h-4 w-4" /> Add Expense
           </button>
+          <button
+            onClick={() => navigate('/products', { state: { openAddDialog: true } })}
+            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-4 py-2 rounded-lg transition-all border border-white/10 text-sm font-medium"
+          >
+            <Package className="h-4 w-4" /> Add Product
+          </button>
         </div>
 
         {/* Decorative elements */}

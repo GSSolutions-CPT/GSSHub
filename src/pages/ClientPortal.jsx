@@ -266,7 +266,8 @@ export default function ClientPortal() {
   // Helpers for links
   const companyPhone = settings.companyPhone || '0629558559'
   const companyEmail = settings.companyEmail || 'Kyle@GSSolutions.co.za'
-  const whatsappUrl = `https://wa.me/${companyPhone.replace(/\s+/g, '')}`
+  const whatsappNumber = settings.whatsappNumber || companyPhone
+  const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/\s+/g, '')}`
 
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>
@@ -441,10 +442,10 @@ export default function ClientPortal() {
       <header className="fixed top-0 left-0 right-0 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md border-b border-white/20 dark:border-slate-800/50 z-50">
         <div className="container mx-auto px-4 md:px-6 py-3 md:py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <img src="/gss-logo-full.png" alt="Global Security Solutions" className="h-10 md:h-12 w-auto object-contain" />
+            <img src={settings.logoUrl || "/gss-logo-full.png"} alt={settings.companyName || "Global Security Solutions"} className="h-10 md:h-12 w-auto object-contain" />
             <div className="hidden md:block">
               <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-none tracking-tight">Client Portal</h1>
-              <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Global Security Solutions</p>
+              <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">{settings.companyName || 'Global Security Solutions'}</p>
             </div>
           </div>
           <div className="flex gap-3">

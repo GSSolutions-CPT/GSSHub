@@ -15,6 +15,7 @@ import { useSettings } from '@/lib/use-settings'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { ClientDialog } from '@/components/ClientDialog'
 
 export default function CreateSale() {
   const navigate = useNavigate()
@@ -121,7 +122,8 @@ export default function CreateSale() {
     }, 0)
 
     const profit = subtotal - tradeSubtotal
-    const vat = formData.vat_applicable ? subtotal * 0.15 : 0
+    const taxRate = (parseFloat(settings.taxRate) || 15) / 100
+    const vat = formData.vat_applicable ? subtotal * taxRate : 0
     const total = subtotal + vat
 
     return { subtotal, tradeSubtotal, profit, vat, total }
@@ -360,22 +362,36 @@ export default function CreateSale() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="client_id">Select Client</Label>
-                <Select
-                  value={formData.client_id}
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                >
-                  <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                    <SelectValue placeholder="Choose a client..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        <span className="font-medium">{client.name}</span>
-                        {client.company && <span className="text-muted-foreground ml-2">({client.company})</span>}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={formData.client_id}
+                    onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                  >
+                    <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex-1">
+                      <SelectValue placeholder="Choose a client..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          <span className="font-medium">{client.name}</span>
+                          {client.company && <span className="text-muted-foreground ml-2">({client.company})</span>}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <ClientDialog
+                    onSuccess={(newClient) => {
+                      setClients(prev => [newClient, ...prev])
+                      setFormData(prev => ({ ...prev, client_id: newClient.id }))
+                    }}
+                    trigger={
+                      <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" type="button">
+                        <Plus className="h-5 w-5" />
+                      </Button>
+                    }
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -582,7 +598,7 @@ export default function CreateSale() {
                 </div>
                 {formData.vat_applicable && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">VAT (15%)</span>
+                    <span className="text-muted-foreground">VAT ({settings.taxRate || 15}%)</span>
                     <span>{formatCurrency(totals.vat)}</span>
                   </div>
                 )}
@@ -598,7 +614,7 @@ export default function CreateSale() {
               <div className="bg-slate-100 dark:bg-slate-900 rounded-lg p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Percent className="h-4 w-4 text-muted-foreground" />
-                  <Label htmlFor="vat-toggle" className="text-sm cursor-pointer">Add VAT (15%)</Label>
+                  <Label htmlFor="vat-toggle" className="text-sm cursor-pointer">Add VAT ({settings.taxRate || 15}%)</Label>
                 </div>
                 <Switch
                   id="vat-toggle"

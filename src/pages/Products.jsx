@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +28,16 @@ export default function Products() {
     cost_price: '',
     description: ''
   })
+
+  const location = useLocation()
+
+  useEffect(() => {
+    if (location.state?.openAddDialog) {
+      setIsDialogOpen(true)
+      // Clear state to prevent reopening on refresh (optional, requires navigate)
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   const fetchProducts = useCallback(async () => {
     try {

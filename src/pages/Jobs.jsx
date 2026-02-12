@@ -7,8 +7,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Search, Briefcase, Calendar as CalendarIcon, User, Clock, List as ListIcon, Kanban, Pencil, Trash2, Loader2, CheckCircle, Activity } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Plus, Search, Briefcase, Calendar as CalendarIcon, User, Clock, List as ListIcon, Kanban, Pencil, Trash2, Loader2, CheckCircle, Activity, Upload, FileText, Image as ImageIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { generateOutlookLink } from '@/lib/calendar-utils'
@@ -30,6 +30,9 @@ export default function Jobs() {
   const [isLoading, setIsLoading] = useState(false)
   const [editingJob, setEditingJob] = useState(null)
   const [viewMode, setViewMode] = useState('list') // list, board, calendar
+  const [attachments, setAttachments] = useState([])
+  const [isUploading, setIsUploading] = useState(false)
+  const [activeTab, setActiveTab] = useState('details')
   const [formData, setFormData] = useState({
     client_id: '',
     quotation_id: '',
@@ -122,6 +125,118 @@ export default function Jobs() {
     fetchClients()
     fetchQuotations()
   }, [fetchJobs, fetchClients, fetchQuotations])
+
+  const fetchAttachments = async (jobId) => {
+    try {
+      const { data, error } = await supabase
+        .from('job_attachments')
+        .select('*')
+        .eq('job_id', jobId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setAttachments(data || [])
+    } catch (error) {
+      console.error('Error fetching attachments:', error)
+      // toast.error('Failed to load attachments') // Optional: suppress to avoid noise if table doesn't exist yet
+    }
+  }
+
+  const handleFileUpload = async (e) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    if (!editingJob) {
+      toast.error('Please save the job before adding attachments')
+      return
+    }
+
+    setIsUploading(true)
+    const toastId = toast.loading('Uploading files...')
+
+    try {
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${editingJob.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+
+        // 1. Upload to Storage
+        const { error: uploadError } = await supabase.storage
+          .from('job-attachments')
+          .upload(fileName, file)
+
+        if (uploadError) throw uploadError
+
+        // 2. Get Public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('job-attachments')
+          .getPublicUrl(fileName)
+
+        // 3. Save to Database
+        const { error: dbError } = await supabase
+          .from('job_attachments')
+          .insert([{
+            job_id: editingJob.id,
+            file_url: publicUrl,
+            file_type: file.type,
+            file_name: file.name,
+            description: '' // Initial empty description
+          }])
+
+        if (dbError) throw dbError
+      }
+
+      toast.success('Files uploaded successfully', { id: toastId })
+      fetchAttachments(editingJob.id)
+    } catch (error) {
+      console.error('Error uploading files:', error)
+      toast.error('Failed to upload files', { id: toastId })
+    } finally {
+      setIsUploading(false)
+      // Reset file input
+      e.target.value = null
+    }
+  }
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    if (!confirm('Are you sure you want to delete this attachment?')) return
+
+    try {
+      // 1. Delete from Database
+      const { error: dbError } = await supabase
+        .from('job_attachments')
+        .delete()
+        .eq('id', attachmentId)
+
+      if (dbError) throw dbError
+
+      // 2. Delete from Storage (Optional but recommended)
+      // Note: We'd need the path, which we didn't store explicitly, but we can infer or just leave it for now.
+      // Ideally we store the storage path in the DB.
+      // For now, just DB delete is sufficient to hide it.
+
+      toast.success('Attachment deleted')
+      fetchAttachments(editingJob.id)
+    } catch (error) {
+      console.error('Error deleting attachment:', error)
+      toast.error('Failed to delete attachment')
+    }
+  }
+
+  const handleUpdateAttachmentDescription = async (attachmentId, description) => {
+    try {
+      const { error } = await supabase
+        .from('job_attachments')
+        .update({ description })
+        .eq('id', attachmentId)
+
+      if (error) throw error
+
+      // Update local state to reflect change without re-fetching
+      setAttachments(prev => prev.map(a => a.id === attachmentId ? { ...a, description } : a))
+    } catch (error) {
+      console.error('Error updating description:', error)
+      toast.error('Failed to save description')
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -216,6 +331,7 @@ export default function Jobs() {
       status: job.status
     })
     setIsDialogOpen(true)
+    fetchAttachments(job.id) // Fetch attachments when editing
   }
 
   const handleDelete = async (id) => {
@@ -442,6 +558,8 @@ export default function Jobs() {
               setIsDialogOpen(open)
               if (!open) {
                 setEditingJob(null)
+                setAttachments([]) // Clear attachments
+                setActiveTab('details') // Reset tab
                 setFormData({
                   client_id: '',
                   quotation_id: '',
@@ -460,117 +578,222 @@ export default function Jobs() {
                 Create Job
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[800px] h-[90vh] sm:h-auto overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingJob ? 'Edit Job' : 'Create New Job'}</DialogTitle>
                 <DialogDescription>
-                  Schedule a new job or work order
+                  {activeTab === 'details' ? 'Schedule a new job or work order' : 'Manage job photos and documents'}
                 </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleSubmit}>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="client_id">Client *</Label>
-                    <Select
-                      value={formData.client_id}
-                      onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clients.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.name} {client.company && `(${client.company})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
 
-                  {!formData.quotation_id && (
-                    <div className="grid gap-2">
-                      <Label htmlFor="quotation_id">Related Quotation (Optional)</Label>
-                      <Select
-                        value={formData.quotation_id}
-                        onValueChange={(value) => setFormData({ ...formData, quotation_id: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a quotation" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">None</SelectItem>
-                          {quotations
-                            .filter(q => q.client_id === formData.client_id)
-                            .map((quotation) => (
-                              <SelectItem key={quotation.id} value={quotation.id}>
-                                Quotation {quotation.id.substring(0, 8)}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="details">Job Details</TabsTrigger>
+                  <TabsTrigger value="attachments">
+                    Attachments
+                    {attachments.length > 0 && (
+                      <span className="ml-2 bg-primary/10 text-primary px-1.5 py-0.5 rounded-full text-xs font-semibold">
+                        {attachments.length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="details">
+                  <form onSubmit={handleSubmit}>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="client_id">Client *</Label>
+                        <Select
+                          value={formData.client_id}
+                          onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a client" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {clients.map((client) => (
+                              <SelectItem key={client.id} value={client.id}>
+                                {client.name} {client.company && `(${client.company})`}
                               </SelectItem>
                             ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="assigned_technicians">Assigned Technicians</Label>
-                    <Input
-                      id="assigned_technicians"
-                      placeholder="Enter names separated by commas"
-                      value={formData.assigned_technicians}
-                      onChange={(e) => setFormData({ ...formData, assigned_technicians: e.target.value })}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Example: John Doe, Jane Smith
-                    </p>
-                  </div>
+                      {!formData.quotation_id && (
+                        <div className="grid gap-2">
+                          <Label htmlFor="quotation_id">Related Quotation (Optional)</Label>
+                          <Select
+                            value={formData.quotation_id}
+                            onValueChange={(value) => setFormData({ ...formData, quotation_id: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a quotation" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">None</SelectItem>
+                              {quotations
+                                .filter(q => q.client_id === formData.client_id)
+                                .map((quotation) => (
+                                  <SelectItem key={quotation.id} value={quotation.id}>
+                                    Quotation {quotation.id.substring(0, 8)}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="scheduled_datetime">Scheduled Date & Time Start</Label>
-                      <div className="relative">
+                      <div className="grid gap-2">
+                        <Label htmlFor="assigned_technicians">Assigned Technicians</Label>
                         <Input
-                          id="scheduled_datetime"
-                          type="datetime-local"
-                          value={formData.scheduled_datetime}
-                          onChange={(e) => setFormData({ ...formData, scheduled_datetime: e.target.value })}
+                          id="assigned_technicians"
+                          placeholder="Enter names separated by commas"
+                          value={formData.assigned_technicians}
+                          onChange={(e) => setFormData({ ...formData, assigned_technicians: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Example: John Doe, Jane Smith
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="scheduled_datetime">Scheduled Date & Time Start</Label>
+                          <div className="relative">
+                            <Input
+                              id="scheduled_datetime"
+                              type="datetime-local"
+                              value={formData.scheduled_datetime}
+                              onChange={(e) => setFormData({ ...formData, scheduled_datetime: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="scheduled_end_datetime">Scheduled Date & Time End</Label>
+                          <div className="relative">
+                            <Input
+                              id="scheduled_end_datetime"
+                              type="datetime-local"
+                              value={formData.scheduled_end_datetime}
+                              onChange={(e) => setFormData({ ...formData, scheduled_end_datetime: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="notes">Notes</Label>
+                        <Textarea
+                          id="notes"
+                          value={formData.notes}
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                          rows={3}
+                          placeholder="Job details, requirements, etc."
                         />
                       </div>
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="scheduled_end_datetime">Scheduled Date & Time End</Label>
-                      <div className="relative">
-                        <Input
-                          id="scheduled_end_datetime"
-                          type="datetime-local"
-                          value={formData.scheduled_end_datetime}
-                          onChange={(e) => setFormData({ ...formData, scheduled_end_datetime: e.target.value })}
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {editingJob ? 'Update Job' : 'Create Job'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="attachments" className="min-h-[300px]">
+                  <div className="space-y-4 py-4">
+                    <div className="flex justify-between items-center bg-muted/40 p-4 rounded-lg border border-border">
+                      <div>
+                        <h3 className="text-sm font-medium">Job Documentation</h3>
+                        <p className="text-xs text-muted-foreground mt-1">Upload photos of work done, serial numbers, etc.</p>
+                      </div>
+                      <div>
+                        <input
+                          type="file"
+                          id="file-upload"
+                          multiple
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onChange={handleFileUpload}
+                          disabled={isUploading || !editingJob}
                         />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => document.getElementById('file-upload').click()}
+                          disabled={isUploading || !editingJob}
+                        >
+                          {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                          Upload Files
+                        </Button>
                       </div>
                     </div>
+
+                    {!editingJob ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed border-muted">
+                        <FileText className="h-10 w-10 mb-3 opacity-20" />
+                        <p>Please save the job first to add attachments.</p>
+                      </div>
+                    ) : attachments.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed border-muted">
+                        <ImageIcon className="h-10 w-10 mb-3 opacity-20" />
+                        <p>No attachments yet.</p>
+                        <p className="text-xs mt-1">Upload photos to document your work.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2">
+                        {attachments.map((file) => (
+                          <div key={file.id} className="group relative border border-border rounded-lg p-3 bg-card hover:shadow-md transition-all">
+                            <div className="aspect-video bg-muted rounded-md mb-3 overflow-hidden flex items-center justify-center relative border border-border/50">
+                              {file.file_type?.startsWith('image/') ? (
+                                <img src={file.file_url} alt={file.file_name} className="w-full h-full object-cover" />
+                              ) : (
+                                <FileText className="h-10 w-10 text-muted-foreground" />
+                              )}
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                onClick={() => handleDeleteAttachment(file.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium truncate text-foreground" title={file.file_name}>{file.file_name}</p>
+                              <Input
+                                placeholder="Description / Serial No."
+                                className="h-8 text-xs bg-background"
+                                value={file.description || ''}
+                                onChange={(e) => {
+                                  // Optimistic UI update
+                                  const newDescription = e.target.value;
+                                  setAttachments(prev => prev.map(a => a.id === file.id ? { ...a, description: newDescription } : a));
+                                }}
+                                onBlur={(e) => handleUpdateAttachmentDescription(file.id, e.target.value)}
+                              />
+                              <p className="text-[10px] text-muted-foreground text-right">{new Date(file.created_at).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      rows={3}
-                      placeholder="Job details, requirements, etc."
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editingJob ? 'Update Job' : 'Create Job'}
-                  </Button>
-                </DialogFooter>
-              </form>
+
+                  <DialogFooter className="mt-4 sm:justify-between border-t pt-4">
+                    <div className="text-xs text-muted-foreground self-center italic hidden sm:block">
+                      {editingJob ? 'Photos and descriptions are saved automatically.' : ''}
+                    </div>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Close Dialog</Button>
+                  </DialogFooter>
+                </TabsContent>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>

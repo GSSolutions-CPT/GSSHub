@@ -2,180 +2,181 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 // --- BRAND CONFIGURATION ---
-const COLORS = {
-    PRIMARY: [37, 99, 235],     // #2563eb (Security Blue)
+// --- BRAND CONFIGURATION ---
+const DEFAULT_COLORS = {
+    PRIMARY: [37, 99, 235],     // #2563eb
+    SECONDARY: [100, 116, 139], // #64748b (Slate 500)
     DARK: [15, 23, 42],         // #0f172a (Slate 900)
-    LIGHT: [239, 246, 255],     // #eff6ff (Blue 50)
-    GRAY_BG: [248, 250, 252],   // #f8fafc (Slate 50)
-    TEXT_DARK: [30, 41, 59],    // #1e293b (Slate 800)
-    TEXT_GRAY: [100, 116, 139], // #64748b (Slate 500)
-    WHITE: [255, 255, 255]
+    LIGHT: [248, 250, 252],     // #f8fafc (Slate 50)
+    BORDER: [226, 232, 240],    // #e2e8f0 (Slate 200)
+    TEXT_MAIN: [30, 41, 59],    // #1e293b (Slate 800)
+    TEXT_MUTED: [148, 163, 184] // #94a3b8 (Slate 400)
 }
 
-const COMPANY_DETAILS = {
-    name: "Global Security Solutions",
-    tagline: "PROFESSIONAL SECURITY SERVICES",
-    address: "66 Robyn Rd, Durbanville",
-    phone: "062 955 8559",
-    email: "Kyle@GlobalSecuritySolutions.co.za",
-    website: "globalsecuritysolutions.co.za"
+const hexToRgb = (hex) => {
+    if (!hex) return null
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+    ] : null
 }
 
 // --- MAIN GENERATOR FUNCTION ---
-const generatePDF = async (docType, data) => {
-    console.log('Generating PDF for:', docType, data)
+const generatePDF = async (docType, data, settings = {}) => {
+    console.log('Generating PDF (Premium V2) for:', docType, data, settings)
+    const COLORS = { ...DEFAULT_COLORS }
+
+    // Apply dynamic primary color
+    if (settings.primaryColor) {
+        const rgb = hexToRgb(settings.primaryColor)
+        if (rgb) COLORS.PRIMARY = rgb
+    }
+
+    // Company Config
+    const company = {
+        name: settings.companyName || "Global Security Solutions",
+        address: settings.companyAddress || "66 Robyn Rd, Durbanville",
+        phone: settings.companyPhone || "062 955 8559",
+        email: settings.companyEmail || "Kyle@GlobalSecuritySolutions.co.za",
+        vat: settings.companyVat || "",
+        website: "globalsecuritysolutions.co.za"
+    }
+
     try {
         // Initialize PDF (A4 Portrait)
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
-        const pageWidth = doc.internal.pageSize.getWidth()
-        const pageHeight = doc.internal.pageSize.getHeight()
+        const pageWidth = doc.internal.pageSize.getWidth() // 210mm
+        const pageHeight = doc.internal.pageSize.getHeight() // 297mm
+        const margin = 15
+        const contentW = pageWidth - (margin * 2)
 
-        // Helper: Draw Rounded Card Background
-        const drawCard = (x, y, w, h, color) => {
-            doc.setFillColor(...color)
-            doc.roundedRect(x, y, w, h, 2, 2, 'F')
+        // Helper: Styled Text
+        const text = (str, x, y, options = {}) => {
+            const { size = 10, color = COLORS.TEXT_MAIN, font = 'helvetica', style = 'normal', align = 'left', maxWidth = 0 } = options
+            doc.setFontSize(size)
+            doc.setTextColor(...color)
+            doc.setFont(font, style)
+            if (maxWidth > 0) {
+                doc.text(String(str), x, y, { align, maxWidth })
+            } else {
+                doc.text(String(str), x, y, { align })
+            }
         }
 
         // ==========================================
-        // 1. HEADER SECTION
+        // 1. BRAND SIDEBAR ACCENT OR MINIMAL HEADER
         // ==========================================
-        doc.setFillColor(...COLORS.DARK)
-        doc.rect(0, 0, pageWidth, 35, 'F')
+        // We'll go with a clean top layout with a subtle left accent bar on the title
 
-        // Logo Handling
+        // 1.1 Brand Logo (Top Left)
         try {
-            // Assumes logo.png is in your public folder
-            const logoUrl = window.location.origin + '/logo.png'
+            const logoUrl = settings.logoUrl || (window.location.origin + '/logo.png')
             const img = await fetchImage(logoUrl)
 
-            // Calculate aspect ratio
+            const logoH = 22
             const imgProps = doc.getImageProperties(img)
-            const logoWidth = 40
-            const logoHeight = (imgProps.height * logoWidth) / imgProps.width
+            const logoW = (imgProps.width * logoH) / imgProps.height
 
-            doc.addImage(img, 'PNG', 14, 5, logoWidth, logoHeight)
+            doc.addImage(img, 'PNG', margin, 12, logoW, logoH)
         } catch (e) {
-            // Fallback Text Logo
-            doc.setFontSize(22)
-            doc.setTextColor(...COLORS.PRIMARY)
-            doc.setFont('helvetica', 'bold')
-            doc.text('GSS', 14, 25)
+            console.warn('Logo load failed', e)
+            text(company.name, margin, 25, { size: 18, style: 'bold', color: COLORS.PRIMARY })
         }
 
-        // Contact Info (Right Aligned)
-        const rightX = pageWidth - 14
-        doc.setTextColor(203, 213, 225) // Slate 300
-        doc.setFontSize(9)
-        doc.text(COMPANY_DETAILS.address, rightX, 10, { align: 'right' })
-        doc.text(COMPANY_DETAILS.phone, rightX, 15, { align: 'right' })
-        doc.setTextColor(...COLORS.PRIMARY)
-        doc.text(COMPANY_DETAILS.email, rightX, 20, { align: 'right' })
-        doc.setTextColor(203, 213, 225)
-        doc.text(COMPANY_DETAILS.website, rightX, 25, { align: 'right' })
-
-        // ==========================================
-        // 2. BLUE BANNER STRIP
-        // ==========================================
-        doc.setFillColor(...COLORS.PRIMARY)
-        doc.rect(0, 35, pageWidth, 8, 'F')
-
-        // Determine Title
+        // 1.2 Document Title & ID (Top Right)
         let titleText = docType.toUpperCase()
         if (docType === 'Invoice') titleText = data.vat_applicable ? 'TAX INVOICE' : 'INVOICE'
         if (docType === 'Quotation' && (data.status === 'Accepted')) titleText = 'PROFORMA INVOICE'
 
-        doc.setFontSize(12)
-        doc.setTextColor(...COLORS.WHITE)
-        doc.setFont('helvetica', 'bold')
-        doc.text(titleText, 14, 40.5)
+        text(titleText, pageWidth - margin, 20, { size: 20, align: 'right', color: COLORS.TEXT_MAIN, style: 'bold', font: 'helvetica' })
 
-        // Meta Data
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        const dateValue = new Date(data.date_created).toLocaleDateString()
-        doc.text(`NR: ${data.id.substring(0, 8)}   |   DATE: ${dateValue}`, rightX, 40.5, { align: 'right' })
-
-        // ==========================================
-        // 3. INFO CARDS
-        // ==========================================
-        const cardY = 55
-        const cardH = 35
-        const colGap = 10
-        const colW = (pageWidth - 28 - colGap) / 2
-
-        // --- Card 1: Bill To (Light Blue) ---
-        drawCard(14, cardY, colW, cardH, COLORS.LIGHT)
         doc.setDrawColor(...COLORS.PRIMARY)
         doc.setLineWidth(1)
-        doc.line(14, cardY + 2, 14, cardY + cardH - 2)
+        doc.line(pageWidth - margin - 40, 24, pageWidth - margin, 24) // Accent line under title
 
-        doc.setTextColor(...COLORS.PRIMARY)
-        doc.setFontSize(8)
-        doc.setFont('helvetica', 'bold')
-        doc.text(docType === 'Purchase Order' ? 'VENDOR' : 'BILL TO', 18, cardY + 8)
+        text(`# ${data.id.substring(0, 8).toUpperCase()}`, pageWidth - margin, 30, { size: 10, align: 'right', color: COLORS.SECONDARY })
 
-        // Client Details
+        // ==========================================
+        // 2. HEADER GRID (FROM / TO / DETAILS)
+        // ==========================================
+        let cursorY = 50
+
+        // 2.1 Sender (Company) Details - Subtle, Left
+        text("FROM", margin, cursorY, { size: 7, color: COLORS.TEXT_MUTED, style: 'bold' })
+        cursorY += 5
+        text(company.name, margin, cursorY, { size: 9, style: 'bold' })
+        cursorY += 5
+        text(company.address, margin, cursorY, { size: 8, color: COLORS.SECONDARY })
+        cursorY += 4
+        text(company.email, margin, cursorY, { size: 8, color: COLORS.SECONDARY })
+        cursorY += 4
+        text(company.phone, margin, cursorY, { size: 8, color: COLORS.SECONDARY })
+        if (company.vat) {
+            cursorY += 4
+            text(`VAT: ${company.vat}`, margin, cursorY, { size: 8, color: COLORS.SECONDARY })
+        }
+
+        // 2.2 Client Details - Right aligned to center or right? Let's do Left-Center for balance
+        const clientColX = margin + 80
+        let clientY = 50
+
+        text(docType === 'Purchase Order' ? 'VENDOR' : 'BILL TO', clientColX, clientY, { size: 7, color: COLORS.TEXT_MUTED, style: 'bold' })
+        clientY += 5
+
         const clientName = docType === 'Purchase Order' ? (data.suppliers?.name || 'Unknown Supplier') : (data.clients?.name || 'Unknown Client')
         const contactPerson = docType === 'Purchase Order' ? data.suppliers?.contact_person : data.clients?.contact_person
+        const clientEmail = docType === 'Purchase Order' ? data.suppliers?.email : data.clients?.email
         const clientPhone = docType === 'Purchase Order' ? data.suppliers?.phone : data.clients?.phone
         const clientAddr = docType === 'Purchase Order' ? data.suppliers?.address : data.clients?.address
+        const clientCompany = docType === 'Purchase Order' ? '' : data.clients?.company
 
-        doc.setTextColor(...COLORS.TEXT_DARK)
-        doc.setFontSize(10)
-        doc.text(clientName, 18, cardY + 14)
+        text(clientCompany || clientName, clientColX, clientY, { size: 9, style: 'bold' })
+        clientY += 5
 
-        doc.setTextColor(...COLORS.TEXT_GRAY)
-        doc.setFontSize(9)
-        doc.setFont('helvetica', 'normal')
-        let clientY = cardY + 19
-        if (contactPerson) { doc.text(`Attn: ${contactPerson}`, 18, clientY); clientY += 4 }
-        if (clientPhone) { doc.text(clientPhone, 18, clientY); clientY += 4 }
+        if (clientCompany && clientName !== clientCompany) {
+            text(`Attn: ${clientName}`, clientColX, clientY, { size: 8, color: COLORS.SECONDARY })
+            clientY += 4
+        }
+        if (contactPerson) {
+            // Optional
+        }
+        if (clientEmail) { text(clientEmail, clientColX, clientY, { size: 8, color: COLORS.SECONDARY }); clientY += 4 }
+        if (clientPhone) { text(clientPhone, clientColX, clientY, { size: 8, color: COLORS.SECONDARY }); clientY += 4 }
         if (clientAddr) {
-            const splitAddr = doc.splitTextToSize(clientAddr, colW - 10)
-            doc.text(splitAddr, 18, clientY)
+            doc.setFontSize(8); doc.setTextColor(...COLORS.SECONDARY);
+            const splitAddr = doc.splitTextToSize(clientAddr, 70)
+            doc.text(splitAddr, clientColX, clientY)
         }
 
-        // --- Card 2: Reference (Gray) ---
-        const refX = 14 + colW + colGap
-        drawCard(refX, cardY, colW, cardH, COLORS.GRAY_BG)
-        doc.setDrawColor(148, 163, 184)
-        doc.line(refX, cardY + 2, refX, cardY + cardH - 2)
+        // 2.3 Dates & Meta - Far Right
+        const metaX = pageWidth - margin - 40
+        let metaY = 50
 
-        doc.setTextColor(...COLORS.TEXT_GRAY)
-        doc.setFontSize(8)
-        doc.setFont('helvetica', 'bold')
-        doc.text(docType === 'Purchase Order' ? 'SHIP TO' : 'PROJECT REFERENCE', refX + 4, cardY + 8)
+        const metaRow = (label, val) => {
+            text(label, metaX, metaY, { size: 7, color: COLORS.TEXT_MUTED, style: 'bold' })
+            text(val, pageWidth - margin, metaY, { size: 8, align: 'right', color: COLORS.TEXT_MAIN })
+            metaY += 8
+        }
 
-        doc.setTextColor(...COLORS.TEXT_DARK)
-        doc.setFontSize(10)
+        metaRow("DATE", new Date(data.date_created).toLocaleDateString())
 
-        if (docType === 'Purchase Order') {
-            doc.text(COMPANY_DETAILS.name, refX + 4, cardY + 14)
-            doc.setFontSize(9)
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.setFont('helvetica', 'normal')
-            doc.text(COMPANY_DETAILS.address, refX + 4, cardY + 19)
-        } else {
-            const refText = data.metadata?.reference || 'Security System Installation'
-            const splitRef = doc.splitTextToSize(refText, colW - 10)
-            doc.text(splitRef, refX + 4, cardY + 14)
+        if (data.valid_until) metaRow("VALID UNTIL", new Date(data.valid_until).toLocaleDateString())
+        if (data.due_date) metaRow("DUE DATE", new Date(data.due_date).toLocaleDateString())
 
-            // Payment Terms Label
-            doc.setFontSize(8)
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.text('Payment Terms:', refX + 4, cardY + 28)
-            doc.setTextColor(...COLORS.PRIMARY)
-            doc.setFont('helvetica', 'bold')
-            const termText = data.payment_type === 'full'
-                ? '100% Upfront'
-                : `${data.deposit_percentage || 75}% Deposit / ${100 - (data.deposit_percentage || 75)}% on Completion`
-            doc.text(termText, refX + 30, cardY + 28)
+        if (data.metadata?.reference) {
+            text("REFERENCE", metaX, metaY, { size: 7, color: COLORS.TEXT_MUTED, style: 'bold' })
+            // wrapping ref id if long
+            const refH = doc.getTextDimensions(data.metadata.reference, { fontSize: 8, maxWidth: 40 }).h
+            text(data.metadata.reference, pageWidth - margin, metaY, { size: 8, align: 'right', color: COLORS.TEXT_MAIN, maxWidth: 40 })
+            metaY += (Math.max(8, refH + 2))
         }
 
         // ==========================================
-        // 4. PRICING TABLE
+        // 3. CLEAN TABLE
         // ==========================================
-        const tableY = cardY + cardH + 10
+        const tableY = Math.max(cursorY, clientY, metaY) + 15
 
         const tableRows = []
         if (data.lines && data.lines.length > 0) {
@@ -183,210 +184,200 @@ const generatePDF = async (docType, data) => {
                 tableRows.push([
                     line.description || 'Item',
                     line.quantity,
-                    `R${parseFloat(line.unit_price || 0).toFixed(2)}`,
-                    `R${parseFloat(line.line_total || 0).toFixed(2)}`
+                    `R ${parseFloat(line.unit_price || 0).toFixed(2)}`,
+                    `R ${parseFloat(line.line_total || 0).toFixed(2)}`
                 ])
             })
         } else {
-            // Fallback if no lines
-            tableRows.push([`Total ${docType} Amount`, '1', `R${parseFloat(data.total_amount || 0).toFixed(2)}`, `R${parseFloat(data.total_amount || 0).toFixed(2)}`])
+            tableRows.push([`Total ${docType} Amount`, '1', `R ${parseFloat(data.total_amount || 0).toFixed(2)}`, `R ${parseFloat(data.total_amount || 0).toFixed(2)}`])
         }
 
         autoTable(doc, {
             startY: tableY,
-            head: [["Description", "Qty", "Unit Price", "Total"]],
+            head: [["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"]],
             body: tableRows,
-            theme: 'plain',
+            theme: 'plain', // Minimalist
             headStyles: {
-                fillColor: COLORS.GRAY_BG,
-                textColor: COLORS.TEXT_GRAY,
-                fontSize: 9,
+                fillColor: COLORS.LIGHT,
+                textColor: COLORS.TEXT_MUTED,
+                fontSize: 8,
                 fontStyle: 'bold',
                 halign: 'left',
-                cellPadding: 4
+                cellPadding: { top: 4, bottom: 4, left: 2, right: 2 }
             },
             bodyStyles: {
-                textColor: COLORS.TEXT_DARK,
-                fontSize: 10,
-                cellPadding: 4,
-                valign: 'middle'
-            },
-            alternateRowStyles: {
-                fillColor: COLORS.LIGHT
+                textColor: COLORS.TEXT_MAIN,
+                fontSize: 9,
+                cellPadding: { top: 4, bottom: 4, left: 2, right: 2 },
+                valign: 'top',
+                lineColor: COLORS.BORDER,
+                lineWidth: { bottom: 0.1 } // Only bottom border
             },
             columnStyles: {
-                0: { cellWidth: 'auto' },
+                0: { cellWidth: 'auto' }, // Desc
                 1: { cellWidth: 20, halign: 'center' },
                 2: { cellWidth: 35, halign: 'right' },
                 3: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
+            },
+            didDrawPage: () => {
+                // No complex headers needed per page
             }
         })
 
         // ==========================================
-        // 5. FOOTER SECTION (Bank & Totals)
+        // 4. FOOTER / TOTALS LAYOUT
         // ==========================================
-        const finalY = doc.lastAutoTable.finalY + 10
-
-        // --- Banking Card ---
-        if (docType !== 'Purchase Order') {
-            const bankWidth = 110
-            drawCard(14, finalY, bankWidth, 32, COLORS.DARK)
-
-            doc.setTextColor(...COLORS.PRIMARY)
-            doc.setFontSize(9)
-            doc.setFont('helvetica', 'bold')
-            doc.text('BANKING DETAILS', 20, finalY + 8)
-
-            doc.setTextColor(...COLORS.WHITE)
-            doc.setFontSize(9)
-
-            const labelX = 20
-            const valX = 60
-            let bankY = finalY + 15
-            const lineH = 5
-
-            doc.setFont('helvetica', 'normal'); doc.text('Bank:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text('FNB/RMB', valX, bankY);
-            bankY += lineH;
-
-            doc.setFont('helvetica', 'normal'); doc.text('Holder:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text('Global Security Solutions', valX, bankY);
-            bankY += lineH;
-
-            doc.setFont('helvetica', 'normal'); doc.text('Account:', labelX, bankY);
-            doc.setTextColor(...COLORS.PRIMARY); doc.setFont('helvetica', 'bold');
-            doc.text('63182000223', valX, bankY);
-            doc.setTextColor(...COLORS.WHITE);
-            bankY += lineH;
-
-            doc.setFont('helvetica', 'normal'); doc.text('Branch:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text('250655', valX, bankY);
-            bankY += lineH;
-
-            doc.setFont('helvetica', 'normal'); doc.text('Type:', labelX, bankY);
-            doc.setFont('helvetica', 'bold'); doc.text('First Business Zero', valX, bankY);
+        let finalY = doc.lastAutoTable.finalY + 10
+        if (finalY > pageHeight - 60) {
+            doc.addPage()
+            finalY = 20
         }
 
-        // --- Totals ---
-        const totalsX = 140
-        let currentTotalY = finalY + 5
+        // Totals Calculation
+        let taxRate = 0.15
+        if (settings.taxRate) taxRate = parseFloat(settings.taxRate) / 100
 
         const totalVal = parseFloat(data.total_amount || 0)
-        // Calculate VAT backwards (Assumption: Total includes VAT)
-        const subtotalVal = totalVal / (data.vat_applicable ? 1.15 : 1)
-        const vatVal = data.vat_applicable ? (totalVal - subtotalVal) : 0
+        let subtotalVal = totalVal
+        let vatVal = 0
+
+        if (data.vat_applicable) {
+            subtotalVal = totalVal / (1 + taxRate)
+            vatVal = totalVal - subtotalVal
+        }
 
         const depositVal = parseFloat(data.deposit_amount || 0)
         const balanceDue = totalVal - depositVal
 
-        doc.setTextColor(...COLORS.TEXT_GRAY)
-        doc.setFontSize(10)
+        // 4.1 Banking Details (Floating Left, Clean)
+        if (docType !== 'Purchase Order') {
+            text("BANKING DETAILS", margin, finalY + 4, { size: 8, style: 'bold', color: COLORS.TEXT_MAIN })
 
-        // Subtotal
-        doc.text('Subtotal', totalsX, currentTotalY)
-        doc.text(`R${subtotalVal.toFixed(2)}`, rightX, currentTotalY, { align: 'right' })
-        currentTotalY += 6
+            // Accent Line
+            doc.setDrawColor(...COLORS.PRIMARY)
+            doc.setLineWidth(0.5)
+            doc.line(margin, finalY + 7, margin + 40, finalY + 7)
 
-        // VAT
-        doc.text(data.vat_applicable ? 'VAT (15%)' : 'VAT (0%)', totalsX, currentTotalY)
-        doc.text(`R${vatVal.toFixed(2)}`, rightX, currentTotalY, { align: 'right' })
-        currentTotalY += 10
+            let bankY = finalY + 14
+            const bankRow = (label, val) => {
+                text(label, margin, bankY, { size: 8, color: COLORS.TEXT_MUTED })
+                text(val, margin + 25, bankY, { size: 8, color: COLORS.TEXT_MAIN, style: 'bold' })
+                bankY += 5
+            }
 
-        // Grand Total Box
-        doc.setFillColor(...COLORS.PRIMARY)
-        doc.roundedRect(totalsX - 5, currentTotalY - 6, (rightX - totalsX) + 10, 12, 1, 1, 'F')
-
-        doc.setTextColor(...COLORS.WHITE)
-        doc.setFont('helvetica', 'bold')
-        doc.text('GRAND TOTAL', totalsX, currentTotalY + 2)
-        doc.setFontSize(12)
-        doc.text(`R${totalVal.toFixed(2)}`, rightX, currentTotalY + 2, { align: 'right' })
-
-        // Deposit / Balance
-        if (depositVal > 0) {
-            currentTotalY += 12
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.setFontSize(9)
-            doc.setFont('helvetica', 'normal')
-            doc.text('Less Deposit:', totalsX, currentTotalY)
-            doc.text(`(R${depositVal.toFixed(2)})`, rightX, currentTotalY, { align: 'right' })
-
-            currentTotalY += 6
-            doc.setTextColor(...COLORS.TEXT_DARK)
-            doc.setFont('helvetica', 'bold')
-            doc.text('Balance Due:', totalsX, currentTotalY)
-            doc.text(`R${balanceDue.toFixed(2)}`, rightX, currentTotalY, { align: 'right' })
+            bankRow("Bank:", settings.bankName || 'FNB')
+            bankRow("Branch:", settings.bankBranchCode || '250655')
+            bankRow("Account:", settings.bankAccountNumber || '63182000223')
+            bankRow("Reference:", settings.bankReference || data.id.substring(0, 8))
         }
 
+        // 4.2 Totals (Right Aligned, Large Typography)
+        const totalsW = 80
+        const totalsX = pageWidth - margin - totalsW
+        let totalsY = finalY
+
+        const totalRow = (label, value, size = 9, color = COLORS.TEXT_MUTED, weight = 'normal') => {
+            text(label, totalsX, totalsY, { size, color, style: weight })
+            text(value, pageWidth - margin, totalsY, { size, align: 'right', color: COLORS.TEXT_MAIN, style: 'bold' })
+            totalsY += (size + 4)
+        }
+
+        totalRow("Subtotal", `R ${subtotalVal.toFixed(2)}`)
+        if (vatVal > 0) totalRow(`VAT (${(taxRate * 100).toFixed(0)}%)`, `R ${vatVal.toFixed(2)}`)
+
+        totalsY += 4
+        // Big Total
+        text("TOTAL", totalsX, totalsY, { size: 10, style: 'bold' })
+        text(`R ${totalVal.toFixed(2)}`, pageWidth - margin, totalsY, { size: 14, style: 'bold', color: COLORS.PRIMARY, align: 'right' })
+        totalsY += 10
+
+        if (depositVal > 0) {
+            totalRow("Less Paid", `(R ${depositVal.toFixed(2)})`, 9, COLORS.TEXT_MUTED)
+            // Balance Accent
+            doc.setFillColor(...COLORS.LIGHT)
+            doc.roundedRect(totalsX - 2, totalsY - 4, totalsW + 2, 12, 1, 1, 'F')
+
+            text("BALANCE DUE", totalsX + 2, totalsY + 4, { size: 9, style: 'bold', color: COLORS.TEXT_MAIN })
+            text(`R ${balanceDue.toFixed(2)}`, pageWidth - margin - 2, totalsY + 4, { size: 11, style: 'bold', align: 'right', color: COLORS.PRIMARY })
+        }
+
+
+
+
         // ==========================================
-        // 6. TERMS & CONDITIONS (Page 2)
+        // 6. TERMS (New Page if Needed)
         // ==========================================
         if (docType !== 'Purchase Order') {
-            doc.addPage()
+            const terms = settings.legalTerms || null
+            if (terms) {
+                // Always add a new page for Terms & Conditions
+                doc.addPage()
+                finalY = 20
 
-            // Header for T&C Page
-            doc.setFillColor(...COLORS.DARK)
-            doc.rect(0, 0, pageWidth, 25, 'F')
-            doc.setTextColor(...COLORS.WHITE)
-            doc.setFontSize(14)
-            doc.text('TERMS & CONDITIONS', 14, 17)
-            doc.setFontSize(9)
-            doc.setTextColor(148, 163, 184)
-            doc.text('Agreement governing the provision and installation of premium security systems.', rightX, 17, { align: 'right' })
+                // Heading
+                let termsY = finalY
 
-            let termY = 40
-            const bottomMargin = 30
-            const terms = [
-                { t: '1. Scope of Services', c: 'We agree to supply and install the security equipment ("System") as specified in the signed Quotation at the address provided ("Site"). The scope includes the physical installation of components, system configuration, basic user training upon handover, and any other services explicitly detailed in the Quotation. Services may include: Intruder Detection, CCTV, Access Control, Electric Fencing, Gate and Garage Automation, Smart Home and System Integration.' },
-                { t: '2. System Specifications', c: 'The make, model, quantity, and specific capabilities of all System components will be detailed in the formal Quotation. We reserve the right to propose a substitution of components with items of equal or superior quality and specification if the quoted items become unavailable. Such a substitution will only be made subject to your prior written approval.' },
-                { t: '3. Installation Procedures', c: '3.1 Site Access: You shall provide us with safe, unimpeded access to the Site during agreed-upon working hours.\n3.2 Customer Obligations: You are responsible for ensuring the Site is ready for installation, including providing a stable 230V AC power supply. You must inform us of concealed utilities.\n3.3 Timeline: Estimates only. We are not liable for delays beyond our control.\n3.4 Completion & Handover: Installation is deemed complete upon successful testing. Acceptance is confirmed by signing our job completion form or by using the system.' },
-                { t: '4. Warranties', c: '4.1 Workmanship: 12-month warranty on installation workmanship. Covers faults directly resulting from installation.\n4.2 Equipment: Manufacturer warranty applies. We facilitate claims.\n4.3 Exclusions: Misuse, neglect, Acts of God (lightning, surge), third-party service failures, consumables (batteries, fuses).' },
-                { t: '5. Payment Terms', c: `5.1 Deposit: ${data.payment_type === 'full' ? '100% payment' : (data.deposit_percentage || 75) + '% deposit'} required on acceptance to secure equipment.\n5.2 Final Payment: ${data.payment_type === 'full' ? '0%' : (100 - (data.deposit_percentage || 75)) + '%'} due upon completion and handover.\n5.3 Ownership: Equipment remains property of Global Security Solutions until fully paid. We reserve right to remove system if unpaid.\n5.4 Late Payments: Interest charged on overdue accounts at prime plus 5%.` },
-                { t: '6. Data Privacy', c: '6.1 Compliance: We handle data in compliance with POPIA.\n6.2 System Data: You are the Data Controller for CCTV footage/logs. You are solely responsible for lawful use.\n6.3 Remote Access: Required for maintenance; done only with your explicit consent.' },
-                { t: '7. Maintenance & Support', c: '7.1 Post-Warranty Service: Service calls requested after warranty period are chargeable at standard rates.\n7.2 Maintenance Contracts: Available for ongoing care.\n7.3 Call-Outs: Standard fees apply for on-site support outside warranty.' },
-                { t: '8. Limitation of Liability', c: '8.1 No Guarantee: Systems are deterrents, not guarantees against loss. GSS is not an insurer.\n8.2 Indemnity: Not liable for loss/damage unless gross negligence is proven.\n8.3 Maximum Liability: Limited to the total contract value.' },
-                { t: '9. Termination', c: `9.1 By You: ${data.payment_type === 'full' ? 'Payment' : (data.deposit_percentage || 75) + '% deposit'} is non-refundable if work commenced. Costs for work done are due.\n9.2 By Us: We may terminate for non-payment or breach.` },
-                { t: '10. General', c: '10.1 Governing Law: Republic of South Africa.\n10.2 Dispute Resolution: Cape Town courts jurisdiction.\n10.3 Entire Agreement: This document + Quotation supersedes all prior communications.' }
-            ]
+                text("TERMS AND CONDITIONS", margin, termsY, { size: 9, style: 'bold', color: COLORS.TEXT_MAIN })
+                termsY += 5
 
-            // Preamble
-            doc.setFontSize(8)
-            doc.setTextColor(100, 116, 139) // Slate 500
-            const preamble = "These Terms and Conditions (\"Agreement\") govern the provision and installation of security systems and related services (\"Services\") by Global Security Solutions (\"we,\" \"us,\" \"our\") to the customer (\"you,\" \"your\"). This Agreement, together with the official Quotation provided, constitutes the entire contract between both parties."
-            const preambleLines = doc.splitTextToSize(preamble, pageWidth - 28)
-            doc.text(preambleLines, 14, termY)
-            termY += (preambleLines.length * 3.5) + 8
+                doc.setFontSize(7)
+                doc.setTextColor(...COLORS.TEXT_MUTED)
+                doc.setFont('helvetica', 'normal')
 
-            doc.setTextColor(...COLORS.TEXT_DARK)
-            terms.forEach(term => {
-                // Check Page Break
-                if (termY > pageHeight - bottomMargin - 10) {
+                // Ensure terms is a string
+                const termsStr = Array.isArray(terms) ? terms.join('\n') : String(terms)
+
+                // Two Column Layout
+                const gap = 10
+                const colWidth = (contentW - gap) / 2
+
+                // Split text into lines that fit in one column
+                const allLines = doc.splitTextToSize(termsStr, colWidth)
+
+                // Calculate split point (approx half)
+                // We want to balance the columns, so we take total lines / 2
+                const splitIndex = Math.ceil(allLines.length / 2)
+
+                const leftCol = allLines.slice(0, splitIndex)
+                const rightCol = allLines.slice(splitIndex)
+
+                doc.text(leftCol, margin, termsY)
+                doc.text(rightCol, margin + colWidth + gap, termsY)
+
+                // Draw Vertical Divider Line
+                const termsHeight = leftCol.length * 3 // approx 3mm line height
+                doc.setDrawColor(...COLORS.BORDER)
+                doc.setLineWidth(0.1)
+                doc.line(margin + colWidth + (gap / 2), termsY, margin + colWidth + (gap / 2), termsY + termsHeight)
+
+                // Update Y for signature (based on column height)
+                const textHeight = termsHeight
+
+                // Signature Section
+                // Check if we need new page for signature
+                // If terms + sig lines don't fit, add page
+                if (termsY + textHeight + 30 > pageHeight - 20) {
                     doc.addPage()
-                    termY = 20
+                    // If we added a page, signatures go to top
                 }
 
-                doc.setFontSize(9)
-                doc.setFont('helvetica', 'bold')
-                doc.setTextColor(...COLORS.PRIMARY)
-                doc.text(term.t, 14, termY)
+                // Signature Lines Position
+                // If we are on a new page (from the check above), start at top
+                let currentY = termsY + textHeight + 20
+                if (currentY > pageHeight - 30) {
+                    currentY = 30
+                }
 
-                doc.setFontSize(8)
-                doc.setFont('helvetica', 'normal')
-                doc.setTextColor(60, 60, 60)
-                const lines = doc.splitTextToSize(term.c, pageWidth - 28)
-                doc.text(lines, 14, termY + 4)
-                termY += (lines.length * 3.5) + 6
-            })
+                const sigLineY = currentY
+                const sigW = 70
 
-            // Acceptance Block
-            const finalPageHeight = doc.internal.pageSize.getHeight()
-            doc.setDrawColor(200, 200, 200)
-            doc.line(14, finalPageHeight - 40, pageWidth - 14, finalPageHeight - 40)
+                doc.line(margin, sigLineY, margin + sigW, sigLineY) // Client
+                text("CLIENT SIGNATURE", margin, sigLineY + 5, { size: 7, color: COLORS.TEXT_MUTED })
 
-            doc.setFontSize(9)
-            doc.setTextColor(...COLORS.TEXT_DARK)
-            doc.text('I acknowledge I have read and agree to these terms.', pageWidth / 2, finalPageHeight - 35, { align: 'center' })
+                doc.line(pageWidth - margin - sigW, sigLineY, pageWidth - margin, sigLineY) // Date
+                text("DATE", pageWidth - margin - sigW, sigLineY + 5, { size: 7, color: COLORS.TEXT_MUTED })
 
+<<<<<<< HEAD
             doc.line(14, finalPageHeight - 20, 80, finalPageHeight - 20)
             doc.setFontSize(8)
             doc.setTextColor(...COLORS.TEXT_GRAY)
@@ -415,27 +406,37 @@ const generatePDF = async (docType, data) => {
                     doc.setFontSize(8)
                     doc.setTextColor(255, 0, 0)
                     doc.text('(Signature could not be loaded)', 14, finalPageHeight - 30)
+=======
+                // Digital Signature Render
+                if (data.client_signature) {
+                    try {
+                        doc.addImage(data.client_signature, 'PNG', margin + 5, sigLineY - 15, 40, 15)
+                        text(`Digital ID: ${data.id}`, margin, sigLineY + 9, { size: 6, color: COLORS.TEXT_MUTED })
+                    } catch (e) {
+                        console.log('Sig render error', e)
+                    }
+>>>>>>> 5da6dc33641efd451cdaea3395d8a4fb7894a428
                 }
             }
         }
 
-        // --- GLOBAL FOOTER ---
+        // ==========================================
+        // 7. GLOBAL FOOTER (Page Numbers)
+        // ==========================================
         const pageCount = doc.internal.getNumberOfPages()
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i)
             const pH = doc.internal.pageSize.getHeight()
 
-            doc.setDrawColor(200, 200, 200)
-            doc.setLineWidth(0.5)
-            doc.line(14, pH - 15, pageWidth - 14, pH - 15)
+            // Subtle footer line
+            doc.setDrawColor(...COLORS.BORDER)
+            doc.setLineWidth(0.1)
+            doc.line(margin, pH - 15, pageWidth - margin, pH - 15)
 
-            doc.setFontSize(8)
-            doc.setTextColor(...COLORS.TEXT_GRAY)
-            doc.text(`Web: ${COMPANY_DETAILS.website}   |   Email: ${COMPANY_DETAILS.email}   |   ${COMPANY_DETAILS.phone}`, pageWidth / 2, pH - 10, { align: 'center' })
-            doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pH - 10, { align: 'right' })
+            text(company.website || company.email, margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED })
+            text(`Page ${i} of ${pageCount}`, pageWidth - margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED, align: 'right' })
         }
 
-        // Output
         doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
 
     } catch (error) {

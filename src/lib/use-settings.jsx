@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import { hexToHsl } from '@/lib/utils'
 
-export function useSettings() {
+const SettingsContext = createContext({
+    settings: {},
+    loading: true,
+    updateSetting: async () => { }
+})
+
+export function SettingsProvider({ children }) {
     const [settings, setSettings] = useState({})
     const [loading, setLoading] = useState(true)
 
@@ -10,11 +17,21 @@ export function useSettings() {
         fetchSettings()
     }, [])
 
+    // Dynamic Theming Effect
+    useEffect(() => {
+        if (settings.primaryColor) {
+            const root = document.documentElement
+            const hsl = hexToHsl(settings.primaryColor)
+            root.style.setProperty('--primary', hsl)
+            // Optional: Update other related colors if needed
+            // root.style.setProperty('--sidebar-primary', hsl)
+        }
+    }, [settings.primaryColor])
+
     const fetchSettings = async () => {
         try {
             const { data, error } = await supabase.from('settings').select('*')
             if (error) {
-                // If table doesn't exist yet (migration pending), ignore error and use local
                 console.warn('Settings fetch error (table may not exist yet):', error)
                 throw error
             }
@@ -27,17 +44,17 @@ export function useSettings() {
             }
             setSettings(settingsMap)
 
-            // Sync to localStorage for redundancy/fallback
+            // Sync to localStorage
             Object.keys(settingsMap).forEach(key => {
                 localStorage.setItem(key, settingsMap[key])
             })
 
         } catch (error) {
-            // Fallback: Load from localStorage if DB fails
             console.log('Falling back to localStorage for settings')
             const localKeys = [
                 'companyName', 'companyAddress', 'companyPhone', 'companyEmail', 'companyVat',
-                'bankName', 'bankAccountHolder', 'bankAccountNumber', 'bankAccountType', 'bankBranchCode', 'bankReference'
+                'bankName', 'bankAccountHolder', 'bankAccountNumber', 'bankAccountType', 'bankBranchCode', 'bankReference',
+                'primaryColor', 'taxRate', 'logoUrl', 'whatsappNumber', 'legalTerms', 'defaultQuoteValidityDays'
             ]
             const localSettings = {}
             localKeys.forEach(key => {
@@ -62,11 +79,27 @@ export function useSettings() {
                 .upsert({ key, value }, { onConflict: 'key' })
 
             if (error) throw error
+            // toast.success('Setting saved') 
         } catch (error) {
             console.error('Error updating setting:', error)
             toast.error('Failed to save settings')
         }
     }
 
-    return { settings, loading, updateSetting }
+    return (
+        <SettingsContext.Provider value={{ settings, loading, updateSetting }}>
+            {children}
+        </SettingsContext.Provider>
+    )
 }
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useSettings = () => {
+    const context = useContext(SettingsContext)
+    if (context === undefined) {
+        throw new Error('useSettings must be used within a SettingsProvider')
+    }
+    return context
+}
+
+
