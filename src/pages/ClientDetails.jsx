@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, Mail, Phone, MapPin, Loader2, Building2 } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, MapPin, Loader2, Building2, Image as ImageIcon, FileText } from 'lucide-react'
 import { ClientDialog } from '@/components/ClientDialog'
 import { formatCurrency } from '@/lib/utils'
 
@@ -16,6 +16,7 @@ export default function ClientDetails() {
     const [jobs, setJobs] = useState([])
     const [invoices, setInvoices] = useState([])
     const [quotations, setQuotations] = useState([])
+    const [attachments, setAttachments] = useState([])
     const [isLoading, setIsLoading] = useState(true)
     const [isEditing, setIsEditing] = useState(false)
 
@@ -39,6 +40,19 @@ export default function ClientDetails() {
                 .eq('client_id', id)
                 .order('created_at', { ascending: false })
             setJobs(jobsData || [])
+
+            // Fetch Attachments for these jobs
+            if (jobsData && jobsData.length > 0) {
+                const jobIds = jobsData.map(job => job.id)
+                const { data: attachmentsData } = await supabase
+                    .from('job_attachments')
+                    .select('*')
+                    .in('job_id', jobIds)
+                    .order('created_at', { ascending: false })
+                setAttachments(attachmentsData || [])
+            } else {
+                setAttachments([])
+            }
 
             // Fetch Invoices
             const { data: invoicesData } = await supabase
@@ -195,10 +209,11 @@ export default function ClientDetails() {
 
             {/* History Tabs */}
             <Tabs defaultValue="jobs" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 max-w-[400px]">
+                <TabsList className="grid w-full grid-cols-4 max-w-[500px]">
                     <TabsTrigger value="jobs">Jobs ({jobs.length})</TabsTrigger>
                     <TabsTrigger value="invoices">Invoices ({invoices.length})</TabsTrigger>
                     <TabsTrigger value="quotes">Quotes ({quotations.length})</TabsTrigger>
+                    <TabsTrigger value="photos">Photos ({attachments?.length || 0})</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="jobs" className="mt-6">
@@ -296,6 +311,51 @@ export default function ClientDetails() {
                                             <div className="text-right">
                                                 <p className="font-bold">{formatCurrency(quote.total_amount)}</p>
                                                 <Button variant="link" className="h-auto p-0 text-xs" onClick={() => navigate('/sales')}>View Quote</Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="photos" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Job Photos</CardTitle>
+                            <CardDescription>Gallery of photos from all jobs.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {attachments.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                                    <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-full mb-3">
+                                        <ImageIcon className="h-6 w-6" />
+                                    </div>
+                                    <p>No photos uploaded yet.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {attachments.map((file) => (
+                                        <div key={file.id} className="group relative aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border">
+                                            {file.file_type.startsWith('image/') ? (
+                                                <img
+                                                    src={file.file_url}
+                                                    alt={file.file_name}
+                                                    className="w-full h-full object-cover transition-transform hover:scale-105"
+                                                />
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                                                    <FileText className="h-8 w-8 text-muted-foreground mb-2" />
+                                                    <span className="text-xs truncate w-full">{file.file_name}</span>
+                                                </div>
+                                            )}
+
+                                            <div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <p className="font-medium truncate">{file.description || file.file_name}</p>
+                                                <p className="text-white/70 text-[10px]">
+                                                    {new Date(file.created_at).toLocaleDateString()}
+                                                </p>
                                             </div>
                                         </div>
                                     ))}
