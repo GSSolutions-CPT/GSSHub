@@ -116,7 +116,28 @@ export default function ClientPortal() {
    * 2. Move to Step 2 (Payment Upload)
    * 3. Do NOT update DB yet. DB Update happens after Payment Upload in Step 2.
    */
-  const submitAcceptance = () => {
+  /* 
+   * NEW STORAGE HELPERS
+   */
+  const uploadFileToStorage = async (file, path) => {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${path}_${Math.random().toString(36).substring(7)}.${fileExt}`
+    const filePath = `${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('payment-proofs')
+      .upload(filePath, file)
+
+    if (uploadError) throw uploadError
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('payment-proofs')
+      .getPublicUrl(filePath)
+
+    return publicUrl
+  }
+
+  const submitAcceptance = async () => {
     if (!signature) {
       toast.error('Please sign the document first.')
       return
@@ -125,10 +146,11 @@ export default function ClientPortal() {
     setStep(2)
   }
 
-  const downloadProof = (dataUrl, filename) => {
+  const downloadProof = (url, filename) => {
     const link = document.createElement('a')
-    link.href = dataUrl
+    link.href = url
     link.download = filename
+    link.target = '_blank' // Open in new tab if download fails or for better UX
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -136,23 +158,31 @@ export default function ClientPortal() {
 
 
 
-  const submitFinalAcceptance = async (paymentProofBase64) => {
+  const submitFinalAcceptance = async (paymentProofFile) => {
     const toastId = toast.loading('Submitting acceptance and payment proof...')
     try {
       // Validate inputs
-      if (!paymentProofBase64) {
+      if (!paymentProofFile) {
         throw new Error('Payment proof is required')
       }
       if (!signature) {
         throw new Error('Signature is required')
       }
 
+      // Upload Proof
+      const proofUrl = await uploadFileToStorage(paymentProofFile, `proof_${acceptingQuote.id}`)
+
+      // Upload Signature (Optional but good for easy access)
+      // Convert DataURL to Blob for upload
+      const signatureBlob = await (await fetch(signature)).blob()
+      const signatureUrl = await uploadFileToStorage(new File([signatureBlob], "signature.png", { type: "image/png" }), `sig_${acceptingQuote.id}`)
+
       const { error } = await supabase
         .from('quotations')
         .update({
           status: 'Pending Review',
-          client_signature: signature,
-          payment_proof: paymentProofBase64,
+          client_signature: signatureUrl, // Storing URL now
+          payment_proof: proofUrl, // Storing URL now
           accepted_at: new Date().toISOString()
         })
         .eq('id', acceptingQuote.id)
@@ -175,15 +205,17 @@ export default function ClientPortal() {
     }
   }
 
-  const submitFinalPaymentProof = async (proofBase64) => {
+  const submitFinalPaymentProof = async (proofFile) => {
     const toastId = toast.loading('Uploading final payment proof...')
     try {
-      if (!proofBase64) throw new Error('File is required')
+      if (!proofFile) throw new Error('File is required')
+
+      const proofUrl = await uploadFileToStorage(proofFile, `final_proof_${acceptingQuote.id}`)
 
       const { error } = await supabase
         .from('quotations')
         .update({
-          final_payment_proof: proofBase64,
+          final_payment_proof: proofUrl,
           // final_payment_approved: false // defaults to false anyway
         })
         .eq('id', acceptingQuote.id)
@@ -737,17 +769,14 @@ export default function ClientPortal() {
                       onChange={(e) => {
                         const file = e.target.files[0]
                         if (!file) return
-                        const reader = new FileReader()
-                        reader.onload = async (event) => {
-                          if (step === 2) {
-                            // Initial Acceptance Upload
-                            await submitFinalAcceptance(event.target.result)
-                          } else if (step === 4) {
-                            // Final Payment Upload
-                            await submitFinalPaymentProof(event.target.result)
-                          }
+
+                        if (step === 2) {
+                          // Initial Acceptance Upload
+                          submitFinalAcceptance(file)
+                        } else if (step === 4) {
+                          // Final Payment Upload
+                          submitFinalPaymentProof(file)
                         }
-                        reader.readAsDataURL(file)
                       }}
                     />
                   </label>
@@ -788,11 +817,7 @@ export default function ClientPortal() {
                         onChange={(e) => {
                           const file = e.target.files[0]
                           if (!file) return
-                          const reader = new FileReader()
-                          reader.onload = async (event) => {
-                            await submitFinalPaymentProof(event.target.result)
-                          }
-                          reader.readAsDataURL(file)
+                          submitFinalPaymentProof(file)
                         }}
                       />
                     </label>

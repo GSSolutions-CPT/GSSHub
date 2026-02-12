@@ -398,12 +398,23 @@ const generatePDF = async (docType, data) => {
             // Render Digital Signature if available
             if (data.client_signature) {
                 try {
-                    doc.addImage(data.client_signature, 'PNG', 14, finalPageHeight - 38, 50, 18)
+                    // Check if it's a URL or base64 (Storage URLs start with http)
+                    // If it's a URL, we need to fetch it first
+                    let signatureImg = data.client_signature
+                    if (data.client_signature.startsWith('http')) {
+                        const imgObj = await fetchImage(data.client_signature)
+                        signatureImg = imgObj
+                    }
+
+                    doc.addImage(signatureImg, 'PNG', 14, finalPageHeight - 38, 50, 18)
                     doc.setFontSize(6)
                     doc.setTextColor(0, 128, 0)
                     doc.text(`Digitally Signed: ${new Date(data.accepted_at || new Date()).toLocaleString()}`, 14, finalPageHeight - 12)
                 } catch (e) {
                     console.warn('Error rendering signature:', e)
+                    doc.setFontSize(8)
+                    doc.setTextColor(255, 0, 0)
+                    doc.text('(Signature could not be loaded)', 14, finalPageHeight - 30)
                 }
             }
         }
@@ -433,14 +444,21 @@ const generatePDF = async (docType, data) => {
     }
 }
 
-// Helper to fetch logo
+// Helper to fetch logo or images from URL
 const fetchImage = (url) => {
     return new Promise((resolve, reject) => {
+        if (!url) {
+            reject(new Error('No URL provided'))
+            return
+        }
         const img = new Image()
         img.crossOrigin = "Anonymous"
         img.src = url
         img.onload = () => resolve(img)
-        img.onerror = reject
+        img.onerror = (e) => {
+            console.error('Failed to load image:', url, e)
+            reject(new Error(`Failed to load image from ${url}`))
+        }
     })
 }
 
