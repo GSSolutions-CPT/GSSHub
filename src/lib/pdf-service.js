@@ -4,13 +4,13 @@ import autoTable from 'jspdf-autotable'
 // --- BRAND CONFIGURATION ---
 // --- BRAND CONFIGURATION ---
 const DEFAULT_COLORS = {
-    PRIMARY: [37, 99, 235],     // #2563eb (Security Blue) - Default
-    SECONDARY: [71, 85, 105],   // #475569 (Slate 600)
+    PRIMARY: [37, 99, 235],     // #2563eb
+    SECONDARY: [100, 116, 139], // #64748b (Slate 500)
     DARK: [15, 23, 42],         // #0f172a (Slate 900)
-    LIGHT: [241, 245, 249],     // #f1f5f9 (Slate 100)
-    WHITE: [255, 255, 255],
-    TEXT_MAIN: [30, 41, 59],    // #1e293b
-    TEXT_MUTED: [100, 116, 139] // #64748b
+    LIGHT: [248, 250, 252],     // #f8fafc (Slate 50)
+    BORDER: [226, 232, 240],    // #e2e8f0 (Slate 200)
+    TEXT_MAIN: [30, 41, 59],    // #1e293b (Slate 800)
+    TEXT_MUTED: [148, 163, 184] // #94a3b8 (Slate 400)
 }
 
 const hexToRgb = (hex) => {
@@ -25,7 +25,7 @@ const hexToRgb = (hex) => {
 
 // --- MAIN GENERATOR FUNCTION ---
 const generatePDF = async (docType, data, settings = {}) => {
-    console.log('Generating PDF for:', docType, data, settings)
+    console.log('Generating PDF (Premium V2) for:', docType, data, settings)
     const COLORS = { ...DEFAULT_COLORS }
 
     // Apply dynamic primary color
@@ -45,171 +45,138 @@ const generatePDF = async (docType, data, settings = {}) => {
     }
 
     try {
-        // Initialize PDF (A4 Portrait) - Margins: Left/Right 15mm
+        // Initialize PDF (A4 Portrait)
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
         const pageWidth = doc.internal.pageSize.getWidth() // 210mm
         const pageHeight = doc.internal.pageSize.getHeight() // 297mm
         const margin = 15
-        const contentWidth = pageWidth - (margin * 2)
+        const contentW = pageWidth - (margin * 2)
 
         // Helper: Styled Text
         const text = (str, x, y, options = {}) => {
-            const { size = 10, color = COLORS.TEXT_MAIN, font = 'helvetica', style = 'normal', align = 'left' } = options
+            const { size = 10, color = COLORS.TEXT_MAIN, font = 'helvetica', style = 'normal', align = 'left', maxWidth = 0 } = options
             doc.setFontSize(size)
             doc.setTextColor(...color)
             doc.setFont(font, style)
-            doc.text(String(str), x, y, { align })
-        }
-
-        // Helper: Draw Section Background
-        const drawSectionBg = (y, h, color) => {
-            doc.setFillColor(...color)
-            doc.rect(0, y, pageWidth, h, 'F')
+            if (maxWidth > 0) {
+                doc.text(String(str), x, y, { align, maxWidth })
+            } else {
+                doc.text(String(str), x, y, { align })
+            }
         }
 
         // ==========================================
-        // 1. HEADER SECTION
+        // 1. BRAND SIDEBAR ACCENT OR MINIMAL HEADER
         // ==========================================
-        // Background Strip
-        drawSectionBg(0, 40, COLORS.DARK)
+        // We'll go with a clean top layout with a subtle left accent bar on the title
 
-        // Logo Handling
+        // 1.1 Brand Logo (Top Left)
         try {
             const logoUrl = settings.logoUrl || (window.location.origin + '/logo.png')
             const img = await fetchImage(logoUrl)
 
-            // Fixed height, auto width to maintain aspect ratio
-            const logoH = 20
+            const logoH = 22
             const imgProps = doc.getImageProperties(img)
             const logoW = (imgProps.width * logoH) / imgProps.height
 
-            doc.addImage(img, 'PNG', margin, 10, logoW, logoH)
+            doc.addImage(img, 'PNG', margin, 12, logoW, logoH)
         } catch (e) {
             console.warn('Logo load failed', e)
-            text(company.name, margin, 22, { size: 18, color: COLORS.WHITE, style: 'bold' })
+            text(company.name, margin, 25, { size: 18, style: 'bold', color: COLORS.PRIMARY })
         }
 
-        // Company Details (Right Aligned in Header)
-        const headerTextX = pageWidth - margin
-        let headerY = 12
-        text(company.address, headerTextX, headerY, { align: 'right', color: COLORS.LIGHT, size: 9 })
-        headerY += 5
-        text(company.email, headerTextX, headerY, { align: 'right', color: COLORS.LIGHT, size: 9 })
-        headerY += 5
-        text(company.phone, headerTextX, headerY, { align: 'right', color: COLORS.LIGHT, size: 9 })
-        if (company.vat) {
-            headerY += 5
-            text(`VAT: ${company.vat}`, headerTextX, headerY, { align: 'right', color: COLORS.LIGHT, size: 9 })
-        }
-
-        // ==========================================
-        // 2. DOCUMENT TITLE STRIP
-        // ==========================================
-        drawSectionBg(40, 15, COLORS.PRIMARY)
-
-        // Title
+        // 1.2 Document Title & ID (Top Right)
         let titleText = docType.toUpperCase()
         if (docType === 'Invoice') titleText = data.vat_applicable ? 'TAX INVOICE' : 'INVOICE'
         if (docType === 'Quotation' && (data.status === 'Accepted')) titleText = 'PROFORMA INVOICE'
 
-        text(titleText, margin, 50, { size: 14, color: COLORS.WHITE, style: 'bold', font: 'helvetica' })
+        text(titleText, pageWidth - margin, 20, { size: 20, align: 'right', color: COLORS.TEXT_MAIN, style: 'bold', font: 'helvetica' })
 
-        // Meta (Doc Number & Date)
-        const dateValue = new Date(data.date_created).toLocaleDateString()
-        const metaText = `NUMBER: ${data.id.substring(0, 8).toUpperCase()}    |    DATE: ${dateValue}`
-        text(metaText, pageWidth - margin, 50, { align: 'right', size: 10, color: COLORS.WHITE, style: 'bold' })
+        doc.setDrawColor(...COLORS.PRIMARY)
+        doc.setLineWidth(1)
+        doc.line(pageWidth - margin - 40, 24, pageWidth - margin, 24) // Accent line under title
 
+        text(`# ${data.id.substring(0, 8).toUpperCase()}`, pageWidth - margin, 30, { size: 10, align: 'right', color: COLORS.SECONDARY })
 
         // ==========================================
-        // 3. INFORMATION GRID
+        // 2. HEADER GRID (FROM / TO / DETAILS)
         // ==========================================
-        const gridY = 70
-        const colW = contentWidth / 2 - 5
+        let cursorY = 50
 
-        // LEFT COLUMN: BILL TO
-        text(docType === 'Purchase Order' ? 'VENDOR' : 'BILL TO', margin, gridY, { size: 9, color: COLORS.TEXT_MUTED, style: 'bold' })
+        // 2.1 Sender (Company) Details - Subtle, Left
+        text("FROM", margin, cursorY, { size: 7, color: COLORS.TEXT_MUTED, style: 'bold' })
+        cursorY += 5
+        text(company.name, margin, cursorY, { size: 9, style: 'bold' })
+        cursorY += 5
+        text(company.address, margin, cursorY, { size: 8, color: COLORS.SECONDARY })
+        cursorY += 4
+        text(company.email, margin, cursorY, { size: 8, color: COLORS.SECONDARY })
+        cursorY += 4
+        text(company.phone, margin, cursorY, { size: 8, color: COLORS.SECONDARY })
+        if (company.vat) {
+            cursorY += 4
+            text(`VAT: ${company.vat}`, margin, cursorY, { size: 8, color: COLORS.SECONDARY })
+        }
+
+        // 2.2 Client Details - Right aligned to center or right? Let's do Left-Center for balance
+        const clientColX = margin + 80
+        let clientY = 50
+
+        text(docType === 'Purchase Order' ? 'VENDOR' : 'BILL TO', clientColX, clientY, { size: 7, color: COLORS.TEXT_MUTED, style: 'bold' })
+        clientY += 5
 
         const clientName = docType === 'Purchase Order' ? (data.suppliers?.name || 'Unknown Supplier') : (data.clients?.name || 'Unknown Client')
         const contactPerson = docType === 'Purchase Order' ? data.suppliers?.contact_person : data.clients?.contact_person
-        if (contactPerson) {
-            // Optional: Display contact person
-        } // Not displaying contact person in main block to save space, or maybe add if space permits
         const clientEmail = docType === 'Purchase Order' ? data.suppliers?.email : data.clients?.email
         const clientPhone = docType === 'Purchase Order' ? data.suppliers?.phone : data.clients?.phone
         const clientAddr = docType === 'Purchase Order' ? data.suppliers?.address : data.clients?.address
         const clientCompany = docType === 'Purchase Order' ? '' : data.clients?.company
 
-        let clientY = gridY + 6
-
-        // Primary Name (Company or Individual)
-        text(clientCompany || clientName, margin, clientY, { size: 11, style: 'bold', color: COLORS.TEXT_MAIN })
+        text(clientCompany || clientName, clientColX, clientY, { size: 9, style: 'bold' })
         clientY += 5
 
-        doc.setFontSize(10)
-        doc.setTextColor(...COLORS.TEXT_MAIN)
-        doc.setFont('helvetica', 'normal')
-
-        // If company, show contact person
         if (clientCompany && clientName !== clientCompany) {
-            doc.text(`Attn: ${clientName}`, margin, clientY)
-            clientY += 5
+            text(`Attn: ${clientName}`, clientColX, clientY, { size: 8, color: COLORS.SECONDARY })
+            clientY += 4
         }
-
-        if (clientEmail) { doc.text(clientEmail, margin, clientY); clientY += 5 }
-        if (clientPhone) { doc.text(clientPhone, margin, clientY); clientY += 5 }
-
+        if (contactPerson) {
+            // Optional
+        }
+        if (clientEmail) { text(clientEmail, clientColX, clientY, { size: 8, color: COLORS.SECONDARY }); clientY += 4 }
+        if (clientPhone) { text(clientPhone, clientColX, clientY, { size: 8, color: COLORS.SECONDARY }); clientY += 4 }
         if (clientAddr) {
-            const splitAddr = doc.splitTextToSize(clientAddr, colW)
-            doc.text(splitAddr, margin, clientY)
+            doc.setFontSize(8); doc.setTextColor(...COLORS.SECONDARY);
+            const splitAddr = doc.splitTextToSize(clientAddr, 70)
+            doc.text(splitAddr, clientColX, clientY)
         }
 
-        // RIGHT COLUMN: DETAILS / SHIP TO
-        const rightColX = pageWidth - margin - colW
+        // 2.3 Dates & Meta - Far Right
+        const metaX = pageWidth - margin - 40
+        let metaY = 50
 
-        text(docType === 'Purchase Order' ? 'SHIP TO' : 'PROJECT DETAILS', rightColX, gridY, { size: 9, color: COLORS.TEXT_MUTED, style: 'bold' })
+        const metaRow = (label, val) => {
+            text(label, metaX, metaY, { size: 7, color: COLORS.TEXT_MUTED, style: 'bold' })
+            text(val, pageWidth - margin, metaY, { size: 8, align: 'right', color: COLORS.TEXT_MAIN })
+            metaY += 8
+        }
 
-        let refY = gridY + 6
+        metaRow("DATE", new Date(data.date_created).toLocaleDateString())
 
-        if (docType === 'Purchase Order') {
-            text(company.name, rightColX, refY, { size: 11, style: 'bold', color: COLORS.TEXT_MAIN })
-            refY += 5
-            doc.setFontSize(10); doc.setTextColor(...COLORS.TEXT_MAIN); doc.setFont('helvetica', 'normal')
-            const splitSite = doc.splitTextToSize(company.address, colW)
-            doc.text(splitSite, rightColX, refY)
-        } else {
-            // Reference
-            if (data.metadata?.reference) {
-                text("Reference:", rightColX, refY, { size: 9, color: COLORS.TEXT_MUTED })
-                const splitRef = doc.splitTextToSize(data.metadata.reference, colW - 25)
-                doc.setTextColor(...COLORS.TEXT_MAIN)
-                doc.text(splitRef, rightColX + 22, refY)
-                refY += (splitRef.length * 5) + 2
-            }
+        if (data.valid_until) metaRow("VALID UNTIL", new Date(data.valid_until).toLocaleDateString())
+        if (data.due_date) metaRow("DUE DATE", new Date(data.due_date).toLocaleDateString())
 
-            // Validity (Quotes) or Due Date (Invoices)
-            if (docType === 'Quotation' && data.valid_until) {
-                text("Valid Until:", rightColX, refY, { size: 9, color: COLORS.TEXT_MUTED })
-                text(new Date(data.valid_until).toLocaleDateString(), rightColX + 22, refY, { size: 9, color: COLORS.TEXT_MAIN })
-                refY += 6
-            }
-            if (docType === 'Invoice' && data.due_date) {
-                text("Due Date:", rightColX, refY, { size: 9, color: COLORS.TEXT_MUTED })
-                text(new Date(data.due_date).toLocaleDateString(), rightColX + 22, refY, { size: 9, color: COLORS.TEXT_MAIN })
-                refY += 6
-            }
-
-            // Payment Terms
-            text("Terms:", rightColX, refY, { size: 9, color: COLORS.TEXT_MUTED })
-            const termText = data.payment_type === 'full'
-                ? '100% Upfront'
-                : `${data.deposit_percentage || 75}% Deposit`
-            text(termText, rightColX + 22, refY, { size: 9, color: COLORS.PRIMARY, style: 'bold' })
+        if (data.metadata?.reference) {
+            text("REFERENCE", metaX, metaY, { size: 7, color: COLORS.TEXT_MUTED, style: 'bold' })
+            // wrapping ref id if long
+            const refH = doc.getTextDimensions(data.metadata.reference, { fontSize: 8, maxWidth: 40 }).h
+            text(data.metadata.reference, pageWidth - margin, metaY, { size: 8, align: 'right', color: COLORS.TEXT_MAIN, maxWidth: 40 })
+            metaY += (Math.max(8, refH + 2))
         }
 
         // ==========================================
-        // 4. ITEMS TABLE
+        // 3. CLEAN TABLE
         // ==========================================
-        const tableY = Math.max(clientY, refY) + 10
+        const tableY = Math.max(cursorY, clientY, metaY) + 15
 
         const tableRows = []
         if (data.lines && data.lines.length > 0) {
@@ -229,45 +196,44 @@ const generatePDF = async (docType, data, settings = {}) => {
             startY: tableY,
             head: [["DESCRIPTION", "QTY", "UNIT PRICE", "TOTAL"]],
             body: tableRows,
-            theme: 'grid',
+            theme: 'plain', // Minimalist
             headStyles: {
-                fillColor: COLORS.PRIMARY,
-                textColor: COLORS.WHITE,
-                fontSize: 9,
+                fillColor: COLORS.LIGHT,
+                textColor: COLORS.TEXT_MUTED,
+                fontSize: 8,
                 fontStyle: 'bold',
                 halign: 'left',
-                cellPadding: { top: 3, bottom: 2, left: 3, right: 3 }
+                cellPadding: { top: 4, bottom: 4, left: 2, right: 2 }
             },
             bodyStyles: {
                 textColor: COLORS.TEXT_MAIN,
                 fontSize: 9,
-                cellPadding: 3,
-                valign: 'middle',
-                lineColor: [226, 232, 240] // Slate 200
+                cellPadding: { top: 4, bottom: 4, left: 2, right: 2 },
+                valign: 'top',
+                lineColor: COLORS.BORDER,
+                lineWidth: { bottom: 0.1 } // Only bottom border
             },
             columnStyles: {
-                0: { cellWidth: 'auto' },
-                1: { cellWidth: 15, halign: 'center' },
-                2: { cellWidth: 30, halign: 'right' },
+                0: { cellWidth: 'auto' }, // Desc
+                1: { cellWidth: 20, halign: 'center' },
+                2: { cellWidth: 35, halign: 'right' },
                 3: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
             },
             didDrawPage: () => {
-                // Header is already drawn
+                // No complex headers needed per page
             }
         })
 
         // ==========================================
-        // 5. FOOTER SECTION (Bank & Totals)
+        // 4. FOOTER / TOTALS LAYOUT
         // ==========================================
         let finalY = doc.lastAutoTable.finalY + 10
-
-        // Ensure we don't start too close to bottom
         if (finalY > pageHeight - 60) {
             doc.addPage()
             finalY = 20
         }
 
-        // --- Totals Calculation ---
+        // Totals Calculation
         let taxRate = 0.15
         if (settings.taxRate) taxRate = parseFloat(settings.taxRate) / 100
 
@@ -283,31 +249,19 @@ const generatePDF = async (docType, data, settings = {}) => {
         const depositVal = parseFloat(data.deposit_amount || 0)
         const balanceDue = totalVal - depositVal
 
-
-        // --- Banking Details Box (Left Side) ---
+        // 4.1 Banking Details (Floating Left, Clean)
         if (docType !== 'Purchase Order') {
-            const bankBoxW = 90
-            const bankBoxH = 35
+            text("BANKING DETAILS", margin, finalY + 4, { size: 8, style: 'bold', color: COLORS.TEXT_MAIN })
 
-            doc.setFillColor(...COLORS.LIGHT)
-            doc.roundedRect(margin, finalY, bankBoxW, bankBoxH, 2, 2, 'F')
+            // Accent Line
+            doc.setDrawColor(...COLORS.PRIMARY)
+            doc.setLineWidth(0.5)
+            doc.line(margin, finalY + 7, margin + 40, finalY + 7)
 
-            // Header
-            doc.setFillColor(...COLORS.SECONDARY)
-            doc.roundedRect(margin, finalY, bankBoxW, 7, 2, 2, 'F')
-            // Fix corners? simplified: just draw rect
-            doc.rect(margin, finalY + 5, bankBoxW, 2, 'F') // filler to square off bottom corners of header
-
-            text("BANKING DETAILS", margin + 3, finalY + 4.5, { size: 8, color: COLORS.WHITE, style: 'bold' })
-
-            // Details
-            let bankY = finalY + 11
-            const bankLabelX = margin + 3
-            const bankValX = margin + 30
-
-            const bankRow = (label, value) => {
-                text(label, bankLabelX, bankY, { size: 8, color: COLORS.TEXT_MUTED })
-                text(value, bankValX, bankY, { size: 8, color: COLORS.TEXT_MAIN, style: 'bold' })
+            let bankY = finalY + 14
+            const bankRow = (label, val) => {
+                text(label, margin, bankY, { size: 8, color: COLORS.TEXT_MUTED })
+                text(val, margin + 25, bankY, { size: 8, color: COLORS.TEXT_MAIN, style: 'bold' })
                 bankY += 5
             }
 
@@ -317,115 +271,105 @@ const generatePDF = async (docType, data, settings = {}) => {
             bankRow("Reference:", settings.bankReference || data.id.substring(0, 8))
         }
 
-        // --- Totals Box (Right Side) ---
+        // 4.2 Totals (Right Aligned, Large Typography)
         const totalsW = 80
         const totalsX = pageWidth - margin - totalsW
         let totalsY = finalY
 
-        const totalRow = (label, value, isBold = false, isGrand = false) => {
-            text(label, totalsX, totalsY, { size: isGrand ? 11 : 9, color: isGrand ? COLORS.TEXT_MAIN : COLORS.TEXT_MUTED, style: (isGrand || isBold) ? 'bold' : 'normal' })
-            text(value, pageWidth - margin, totalsY, { align: 'right', size: isGrand ? 12 : 9, color: isGrand ? COLORS.PRIMARY : COLORS.TEXT_MAIN, style: (isGrand || isBold) ? 'bold' : 'normal' })
-            totalsY += isGrand ? 8 : 6
+        const totalRow = (label, value, size = 9, color = COLORS.TEXT_MUTED, weight = 'normal') => {
+            text(label, totalsX, totalsY, { size, color, style: weight })
+            text(value, pageWidth - margin, totalsY, { size, align: 'right', color: COLORS.TEXT_MAIN, style: 'bold' })
+            totalsY += (size + 4)
         }
 
         totalRow("Subtotal", `R ${subtotalVal.toFixed(2)}`)
-        totalRow(data.vat_applicable ? `VAT (${(taxRate * 100).toFixed(0)}%)` : "VAT (0%)", `R ${vatVal.toFixed(2)}`)
+        if (vatVal > 0) totalRow(`VAT (${(taxRate * 100).toFixed(0)}%)`, `R ${vatVal.toFixed(2)}`)
 
-        // Dotted Line
-        doc.setDrawColor(...COLORS.SECONDARY)
-        doc.setLineWidth(0.1)
-        doc.setLineDash([1, 1], 0)
-        doc.line(totalsX, totalsY - 2, pageWidth - margin, totalsY - 2)
-        doc.setLineDash([])
-        totalsY += 2
-
-        totalRow("TOTAL", `R ${totalVal.toFixed(2)}`, true, true)
+        totalsY += 4
+        // Big Total
+        text("TOTAL", totalsX, totalsY, { size: 10, style: 'bold' })
+        text(`R ${totalVal.toFixed(2)}`, pageWidth - margin, totalsY, { size: 14, style: 'bold', color: COLORS.PRIMARY, align: 'right' })
+        totalsY += 10
 
         if (depositVal > 0) {
-            totalsY += 2
-            totalRow("Paid / Deposit", `(R ${depositVal.toFixed(2)})`)
-
-            // Balance Highlight
+            totalRow("Less Paid", `(R ${depositVal.toFixed(2)})`, 9, COLORS.TEXT_MUTED)
+            // Balance Accent
             doc.setFillColor(...COLORS.LIGHT)
-            doc.roundedRect(totalsX - 2, totalsY - 4, totalsW + 2, 10, 1, 1, 'F')
-            totalsY += 2
-            text("BALANCE DUE", totalsX + 2, totalsY, { size: 10, style: 'bold', color: COLORS.TEXT_MAIN })
-            text(`R ${balanceDue.toFixed(2)}`, pageWidth - margin - 2, totalsY, { align: 'right', size: 10, style: 'bold', color: COLORS.PRIMARY })
+            doc.roundedRect(totalsX - 2, totalsY - 4, totalsW + 2, 12, 1, 1, 'F')
+
+            text("BALANCE DUE", totalsX + 2, totalsY + 4, { size: 9, style: 'bold', color: COLORS.TEXT_MAIN })
+            text(`R ${balanceDue.toFixed(2)}`, pageWidth - margin - 2, totalsY + 4, { size: 11, style: 'bold', align: 'right', color: COLORS.PRIMARY })
         }
 
-        // ==========================================
-        // 6. TERMS (Separate Page if needed, or inline)
-        // ==========================================
-
-        if (docType !== 'Purchase Order') {
-
-            const terms = settings.legalTerms || "Standard Terms and Conditions apply. Please request a copy if required. Goods remain property of the supplier until paid in full."
-
-            // Heading
-            let termsY = finalY + 45
-            if (termsY > pageHeight - 30) {
-                doc.addPage()
-                termsY = 20
-            }
-
-            text("TERMS AND CONDITIONS", margin, termsY, { size: 9, style: 'bold', color: COLORS.TEXT_MAIN })
-            termsY += 5
-
-            doc.setFontSize(8)
-            doc.setTextColor(...COLORS.TEXT_MUTED)
-            doc.setFont('helvetica', 'normal')
-
-            const splitTerms = doc.splitTextToSize(terms, contentWidth)
-            doc.text(splitTerms, margin, termsY)
-
-            // Signature Section
-            const sigY = pageHeight - 40
-
-            // Check if we need new page for signature
-            if (termsY + splitTerms.length * 4 > sigY - 20) {
-                doc.addPage()
-            }
-
-            // Signature Lines
-            doc.setDrawColor(...COLORS.SECONDARY)
-            doc.setLineWidth(0.5)
-
-            const sigLineY = pageHeight - 30
-            const sigW = 70
-
-            doc.line(margin, sigLineY, margin + sigW, sigLineY) // Client
-            text("CLIENT SIGNATURE", margin, sigLineY + 5, { size: 7, color: COLORS.TEXT_MUTED })
-
-            doc.line(pageWidth - margin - sigW, sigLineY, pageWidth - margin, sigLineY) // Date
-            text("DATE", pageWidth - margin - sigW, sigLineY + 5, { size: 7, color: COLORS.TEXT_MUTED })
-
-            // Digital Signature Render
-            if (data.client_signature) {
-                try {
-                    doc.addImage(data.client_signature, 'PNG', margin + 5, sigLineY - 15, 40, 15)
-                    text(`Digital ID: ${data.id}`, margin, sigLineY + 9, { size: 6, color: COLORS.TEXT_MUTED })
-                } catch (e) {
-                    console.log('Sig render error', e)
-                }
-            }
-        }
 
         // ==========================================
-        // 7. PAGE NUMBERS
+        // 5. GLOBAL FOOTER (Page Numbers)
         // ==========================================
         const pageCount = doc.internal.getNumberOfPages()
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i)
+            const pH = doc.internal.pageSize.getHeight()
 
-            // Footer Line
-            doc.setDrawColor(...COLORS.LIGHT)
-            doc.setLineWidth(0.5)
-            doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15)
+            // Subtle footer line
+            doc.setDrawColor(...COLORS.BORDER)
+            doc.setLineWidth(0.1)
+            doc.line(margin, pH - 15, pageWidth - margin, pH - 15)
 
-            // Text
-            const footerText = `${company.name}  |  ${company.website || company.email}`
-            text(footerText, margin, pageHeight - 10, { size: 8, color: COLORS.TEXT_MUTED })
-            text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right', size: 8, color: COLORS.TEXT_MUTED })
+            text(company.website || company.email, margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED })
+            text(`Page ${i} of ${pageCount}`, pageWidth - margin, pH - 10, { size: 8, color: COLORS.TEXT_MUTED, align: 'right' })
+        }
+
+        // ==========================================
+        // 6. TERMS (New Page if Needed)
+        // ==========================================
+        if (docType !== 'Purchase Order') {
+            const terms = settings.legalTerms || null
+            if (terms) {
+                // If there's barely any space left on main page, break
+                if (finalY + 60 > pageHeight - 30) {
+                    doc.addPage()
+                    finalY = 20
+                } else {
+                    finalY += 30 // Gap after banking/totals
+                }
+
+                // If on new page, reset Y
+                let y = (finalY > 200) ? 20 : finalY
+                if (y === 20) {
+                    // Add header for new page? Nah, simple is better
+                }
+
+                text("TERMS & CONDITIONS", margin, y, { size: 8, style: 'bold', color: COLORS.TEXT_MUTED })
+                y += 5
+                doc.setFontSize(7)
+                doc.setTextColor(...COLORS.TEXT_MUTED)
+                const splitTerms = doc.splitTextToSize(terms, contentW)
+                doc.text(splitTerms, margin, y)
+                y += (splitTerms.length * 3.5) + 10
+
+                // Signatures
+                if (y > pageHeight - 40) {
+                    doc.addPage()
+                    y = 30
+                }
+
+                // Signature Lines
+                doc.setDrawColor(...COLORS.BORDER)
+                doc.setLineWidth(0.5)
+
+                doc.line(margin, y + 15, margin + 60, y + 15)
+                text("CLIENT SIGNATURE", margin, y + 20, { size: 7, color: COLORS.TEXT_MUTED })
+
+                doc.line(pageWidth - margin - 60, y + 15, pageWidth - margin, y + 15)
+                text("DATE", pageWidth - margin - 60, y + 20, { size: 7, color: COLORS.TEXT_MUTED })
+
+                // Digital Sig
+                if (data.client_signature) {
+                    try {
+                        doc.addImage(data.client_signature, 'PNG', margin + 5, y, 40, 14)
+                    } catch (err) { console.log(err) }
+                }
+            }
         }
 
         doc.save(`${titleText}_${data.id.substring(0, 8)}.pdf`)
