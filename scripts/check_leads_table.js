@@ -34,7 +34,7 @@ async function checkLeadsTable() {
     console.log('Checking for "leads" table...')
 
     try {
-        const { count, error } = await supabase
+        const { error } = await supabase
             .from('leads')
             .select('*', { count: 'exact', head: true })
 
