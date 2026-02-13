@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { ClientDialog } from '@/components/ClientDialog'
+import { ProductSearch } from '@/components/ProductSearch'
 
 export default function CreateSale() {
   const navigate = useNavigate()
@@ -466,28 +467,17 @@ export default function CreateSale() {
                         <Label className="text-xs text-muted-foreground uppercase tracking-wider">Product / Description</Label>
                         <div className="flex gap-2">
                           <div className="w-1/3 min-w-[140px]">
-                            <Select
+                            <ProductSearch
+                              products={products}
                               value={item.product_id || "custom"}
-                              onValueChange={(value) => {
+                              onSelect={(value) => {
                                 if (value === "custom") {
                                   updateLineItem(index, 'product_id', null)
                                 } else {
                                   updateLineItem(index, 'product_id', value)
                                 }
                               }}
-                            >
-                              <SelectTrigger className="bg-white dark:bg-slate-950">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="custom">Custom Item</SelectItem>
-                                {products.map((product) => (
-                                  <SelectItem key={product.id} value={product.id}>
-                                    {product.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            />
                           </div>
                           <Input
                             className="flex-1 bg-white dark:bg-slate-950"
