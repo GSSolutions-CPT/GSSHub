@@ -12,6 +12,7 @@ import { useCurrency } from '@/lib/use-currency.jsx'
 import { toast } from 'sonner'
 import { ImportProductsDialog } from '@/components/ImportProductsDialog'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 export default function Products() {
   const { formatCurrency } = useCurrency()
@@ -20,6 +21,7 @@ export default function Products() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [selectedCategory, setSelectedCategory] = useState('All')
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -148,11 +150,17 @@ export default function Products() {
     }
   }
 
-  const filteredProducts = products.filter(product =>
-    product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const categories = ['All', ...[...new Set(products.map(p => p.category))].filter(Boolean).sort()]
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory
+
+    return matchesSearch && matchesCategory
+  })
 
   const calculateMargin = (retail, cost) => {
     if (!retail || !cost) return 0
@@ -321,6 +329,31 @@ export default function Products() {
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+
+        {/* Category Navigation Bar */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-4 no-scrollbar -mx-1 px-1">
+          {categories.map((category) => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedCategory(category)}
+              className={cn(
+                "rounded-full px-6 transition-all whitespace-nowrap border-slate-200 dark:border-slate-800",
+                selectedCategory === category
+                  ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20"
+                  : "bg-white dark:bg-slate-900 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 hover:text-indigo-600 dark:hover:text-indigo-400"
+              )}
+            >
+              {category}
+              {category !== 'All' && (
+                <span className="ml-2 text-[10px] opacity-60">
+                  {products.filter(p => p.category === category).length}
+                </span>
+              )}
+            </Button>
+          ))}
         </div>
 
         {/* Products Grid */}

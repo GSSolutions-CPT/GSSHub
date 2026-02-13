@@ -19,6 +19,7 @@ const Financials = lazy(() => import('./pages/Financials.jsx'))
 const ClientPortal = lazy(() => import('./pages/ClientPortal.jsx'))
 const Contracts = lazy(() => import('./pages/Contracts.jsx'))
 const Settings = lazy(() => import('./pages/Settings.jsx'))
+const ProfileSetup = lazy(() => import('./pages/ProfileSetup.jsx'))
 const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 
 
@@ -26,12 +27,13 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <AuthProvider>
-        <Router>
+        <Router basename="/portal">
           <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading…</div>}>
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/portal" element={<ClientPortal />} />
+              <Route path="/setup-profile/:id" element={<ProfileSetup />} />
 
               {/* Protected Admin Routes */}
               <Route path="/" element={
