@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { ClientDialog } from '@/components/ClientDialog'
 import { ProductSearch } from '@/components/ProductSearch'
+import { ClientSearch } from '@/components/ClientSearch'
 
 export default function CreateSale() {
   const navigate = useNavigate()
@@ -363,31 +364,22 @@ export default function CreateSale() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="client_id">Select Client</Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={formData.client_id}
-                    onValueChange={(value) => setFormData({ ...formData, client_id: value })}
-                  >
-                    <SelectTrigger className="h-11 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex-1">
-                      <SelectValue placeholder="Choose a client..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          <span className="font-medium">{client.name}</span>
-                          {client.company && <span className="text-muted-foreground ml-2">({client.company})</span>}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
+                <div className="flex gap-2 w-full">
+                  <div className="flex-1">
+                    <ClientSearch
+                      clients={clients}
+                      value={formData.client_id}
+                      onSelect={(value) => setFormData({ ...formData, client_id: value })}
+                      onAddNew={() => document.getElementById('add-new-client-trigger')?.click()}
+                    />
+                  </div>
                   <ClientDialog
                     onSuccess={(newClient) => {
                       setClients(prev => [newClient, ...prev])
                       setFormData(prev => ({ ...prev, client_id: newClient.id }))
                     }}
                     trigger={
-                      <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" type="button">
+                      <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" type="button" id="add-new-client-trigger">
                         <Plus className="h-5 w-5" />
                       </Button>
                     }
@@ -515,8 +507,13 @@ export default function CreateSale() {
                       </div>
                       <div className="flex-1 text-right">
                         <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Total</p>
-                        <div className="h-10 flex items-center justify-end px-3 font-semibold text-lg">
-                          {formatCurrency(item.quantity * item.unit_price)}
+                        <div className="h-10 flex flex-col items-end justify-center px-3">
+                          <span className="font-semibold text-lg">{formatCurrency(item.quantity * item.unit_price)}</span>
+                          {(item.unit_price > 0 && item.cost_price > 0) && (
+                            <span className={`text-[10px] font-medium ${((item.unit_price - item.cost_price) / item.unit_price) < 0.2 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                              {Math.round(((item.unit_price - item.cost_price) / item.unit_price) * 100)}% Margin
+                            </span>
+                          )}
                         </div>
                       </div>
 
