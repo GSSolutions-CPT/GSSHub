@@ -11,7 +11,7 @@ async function testPublicInsert() {
     console.log('Testing PUBLIC INSERT into "clients" table...')
 
     const testClient = {
-        name: 'Integration Test User',
+        name: `Integration Test User - ${new Date().toISOString()}`,
         email: 'test@example.com',
         phone: '0000000000',
         company: 'Review Me - Website Lead',
