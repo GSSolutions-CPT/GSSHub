@@ -128,7 +128,8 @@ export default function Login() {
                         </div>
                     </CardContent>
 
-                    <CardFooter className="pt-2 pb-8">
+                    <CardFooter className="flex flex-col gap-4 pt-2 pb-8">
+                        {/* Sign In Button */}
                         <Button
                             className="w-full h-11 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white shadow-lg shadow-blue-500/20 transition-all duration-300 transform hover:-translate-y-0.5"
                             type="submit"
@@ -143,22 +144,24 @@ export default function Login() {
                             )}
                         </Button>
 
-                        <div className="relative my-6">
+                        {/* Divider */}
+                        <div className="relative w-full my-2">
                             <div className="absolute inset-0 flex items-center">
                                 <span className="w-full border-t border-slate-200 dark:border-slate-800" />
                             </div>
                             <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-white dark:bg-slate-900 px-2 text-slate-500">Or continue with</span>
+                                <span className="bg-white dark:bg-slate-900 px-3 text-slate-400 tracking-wider">Or continue with</span>
                             </div>
                         </div>
 
+                        {/* Google Button */}
                         <Button
                             type="button"
                             variant="outline"
                             className="w-full h-11 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all font-semibold"
                             onClick={() => signInWithGoogle()}
                         >
-                            <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                            <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                                 <path
                                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                                     fill="#4285F4"
@@ -176,10 +179,11 @@ export default function Login() {
                                     fill="#EA4335"
                                 />
                             </svg>
-                            Google Account
+                            Continue with Google
                         </Button>
 
-                        <div className="w-full text-center mt-4">
+                        {/* Register Link */}
+                        <div className="w-full text-center mt-2">
                             <p className="text-sm text-slate-500 dark:text-slate-400">
                                 Don&apos;t have an account?{' '}
                                 <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-500 hover:underline transition-colors">
