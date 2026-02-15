@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Search, FileText, Receipt, Banknote, Calendar, Download, Trash2, CheckCircle, Package, FileSignature, AlertCircle, Share2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Search, FileText, Receipt, Banknote, Calendar, Download, Trash2, CheckCircle, Package, FileSignature, AlertCircle, Share2, Wrench } from 'lucide-react'
+import InstallationDetails from '@/components/InstallationDetails'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF, generatePurchaseOrderPDF } from '@/lib/pdf-service'
@@ -22,6 +24,8 @@ export default function Sales() {
   const [invoices, setInvoices] = useState([])
   const [purchaseOrders, setPurchaseOrders] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [installationDetailsOpen, setInstallationDetailsOpen] = useState(false)
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(null)
 
   // Calculate Summary Stats
   const activeQuotes = quotations.filter(q => ['Draft', 'Sent', 'Pending Review'].includes(q.status))
@@ -559,6 +563,20 @@ export default function Sales() {
                 {(sale.status === 'Sent' || sale.status === 'Overdue') && (
                   <Button size="sm" onClick={() => updateStatus('invoice', sale.id, 'Paid')} className="w-full bg-green-600 hover:bg-green-700">Mark Paid</Button>
                 )}
+                {sale.status === 'Paid' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-900/50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                    onClick={() => {
+                      setSelectedInvoiceId(sale.id)
+                      setInstallationDetailsOpen(true)
+                    }}
+                  >
+                    <Wrench className="h-4 w-4 mr-1" />
+                    Installation
+                  </Button>
+                )}
               </>
             )}
 
@@ -884,6 +902,21 @@ export default function Sales() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Installation Details Modal */}
+      <Dialog open={installationDetailsOpen} onOpenChange={setInstallationDetailsOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Installation Details</DialogTitle>
+            <DialogDescription>
+              Manage installation photos and serial numbers for Invoice #{selectedInvoiceId?.substring(0, 8)}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedInvoiceId && (
+            <InstallationDetails invoiceId={selectedInvoiceId} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
