@@ -1,9 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useState, useEffect } from 'react'
 import './App.css'
 import { ThemeProvider } from '@/lib/use-theme.jsx'
-import { AuthProvider } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
+import { supabase } from './lib/supabase'
 
 const Layout = lazy(() => import('./components/Layout.jsx'))
 const Login = lazy(() => import('./pages/Login.jsx'))
@@ -23,21 +24,69 @@ const Settings = lazy(() => import('./pages/Settings.jsx'))
 const ProfileSetup = lazy(() => import('./pages/ProfileSetup.jsx'))
 const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 
-// Smart root component: if ?client= param is present, show ClientPortal
-// Otherwise, show the admin dashboard (via PrivateRoute)
+// Smart root component: if ?client= param is present, check auth before showing portal
 function RootRedirect() {
   const [searchParams] = useSearchParams()
   const clientId = searchParams.get('client')
+  const { user, loading: authLoading } = useAuth()
+  const [checking, setChecking] = useState(true)
+  const [redirect, setRedirect] = useState(null)
 
-  if (clientId) {
-    return <ClientPortal />
+  useEffect(() => {
+    async function checkClientAccess() {
+      if (!clientId) {
+        setRedirect('/dashboard')
+        setChecking(false)
+        return
+      }
+
+      // Look up the client record
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, auth_user_id')
+        .eq('id', clientId)
+        .single()
+
+      if (!clientData) {
+        setRedirect('/login')
+        setChecking(false)
+        return
+      }
+
+      // If client has no account yet → send to profile setup
+      if (!clientData.auth_user_id) {
+        setRedirect(`/setup-profile/${clientId}`)
+        setChecking(false)
+        return
+      }
+
+      // If user is logged in and is this client → show portal
+      if (user && clientData.auth_user_id === user.id) {
+        setRedirect(null) // null means show ClientPortal
+        setChecking(false)
+        return
+      }
+
+      // Client has account but user isn't logged in → send to login
+      setRedirect('/login')
+      setChecking(false)
+    }
+
+    if (!authLoading) {
+      checkClientAccess()
+    }
+  }, [clientId, user, authLoading])
+
+  if (authLoading || checking) {
+    return <div className="min-h-screen flex items-center justify-center"><div className="p-6 text-sm text-muted-foreground">Loading…</div></div>
   }
 
-  return (
-    <PrivateRoute>
-      <Navigate to="/dashboard" replace />
-    </PrivateRoute>
-  )
+  if (redirect) {
+    return <Navigate to={redirect} replace />
+  }
+
+  // Authenticated client → show their portal
+  return <ClientPortal />
 }
 
 function App() {
