@@ -7,6 +7,7 @@ import PrivateRoute from './components/PrivateRoute'
 
 const Layout = lazy(() => import('./components/Layout.jsx'))
 const Login = lazy(() => import('./pages/Login.jsx'))
+const Register = lazy(() => import('./pages/Register.jsx'))
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Clients = lazy(() => import('./pages/Clients.jsx'))
 const ClientDetails = lazy(() => import('./pages/ClientDetails.jsx'))
@@ -30,8 +31,8 @@ function App() {
         <Router basename="/portal">
           <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading…</div>}>
             <Routes>
-              {/* Public Routes */}
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/portal" element={<ClientPortal />} />
               <Route path="/setup-profile/:id" element={<ProfileSetup />} />
 

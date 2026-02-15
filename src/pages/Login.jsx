@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,15 +21,32 @@ export default function Login() {
 
     const from = location.state?.from?.pathname || '/dashboard'
 
+    const routeByRole = async (user) => {
+        // Check if this user is a client
+        const { data: clientData } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('auth_user_id', user.id)
+            .single()
+
+        if (clientData) {
+            // Client user → go to client portal
+            navigate(`/portal?client=${clientData.id}`, { replace: true })
+        } else {
+            // Employee/admin → go to dashboard
+            navigate(from, { replace: true })
+        }
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
         setLoading(true)
 
         try {
-            const { error } = await signIn({ email, password })
+            const { data, error } = await signIn({ email, password })
             if (error) throw error
-            navigate(from, { replace: true })
+            await routeByRole(data.user)
         } catch (err) {
             setError(err.message || 'Failed to sign in')
         } finally {
@@ -160,6 +178,15 @@ export default function Login() {
                             </svg>
                             Google Account
                         </Button>
+
+                        <div className="w-full text-center mt-4">
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                Don&apos;t have an account?{' '}
+                                <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-500 hover:underline transition-colors">
+                                    Register Account
+                                </Link>
+                            </p>
+                        </div>
                     </CardFooter>
                 </form>
 

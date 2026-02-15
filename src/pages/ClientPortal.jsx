@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Download, CheckCircle, Upload, MessageCircle, Phone, Mail, HelpCircle, PenTool, CreditCard } from 'lucide-react'
+import { Download, CheckCircle, Upload, MessageCircle, Phone, Mail, HelpCircle, PenTool, CreditCard, FileText, MapPin, CalendarDays, Send, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSearchParams } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
@@ -14,18 +14,41 @@ import { toast } from 'sonner'
 import { useSettings } from '@/lib/use-settings.jsx'
 import { InstallPrompt } from '@/components/InstallPrompt'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 export default function ClientPortal() {
   const { formatCurrency } = useCurrency()
   const { settings } = useSettings()
+  const { user } = useAuth()
   const [searchParams] = useSearchParams()
-  const clientId = searchParams.get('client')
+  const urlClientId = searchParams.get('client')
+  const [clientId, setClientId] = useState(urlClientId)
 
+  // Auth-based client resolution: if no URL param, look up by auth user
   useEffect(() => {
-    if (!clientId) {
+    async function resolveClient() {
+      if (urlClientId) {
+        setClientId(urlClientId)
+        return
+      }
+      if (user) {
+        const { data } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('auth_user_id', user.id)
+          .single()
+        if (data) {
+          setClientId(data.id)
+          return
+        }
+      }
       setLoading(false)
     }
-  }, [clientId])
+    resolveClient()
+  }, [urlClientId, user])
 
   const [client, setClient] = useState(null)
   const [quotations, setQuotations] = useState([])
@@ -38,6 +61,12 @@ export default function ClientPortal() {
   const [step, setStep] = useState(0) // 0: Closed, 1: Sign, 2: Payment Info
   const [signature, setSignature] = useState(null)
   const [contactOpen, setContactOpen] = useState(false)
+
+  // Request dialogs
+  const [requestQuoteOpen, setRequestQuoteOpen] = useState(false)
+  const [requestVisitOpen, setRequestVisitOpen] = useState(false)
+  const [requestLoading, setRequestLoading] = useState(false)
+  const [requestForm, setRequestForm] = useState({ description: '', address: '', preferredDate: '' })
 
   const fetchClientData = useCallback(async () => {
     try {
@@ -479,17 +508,17 @@ export default function ClientPortal() {
               </div>
               <span className="font-medium text-slate-700 dark:text-slate-300">WhatsApp Us</span>
             </Button>
-            <Button variant="outline" className="h-32 flex-col justify-center gap-3 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 hover:border-purple-500/50 hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-all group" disabled>
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full grayscale group-hover:grayscale-0 transition-all duration-300">
-                <Upload className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            <Button variant="outline" className="h-32 flex-col justify-center gap-3 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 hover:border-purple-500/50 hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-all group" onClick={() => { setRequestForm({ description: '', address: '', preferredDate: '' }); setRequestQuoteOpen(true) }}>
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full group-hover:scale-110 transition-transform duration-300">
+                <FileText className="h-6 w-6 text-purple-600 dark:text-purple-400" />
               </div>
-              <span className="font-medium text-slate-400 dark:text-slate-500">Submit Ticket</span>
+              <span className="font-medium text-slate-700 dark:text-slate-300">Request a Quote</span>
             </Button>
-            <Button variant="outline" className="h-32 flex-col justify-center gap-3 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 hover:border-amber-500/50 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-all group" disabled>
-              <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-full grayscale group-hover:grayscale-0 transition-all duration-300">
-                <Phone className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            <Button variant="outline" className="h-32 flex-col justify-center gap-3 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-slate-200 dark:border-slate-800 hover:border-amber-500/50 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-all group" onClick={() => { setRequestForm({ description: '', address: client?.address || '', preferredDate: '' }); setRequestVisitOpen(true) }}>
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-full group-hover:scale-110 transition-transform duration-300">
+                <MapPin className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
-              <span className="font-medium text-slate-400 dark:text-slate-500">Request Call</span>
+              <span className="font-medium text-slate-700 dark:text-slate-300">Request Site Visit</span>
             </Button>
           </div>
         </div>
@@ -990,6 +1019,152 @@ export default function ClientPortal() {
           </DialogFooter>
         </DialogContent>
       </Dialog >
+
+      {/* ── Request a Quote Dialog ── */}
+      <Dialog open={requestQuoteOpen} onOpenChange={setRequestQuoteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-purple-600" /> Request a Quote
+            </DialogTitle>
+            <DialogDescription>
+              Tell us what you need and we&apos;ll prepare a quote for you.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={async (e) => {
+            e.preventDefault()
+            setRequestLoading(true)
+            try {
+              const { error: reqError } = await supabase.from('client_requests').insert([{
+                client_id: clientId,
+                type: 'quote',
+                description: requestForm.description,
+                preferred_date: requestForm.preferredDate || null,
+                status: 'pending'
+              }])
+              if (reqError) throw reqError
+              await supabase.from('activity_log').insert([{
+                client_id: clientId,
+                action: 'Quote Requested',
+                details: requestForm.description
+              }])
+              toast.success('Quote request submitted! We\'ll be in touch shortly.')
+              setRequestQuoteOpen(false)
+            } catch (err) {
+              toast.error(err.message || 'Failed to submit request')
+            } finally {
+              setRequestLoading(false)
+            }
+          }} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="quoteDesc">What do you need?</Label>
+              <Textarea
+                id="quoteDesc"
+                placeholder="e.g. CCTV installation for a 4-bedroom house, electric fencing for perimeter..."
+                value={requestForm.description}
+                onChange={(e) => setRequestForm(f => ({ ...f, description: e.target.value }))}
+                rows={4}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quoteDate">Preferred Date (optional)</Label>
+              <Input
+                id="quoteDate"
+                type="date"
+                value={requestForm.preferredDate}
+                onChange={(e) => setRequestForm(f => ({ ...f, preferredDate: e.target.value }))}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setRequestQuoteOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={requestLoading} className="bg-purple-600 hover:bg-purple-700 text-white">
+                {requestLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Submit Request
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Request a Site Visit Dialog ── */}
+      <Dialog open={requestVisitOpen} onOpenChange={setRequestVisitOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-amber-600" /> Request a Site Visit
+            </DialogTitle>
+            <DialogDescription>
+              Schedule a site assessment by our team.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={async (e) => {
+            e.preventDefault()
+            setRequestLoading(true)
+            try {
+              const { error: reqError } = await supabase.from('client_requests').insert([{
+                client_id: clientId,
+                type: 'site_visit',
+                description: requestForm.description,
+                address: requestForm.address,
+                preferred_date: requestForm.preferredDate || null,
+                status: 'pending'
+              }])
+              if (reqError) throw reqError
+              await supabase.from('activity_log').insert([{
+                client_id: clientId,
+                action: 'Site Visit Requested',
+                details: `${requestForm.address} — ${requestForm.description}`
+              }])
+              toast.success('Site visit request submitted! We\'ll confirm a time soon.')
+              setRequestVisitOpen(false)
+            } catch (err) {
+              toast.error(err.message || 'Failed to submit request')
+            } finally {
+              setRequestLoading(false)
+            }
+          }} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="visitAddress">Site Address</Label>
+              <Input
+                id="visitAddress"
+                placeholder="123 Main Street, Cape Town"
+                value={requestForm.address}
+                onChange={(e) => setRequestForm(f => ({ ...f, address: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="visitDesc">Notes / What should we look at?</Label>
+              <Textarea
+                id="visitDesc"
+                placeholder="e.g. Need assessment for perimeter security, gate motor installation..."
+                value={requestForm.description}
+                onChange={(e) => setRequestForm(f => ({ ...f, description: e.target.value }))}
+                rows={3}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="visitDate">Preferred Date (optional)</Label>
+              <Input
+                id="visitDate"
+                type="date"
+                value={requestForm.preferredDate}
+                onChange={(e) => setRequestForm(f => ({ ...f, preferredDate: e.target.value }))}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setRequestVisitOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={requestLoading} className="bg-amber-600 hover:bg-amber-700 text-white">
+                {requestLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Submit Request
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <InstallPrompt />
     </div >
   )
