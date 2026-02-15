@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,11 +16,7 @@ export default function InstallationDetails({ invoiceId, readonly = false }) {
     const [notes, setNotes] = useState('')
     const [uploading, setUploading] = useState(false)
 
-    useEffect(() => {
-        fetchInstallationDetails()
-    }, [invoiceId])
-
-    const fetchInstallationDetails = async () => {
+    const fetchInstallationDetails = useCallback(async () => {
         try {
             setLoading(true)
 
@@ -54,7 +50,11 @@ export default function InstallationDetails({ invoiceId, readonly = false }) {
         } finally {
             setLoading(false)
         }
-    }
+    }, [invoiceId])
+
+    useEffect(() => {
+        fetchInstallationDetails()
+    }, [fetchInstallationDetails])
 
     const handlePhotoUpload = async (e) => {
         const files = Array.from(e.target.files)
@@ -84,7 +84,7 @@ export default function InstallationDetails({ invoiceId, readonly = false }) {
                 const fileExt = file.name.split('.').pop()
                 const fileName = `${invoiceId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
 
-                const { data: uploadData, error: uploadError } = await supabase.storage
+                const { error: uploadError } = await supabase.storage
                     .from('installation-photos')
                     .upload(fileName, file)
 

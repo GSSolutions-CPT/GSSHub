@@ -396,6 +396,17 @@ export default function Sales() {
       const fullData = { ...sale, lines: lines || [] }
 
       if (type === 'quotation') {
+        // Fetch site plan if exists
+        const { data: sitePlanData } = await supabase
+          .from('site_plans')
+          .select('flattened_url')
+          .eq('quotation_id', sale.id)
+          .single()
+
+        if (sitePlanData?.flattened_url) {
+          fullData.site_plan_url = sitePlanData.flattened_url
+        }
+
         generateQuotePDF(fullData, settings)
       } else {
         generateInvoicePDF(fullData, settings)

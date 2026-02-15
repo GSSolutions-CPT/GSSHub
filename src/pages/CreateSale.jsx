@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Trash2, FileText, Receipt, Package, Loader2, User, Calendar, Percent, ChevronLeft } from 'lucide-react'
+import { Plus, Trash2, FileText, Receipt, Package, Loader2, User, Calendar, Percent, ChevronLeft, Map, ImageIcon } from 'lucide-react'
+import SitePlanner from '@/components/SitePlanner'
 import { supabase } from '@/lib/supabase'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { SmartEstimator } from '@/components/SmartEstimator'
@@ -41,6 +42,9 @@ export default function CreateSale() {
   const [lineItems, setLineItems] = useState([
     { product_id: '', quantity: 1, unit_price: 0, cost_price: 0, description: '' }
   ])
+  const [sitePlannerOpen, setSitePlannerOpen] = useState(false)
+  const [sitePlan, setSitePlan] = useState(null)
+  const [sitePlanPreview, setSitePlanPreview] = useState(null)
 
   const fetchClients = useCallback(async () => {
     try {
@@ -160,8 +164,30 @@ export default function CreateSale() {
       setEditId(editParam)
       if (typeParam) setMode(typeParam)
       fetchEditData(editParam, typeParam || 'quotation')
+      // Fetch existing site plan if editing a quotation
+      if (!typeParam || typeParam === 'quotation') {
+        fetchSitePlan(editParam)
+      }
     }
   }, [])
+
+  const fetchSitePlan = async (quotationId) => {
+    try {
+      const { data, error } = await supabase
+        .from('site_plans')
+        .select('*')
+        .eq('quotation_id', quotationId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+      if (data) {
+        setSitePlan(data)
+        setSitePlanPreview(data.flattened_url)
+      }
+    } catch (error) {
+      console.error('Error fetching site plan:', error)
+    }
+  }
 
   const fetchEditData = async (id, type) => {
     try {
@@ -537,6 +563,84 @@ export default function CreateSale() {
               </Button>
             </CardFooter>
           </Card>
+
+          {/* Site Plan Section (Quotations only) */}
+          {mode === 'quotation' && (
+            <Card className="border-none shadow-md bg-white dark:bg-slate-900/50 overflow-hidden">
+              <CardHeader className="pb-4 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Map className="h-5 w-5 text-primary" />
+                  Visual Site Plan
+                </CardTitle>
+                <CardDescription>Upload a floor plan and annotate with security icons</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4">
+                {sitePlanPreview ? (
+                  <div className="space-y-3">
+                    <div className="relative group rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800">
+                      <img
+                        src={sitePlanPreview}
+                        alt="Site Plan"
+                        className="w-full h-48 object-contain bg-slate-50 dark:bg-slate-900"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => setSitePlannerOpen(true)}
+                        >
+                          <ImageIcon className="h-4 w-4 mr-1" />
+                          Edit Plan
+                        </Button>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      ✓ Site plan attached — will be included in PDF
+                    </Badge>
+                  </div>
+                ) : (
+                  <div
+                    className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (!editId) {
+                        toast.info('Please save the quotation first, then edit it to add a site plan.')
+                        return
+                      }
+                      setSitePlannerOpen(true)
+                    }}
+                  >
+                    <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-full mb-3">
+                      <Map className="h-6 w-6 text-blue-500" />
+                    </div>
+                    <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-1">
+                      Add Visual Site Plan
+                    </h3>
+                    <p className="text-xs text-muted-foreground text-center max-w-xs">
+                      {editId
+                        ? 'Upload a floor plan and place security icons, draw cable paths, and add labels'
+                        : 'Save the quotation first, then come back to add a site plan'
+                      }
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Site Planner Full-Screen Editor */}
+          {sitePlannerOpen && editId && (
+            <SitePlanner
+              quotationId={editId}
+              existingPlan={sitePlan}
+              onSave={(flattenedUrl) => {
+                setSitePlanPreview(flattenedUrl)
+                setSitePlannerOpen(false)
+                fetchSitePlan(editId)
+              }}
+              onClose={() => setSitePlannerOpen(false)}
+            />
+          )}
         </div>
 
         {/* Right Column: Live Preview */}

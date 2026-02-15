@@ -302,6 +302,48 @@ const generatePDF = async (docType, data, settings = {}) => {
         }
 
 
+        // ==========================================
+        // 5. SITE PLAN PAGE (Quotations with site plans)
+        // ==========================================
+        if (docType === 'Quotation' && data.site_plan_url) {
+            try {
+                doc.addPage()
+                let planY = 20
+
+                // Header
+                text("SITE PLAN", margin, planY, { size: 14, style: 'bold', color: COLORS.TEXT_MAIN })
+                planY += 4
+
+                doc.setDrawColor(...COLORS.PRIMARY)
+                doc.setLineWidth(0.8)
+                doc.line(margin, planY, margin + 50, planY)
+                planY += 8
+
+                text(`Quotation #${data.id.substring(0, 8).toUpperCase()}`, margin, planY, { size: 9, color: COLORS.SECONDARY })
+                planY += 10
+
+                // Fetch and embed site plan image
+                const sitePlanImg = await fetchImage(data.site_plan_url)
+                const imgProps = doc.getImageProperties(sitePlanImg)
+
+                // Scale to fit available space (A4 with margins)
+                const availW = contentW
+                const availH = pageHeight - planY - 30 // leave space for footer
+                const scaleX = availW / imgProps.width
+                const scaleY = availH / imgProps.height
+                const scale = Math.min(scaleX, scaleY)
+                const imgW = imgProps.width * scale
+                const imgH = imgProps.height * scale
+
+                // Center horizontally
+                const imgX = margin + (availW - imgW) / 2
+
+                doc.addImage(sitePlanImg, 'PNG', imgX, planY, imgW, imgH)
+
+            } catch (e) {
+                console.warn('Failed to load site plan image:', e)
+            }
+        }
 
 
         // ==========================================
