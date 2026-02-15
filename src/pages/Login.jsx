@@ -31,7 +31,7 @@ export default function Login() {
 
         if (clientData) {
             // Client user → go to client portal
-            navigate(`/portal?client=${clientData.id}`, { replace: true })
+            navigate(`/?client=${clientData.id}`, { replace: true })
         } else {
             // Employee/admin → go to dashboard
             navigate(from, { replace: true })

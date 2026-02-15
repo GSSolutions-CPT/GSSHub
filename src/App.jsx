@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import './App.css'
 import { ThemeProvider } from '@/lib/use-theme.jsx'
@@ -23,6 +23,22 @@ const Settings = lazy(() => import('./pages/Settings.jsx'))
 const ProfileSetup = lazy(() => import('./pages/ProfileSetup.jsx'))
 const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 
+// Smart root component: if ?client= param is present, show ClientPortal
+// Otherwise, show the admin dashboard (via PrivateRoute)
+function RootRedirect() {
+  const [searchParams] = useSearchParams()
+  const clientId = searchParams.get('client')
+
+  if (clientId) {
+    return <ClientPortal />
+  }
+
+  return (
+    <PrivateRoute>
+      <Navigate to="/dashboard" replace />
+    </PrivateRoute>
+  )
+}
 
 function App() {
   return (
@@ -31,10 +47,14 @@ function App() {
         <Router basename="/portal">
           <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading…</div>}>
             <Routes>
+              {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/portal" element={<ClientPortal />} />
+              <Route path="/client-portal" element={<ClientPortal />} />
               <Route path="/setup-profile/:id" element={<ProfileSetup />} />
+
+              {/* Smart root: client portal or admin redirect */}
+              <Route index element={<RootRedirect />} />
 
               {/* Protected Admin Routes */}
               <Route path="/" element={
@@ -42,7 +62,6 @@ function App() {
                   <Layout />
                 </PrivateRoute>
               }>
-                <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="clients" element={<Clients />} />
                 <Route path="clients/:id" element={<ClientDetails />} />
@@ -67,3 +86,4 @@ function App() {
 }
 
 export default App
+
