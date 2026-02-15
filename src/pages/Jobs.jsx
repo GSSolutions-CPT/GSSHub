@@ -17,10 +17,11 @@ import { generateOutlookLink } from '@/lib/calendar-utils'
 const JobBoard = lazy(() => import('./jobs/JobBoard'))
 const JobCalendar = lazy(() => import('./jobs/JobCalendar'))
 
-import { useLocation } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 
 export default function Jobs() {
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [jobs, setJobs] = useState([])
   const [clients, setClients] = useState([])
   const [quotations, setQuotations] = useState([])
@@ -48,16 +49,50 @@ export default function Jobs() {
   const completedJobs = jobs.filter(j => j.status === 'Completed').length
   const pendingJobs = jobs.filter(j => j.status === 'Pending').length
 
-  // Handle incoming navigation state (e.g. from Sales)
+  // REFACTORED: Handle incoming "Create Job from Quote" via URL search params.
+  // This survives page refreshes unlike location.state.
+  // Usage: navigate('/jobs?fromQuote=<quotation_id>')
   useEffect(() => {
-    if (location.state?.createFromQuote && location.state?.quoteData) {
-      const { quoteData } = location.state
+    const fromQuoteId = searchParams.get('fromQuote')
 
-      // Switch to Board view as requested
+    // Also support the legacy location.state approach for backwards-compatibility
+    const quoteData = location.state?.createFromQuote ? location.state.quoteData : null
+
+    if (fromQuoteId) {
+      // Fetch the quotation from Supabase and pre-fill the form
+      const fetchAndPrefill = async () => {
+        try {
+          const { data: quote, error } = await supabase
+            .from('quotations')
+            .select('id, client_id')
+            .eq('id', fromQuoteId)
+            .single()
+
+          if (error || !quote) {
+            console.error('Could not find quotation:', error)
+            toast.error('Quotation not found')
+            return
+          }
+
+          setViewMode('board')
+          setFormData(prev => ({
+            ...prev,
+            client_id: quote.client_id,
+            quotation_id: quote.id,
+            notes: `Job for Quotation #${quote.id.substring(0, 6)}`,
+            status: 'Pending'
+          }))
+          setIsDialogOpen(true)
+        } catch (err) {
+          console.error('Error fetching quotation for job creation:', err)
+        }
+      }
+      fetchAndPrefill()
+      // Clear the search param to prevent re-opening on navigation
+      setSearchParams({}, { replace: true })
+    } else if (quoteData) {
+      // Legacy fallback: support location.state
       setViewMode('board')
-
-      // optimize UX: wait for clients to load before setting form data to ensure matching
-      // Pre-fill form
       setFormData(prev => ({
         ...prev,
         client_id: quoteData.client_id,
@@ -65,14 +100,10 @@ export default function Jobs() {
         notes: `Job for Quotation #${quoteData.id.substring(0, 6)}`,
         status: 'Pending'
       }))
-
-      // Open dialog to prompt for scheduling
       setIsDialogOpen(true)
-
-      // Clear state to prevent re-opening on refresh (optional, but good practice)
       window.history.replaceState({}, document.title)
     }
-  }, [location.state])
+  }, [searchParams, location.state, setSearchParams])
 
   const fetchJobs = useCallback(async () => {
     try {

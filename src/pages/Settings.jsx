@@ -38,24 +38,26 @@ export default function Settings() {
     }
   }
 
+  // REFACTORED: Only create a user profile in the public.users table.
+  // Auth user creation requires admin/service-role privileges.
+  // The admin should invite the user via Supabase Dashboard > Authentication.
   const handleAddUser = async (e) => {
     e.preventDefault()
     try {
       const { error } = await supabase.from('users').insert([{
         email: newUser.email,
         role: newUser.role,
-        password_hash: 'hashed_placeholder',
         is_active: true
       }])
 
       if (error) throw error
-      alert('User added successfully!')
+      alert('User profile created! Please invite this email address via the Supabase Dashboard > Authentication tab to finish setting up their account.')
       setIsUserDialogOpen(false)
       setNewUser({ email: '', role: 'technician', password: '' })
       fetchUsers()
     } catch (error) {
       console.error('Error adding user:', error)
-      alert('Failed to add user')
+      alert('Failed to add user profile')
     }
   }
 

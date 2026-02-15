@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Download, CheckCircle, Upload, MessageCircle, Phone, Mail, HelpCircle, PenTool, CreditCard, FileText, MapPin, CalendarDays, Send, Loader2 } from 'lucide-react'
+import { Download, CheckCircle, Upload, MessageCircle, Phone, Mail, HelpCircle, PenTool, CreditCard, FileText, MapPin, Send, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSearchParams } from 'react-router-dom'
 import { generateInvoicePDF, generateQuotePDF } from '@/lib/pdf-service'
@@ -145,6 +145,22 @@ export default function ClientPortal() {
    * 2. Move to Step 2 (Payment Upload)
    * 3. Do NOT update DB yet. DB Update happens after Payment Upload in Step 2.
    */
+
+  // HELPER: Convert a DataURL string to a Blob object.
+  // This is used to convert the signature canvas DataURL into
+  // an uploadable Blob for Supabase Storage.
+  const dataURLtoBlob = (dataurl) => {
+    const parts = dataurl.split(',')
+    const mime = parts[0].match(/:(.*?);/)[1]
+    const bstr = atob(parts[1])
+    let n = bstr.length
+    const u8arr = new Uint8Array(n)
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n)
+    }
+    return new Blob([u8arr], { type: mime })
+  }
+
   /* 
    * NEW STORAGE HELPERS
    */
@@ -201,9 +217,9 @@ export default function ClientPortal() {
       // Upload Proof
       const proofUrl = await uploadFileToStorage(paymentProofFile, `proof_${acceptingQuote.id}`)
 
-      // Upload Signature (Optional but good for easy access)
-      // Convert DataURL to Blob for upload
-      const signatureBlob = await (await fetch(signature)).blob()
+      // Upload Signature — use dataURLtoBlob helper to reliably convert
+      // the canvas DataURL into an uploadable Blob (avoids fetch CORS issues)
+      const signatureBlob = dataURLtoBlob(signature)
       const signatureUrl = await uploadFileToStorage(new File([signatureBlob], "signature.png", { type: "image/png" }), `sig_${acceptingQuote.id}`)
 
       const { error } = await supabase
