@@ -34,7 +34,7 @@ export default function Layout() {
     const handleSignOut = async () => {
         try {
             await signOut()
-            navigate('/login')
+            window.location.href = 'https://www.globalsecuritysolutions.co.za/'
         } catch (error) {
             console.error('Error signing out:', error)
         }
