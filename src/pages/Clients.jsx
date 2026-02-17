@@ -26,6 +26,7 @@ export default function Clients() {
     return clientDate.getMonth() === now.getMonth() && clientDate.getFullYear() === now.getFullYear()
   }).length
 
+  /* 1. UPDATE fetchClients to hide archived profiles */
   const fetchClients = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -34,7 +35,10 @@ export default function Clients() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setClients(data || [])
+
+      // Filter out archived clients
+      const activeClients = (data || []).filter(c => c.metadata?.status !== 'archived')
+      setClients(activeClients)
     } catch (error) {
       console.error('Error fetching clients:', error)
     }
@@ -44,30 +48,34 @@ export default function Clients() {
     fetchClients()
   }, [fetchClients])
 
-
   const handleEdit = (client) => {
     setEditingClient(client)
     setIsDialogOpen(true)
   }
 
+  /* 2. UPDATE handleDelete to "Soft Delete" (Archive) */
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this client? This will implicitly delete all their sales and jobs!')) return
+    if (!confirm('Are you sure you want to archive this client? Their financial history will be preserved but hidden.')) return
 
-    const toastId = toast.loading('Deleting client...')
+    const toastId = toast.loading('Archiving client...')
 
     try {
+      // Instead of DELETE, we UPDATE metadata
+      const clientToArchive = clients.find(c => c.id === id)
+      const newMetadata = { ...clientToArchive.metadata, status: 'archived' }
+
       const { error } = await supabase
         .from('clients')
-        .delete()
+        .update({ metadata: newMetadata })
         .eq('id', id)
 
       if (error) throw error
 
-      toast.success('Client deleted successfully', { id: toastId })
-      fetchClients()
+      toast.success('Client archived successfully', { id: toastId })
+      fetchClients() // Refresh list
     } catch (error) {
-      console.error('Error deleting client:', error)
-      toast.error('Error deleting client: They might have related data.', { id: toastId })
+      console.error('Error archiving client:', error)
+      toast.error('Error archiving client.', { id: toastId })
     }
   }
 
