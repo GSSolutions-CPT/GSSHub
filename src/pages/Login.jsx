@@ -30,12 +30,23 @@ export default function Login() {
             .single()
 
         if (clientData) {
-            // Client user → go to client portal (Root of the app, which is /portal)
-            // Fix: Explicitly navigate to '/' to avoid appending '/portal' again if basename is set
-            navigate({ pathname: '/', search: `?client=${clientData.id}` }, { replace: true })
+            // Client user → Force hard redirect to avoid double-pathing (/portal/portal)
+            // We manually construct the URL to ensure it is correct.
+            const origin = window.location.origin
+            // Fix: ensure we don't double-slash if origin ends in /
+            const baseUrl = origin.endsWith('/') ? origin : `${origin}/`
+            window.location.href = `${baseUrl}portal/?client=${clientData.id}`
         } else {
             // Employee/admin → go to dashboard
-            navigate(from, { replace: true })
+            // Sanitize 'from' to prevent double /portal if it was captured with the basename
+            let target = from
+            if (target.startsWith('/portal')) {
+                target = target.substring(7)
+            }
+            if (!target.startsWith('/')) {
+                target = `/${target}`
+            }
+            navigate(target, { replace: true })
         }
     }
 
