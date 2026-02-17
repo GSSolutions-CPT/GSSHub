@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,7 +19,6 @@ import { useSettings } from '@/lib/use-settings'
 export default function Layout() {
     const { signOut, user } = useAuth()
     const { settings } = useSettings()
-    const navigate = useNavigate()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     const navItems = [
