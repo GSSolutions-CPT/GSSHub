@@ -31,102 +31,119 @@ export default function Dashboard() {
   const [monthlyData, setMonthlyData] = useState([])
   const [expenseBreakdown, setExpenseBreakdown] = useState([])
   const [activities, setActivities] = useState([])
+  const [viewMode, setViewMode] = useState('cash_flow') // 'cash_flow' | 'projected'
+  const [rawInvoices, setRawInvoices] = useState([])
+  const [rawExpenses, setRawExpenses] = useState([])
 
   const fetchDashboardData = useCallback(async () => {
     try {
       const now = new Date()
       const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-      // Fetch Clients
-      const { data: clients } = await supabase.from('clients').select('*')
+      // Fetch Data
+      const [
+        { data: clients },
+        { data: invoices },
+        { data: expenses },
+        { data: activityLog }
+      ] = await Promise.all([
+        supabase.from('clients').select('*'),
+        supabase.from('invoices').select('*'),
+        supabase.from('expenses').select('*'),
+        supabase.from('activity_log').select('*').order('timestamp', { ascending: false }).limit(5)
+      ])
 
-      // Fetch Invoices
-      const { data: invoices } = await supabase.from('invoices').select('*')
+      // Store Raw Data
+      setRawInvoices(invoices || [])
+      setRawExpenses(expenses || [])
+      setActivities(activityLog || [])
 
-      // Fetch Expenses
-      const { data: expenses } = await supabase.from('expenses').select('*')
-
-      // Fetch Activity Log
-      const { data: activityLog } = await supabase
-        .from('activity_log')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(5)
-
-      // Calculate Metrics
-      const currentMonthInvoices = invoices?.filter(inv =>
-        new Date(inv.date_created) >= new Date(firstDayOfMonth) &&
-        inv.status !== 'Draft'
-      ) || []
-
-      const monthlyRevenue = currentMonthInvoices
-        .filter(inv => ['Paid', 'Sent', 'Overdue'].includes(inv.status))
-        .reduce((sum, inv) => sum + (parseFloat(inv.total_amount) || 0), 0)
-
-      const monthlyProfit = currentMonthInvoices
-        .filter(inv => ['Paid', 'Sent', 'Overdue'].includes(inv.status))
-        .reduce((sum, inv) => sum + (parseFloat(inv.profit_estimate) || 0), 0)
-
+      // Calculate Non-Financial Metrics
       const newClients = clients?.filter(c =>
         new Date(c.created_at) >= new Date(firstDayOfMonth)
       ).length || 0
 
       const overdueInvoices = invoices?.filter(inv => inv.status === 'Overdue').length || 0
 
-      setMetrics({
-        monthlyRevenue,
-        monthlyProfit,
-        newClients,
-        overdueInvoices
-      })
+      setMetrics(prev => ({ ...prev, newClients, overdueInvoices }))
 
-      setActivities(activityLog || [])
-
-      // Prepare Chart Data (reuse logic)
-      prepareChartData(invoices || [], expenses || [])
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     }
-  }, []) // No dependencies needed as supabase is imported
+  }, [])
 
+  // Recalculate Financials when ViewMode or Data changes
+  useEffect(() => {
+    const recalculateFinancials = () => {
+      const now = new Date()
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+      // Define Status Filter based on View Mode
+      // Cash Flow = Paid only
+      // Projected = Paid + Sent + Overdue
+      const targetStatuses = viewMode === 'cash_flow'
+        ? ['Paid']
+        : ['Paid', 'Sent', 'Overdue']
+
+      // 1. Calculate Monthly Metrics
+      const currentMonthInvoices = rawInvoices.filter(inv =>
+        new Date(inv.date_created) >= new Date(firstDayOfMonth) &&
+        inv.status !== 'Draft'
+      )
+
+      const monthlyRevenue = currentMonthInvoices
+        .filter(inv => targetStatuses.includes(inv.status))
+        .reduce((sum, inv) => sum + (parseFloat(inv.total_amount) || 0), 0)
+
+      const monthlyProfit = currentMonthInvoices
+        .filter(inv => targetStatuses.includes(inv.status))
+        .reduce((sum, inv) => sum + (parseFloat(inv.profit_estimate) || 0), 0)
+
+      setMetrics(prev => ({ ...prev, monthlyRevenue, monthlyProfit }))
+
+      // 2. Prepare Chart Data
+      const data = {}
+      const expenseTypes = { job: 0, general: 0 }
+
+      // Process Invoices for Charts
+      rawInvoices.forEach(inv => {
+        if (targetStatuses.includes(inv.status)) {
+          const month = new Date(inv.date_created).toLocaleDateString('en-US', { month: 'short' })
+          if (!data[month]) data[month] = { month, revenue: 0, profit: 0, expenses: 0 }
+          data[month].revenue += parseFloat(inv.total_amount) || 0
+          data[month].profit += parseFloat(inv.profit_estimate) || 0
+        }
+      })
+
+      // Process Expenses (Independent of view mode, expenses are expenses)
+      rawExpenses.forEach(exp => {
+        const month = new Date(exp.date).toLocaleDateString('en-US', { month: 'short' })
+        if (!data[month]) data[month] = { month, revenue: 0, profit: 0, expenses: 0 }
+        data[month].expenses += parseFloat(exp.amount) || 0
+
+        if (exp.type) {
+          expenseTypes[exp.type] = (expenseTypes[exp.type] || 0) + (parseFloat(exp.amount) || 0)
+        }
+      })
+
+      const sortedData = Object.values(data)
+        .sort((a, b) => new Date(a.month) - new Date(b.month)) // Rudimentary sort, better relies on full date
+        .slice(-6) // Last 6 months
+
+      setMonthlyData(sortedData)
+      setExpenseBreakdown([
+        { name: 'Job Expenses', value: expenseTypes.job || 0 },
+        { name: 'General Overhead', value: expenseTypes.general || 0 }
+      ])
+    }
+
+    recalculateFinancials()
+  }, [rawInvoices, rawExpenses, viewMode])
+
+  // Fetch initial data on mount
   useEffect(() => {
     fetchDashboardData()
   }, [fetchDashboardData])
-
-  const prepareChartData = (invoices, expenses) => {
-    const data = {}
-    const expenseTypes = { job: 0, general: 0 }
-
-    // Process Invoices
-    invoices.forEach(inv => {
-      if (['Paid', 'Sent', 'Overdue'].includes(inv.status)) {
-        const month = new Date(inv.date_created).toLocaleDateString('en-US', { month: 'short' })
-        if (!data[month]) data[month] = { month, revenue: 0, profit: 0, expenses: 0 }
-        data[month].revenue += parseFloat(inv.total_amount) || 0
-        data[month].profit += parseFloat(inv.profit_estimate) || 0
-      }
-    })
-
-    // Process Expenses
-    expenses.forEach(exp => {
-      const month = new Date(exp.date).toLocaleDateString('en-US', { month: 'short' })
-      if (!data[month]) data[month] = { month, revenue: 0, profit: 0, expenses: 0 }
-      data[month].expenses += parseFloat(exp.amount) || 0
-
-      if (exp.type) {
-        expenseTypes[exp.type] += parseFloat(exp.amount) || 0
-      }
-    })
-
-    // Sort by month (rudimentary sort, assumes current year roughly)
-    const sortedData = Object.values(data).reverse().slice(0, 6).reverse() // Last 6 months
-    setMonthlyData(sortedData)
-
-    setExpenseBreakdown([
-      { name: 'Job Expenses', value: expenseTypes.job },
-      { name: 'General Overhead', value: expenseTypes.general }
-    ])
-  }
 
   return (
     <div className="space-y-6">
@@ -142,6 +159,22 @@ export default function Dashboard() {
             })()}
           </h2>
           <p className="text-slate-300">Here&apos;s your daily overview.</p>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2 mt-4 bg-slate-950/30 p-1 rounded-lg w-fit backdrop-blur-sm border border-white/10">
+            <button
+              onClick={() => setViewMode('cash_flow')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'cash_flow' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+            >
+              Cash Flow
+            </button>
+            <button
+              onClick={() => setViewMode('projected')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${viewMode === 'projected' ? 'bg-blue-500 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+            >
+              Projected
+            </button>
+          </div>
         </div>
         <div className="relative z-10 flex flex-wrap gap-3">
           <button
