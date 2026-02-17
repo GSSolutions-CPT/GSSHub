@@ -127,7 +127,7 @@ export default function Dashboard() {
       })
 
       const sortedData = Object.values(data)
-        .sort((a, b) => new Date(a.month) - new Date(b.month)) // Rudimentary sort, better relies on full date
+        .sort((a, b) => new Date(a.month) - new Date(b.month))
         .slice(-6) // Last 6 months
 
       setMonthlyData(sortedData)
