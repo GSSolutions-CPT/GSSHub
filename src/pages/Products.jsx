@@ -42,16 +42,39 @@ export default function Products() {
   }, [location])
 
   const fetchProducts = useCallback(async () => {
+    setIsLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('name', { ascending: true })
+      let allProducts = []
+      let page = 0
+      const pageSize = 1000
+      let hasMore = true
 
-      if (error) throw error
-      setProducts(data || [])
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('name', { ascending: true })
+          .range(page * pageSize, (page + 1) * pageSize - 1)
+
+        if (error) throw error
+
+        if (data) {
+          allProducts = [...allProducts, ...data]
+        }
+
+        if (!data || data.length < pageSize) {
+          hasMore = false
+        } else {
+          page++
+        }
+      }
+
+      setProducts(allProducts)
     } catch (error) {
       console.error('Error fetching products:', error)
+      toast.error('Failed to load products')
+    } finally {
+      setIsLoading(false)
     }
   }, [])
 
