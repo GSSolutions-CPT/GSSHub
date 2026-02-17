@@ -30,8 +30,9 @@ export default function Login() {
             .single()
 
         if (clientData) {
-            // Client user → go to client portal
-            navigate(`/?client=${clientData.id}`, { replace: true })
+            // Client user → go to client portal (Root of the app, which is /portal)
+            // Fix: Explicitly navigate to '/' to avoid appending '/portal' again if basename is set
+            navigate({ pathname: '/', search: `?client=${clientData.id}` }, { replace: true })
         } else {
             // Employee/admin → go to dashboard
             navigate(from, { replace: true })

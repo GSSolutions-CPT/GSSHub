@@ -89,7 +89,7 @@ export default function ProfileSetup() {
             }
 
             setSuccess(true)
-            setTimeout(() => navigate('/portal'), 2000)
+            setTimeout(() => navigate('/'), 2000) // Fix: Navigate to root (which is /portal via basename)
         } catch (err) {
             setError(err.message || 'Failed to create profile')
         } finally {
