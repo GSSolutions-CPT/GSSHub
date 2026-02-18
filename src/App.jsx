@@ -3,6 +3,8 @@ import { Suspense, lazy, useState, useEffect } from 'react'
 import './App.css'
 import { ThemeProvider } from '@/lib/use-theme.jsx'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { SettingsProvider } from './lib/use-settings'
+import { CurrencyProvider } from './lib/use-currency'
 import PrivateRoute from './components/PrivateRoute'
 import { supabase } from './lib/supabase'
 
@@ -93,42 +95,46 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <AuthProvider>
-        <Router basename="/portal">
-          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading…</div>}>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/client-portal" element={<ClientPortal />} />
-              <Route path="/setup-profile/:id" element={<ProfileSetup />} />
+        <SettingsProvider>
+          <CurrencyProvider>
+            <Router basename="/portal">
+              <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading...</div>}>
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/client-portal" element={<ClientPortal />} />
+                  <Route path="/setup-profile/:id" element={<ProfileSetup />} />
 
-              {/* Smart root: client portal or admin redirect */}
-              <Route index element={<RootRedirect />} />
+                  {/* Smart root: client portal or admin redirect */}
+                  <Route index element={<RootRedirect />} />
 
-              {/* Protected Admin Routes */}
-              <Route path="/" element={
-                <PrivateRoute>
-                  <Layout />
-                </PrivateRoute>
-              }>
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="clients" element={<Clients />} />
-                <Route path="clients/:id" element={<ClientDetails />} />
-                <Route path="products" element={<Products />} />
-                <Route path="create-sale" element={<CreateSale />} />
-                <Route path="create-purchase-order" element={<CreatePurchaseOrder />} />
-                <Route path="sales" element={<Sales />} />
-                <Route path="jobs" element={<Jobs />} />
-                <Route path="contracts" element={<Contracts />} />
-                <Route path="financials" element={<Financials />} />
-                <Route path="settings" element={<Settings />} />
-              </Route>
+                  {/* Protected Admin Routes */}
+                  <Route path="/" element={
+                    <PrivateRoute>
+                      <Layout />
+                    </PrivateRoute>
+                  }>
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="clients" element={<Clients />} />
+                    <Route path="clients/:id" element={<ClientDetails />} />
+                    <Route path="products" element={<Products />} />
+                    <Route path="create-sale" element={<CreateSale />} />
+                    <Route path="create-purchase-order" element={<CreatePurchaseOrder />} />
+                    <Route path="sales" element={<Sales />} />
+                    <Route path="jobs" element={<Jobs />} />
+                    <Route path="contracts" element={<Contracts />} />
+                    <Route path="financials" element={<Financials />} />
+                    <Route path="settings" element={<Settings />} />
+                  </Route>
 
-              {/* Catch-all 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </Router>
+                  {/* Catch-all 404 */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </Router>
+          </CurrencyProvider>
+        </SettingsProvider>
       </AuthProvider>
     </ThemeProvider>
   )
