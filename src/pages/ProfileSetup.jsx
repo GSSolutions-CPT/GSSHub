@@ -138,22 +138,22 @@ export default function ProfileSetup() {
                     ) : client ? (
                         <form onSubmit={handleSignup} className="space-y-4">
                             <div className="space-y-2">
-                                <Label>Full Name</Label>
-                                <Input value={client.name} disabled className="bg-slate-100 dark:bg-slate-800" />
+                                <Label className="text-slate-700 dark:text-slate-300">Full Name</Label>
+                                <Input value={client.name} disabled className="bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 opacity-100" />
                             </div>
                             <div className="space-y-2">
-                                <Label>Email Address</Label>
-                                <Input value={client.email} disabled className="bg-slate-100 dark:bg-slate-800" />
+                                <Label className="text-slate-700 dark:text-slate-300">Email Address</Label>
+                                <Input value={client.email} disabled className="bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 opacity-100" />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="password">Create Password</Label>
+                                <Label htmlFor="password" className="text-slate-900 dark:text-white font-medium">Create Password</Label>
                                 <div className="relative group">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                     <Input
                                         id="password"
                                         type="password"
                                         placeholder="Min 6 characters"
-                                        className="pl-10 h-11"
+                                        className="pl-10 h-11 bg-white text-slate-900 border-slate-300 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-950 dark:text-white dark:border-slate-700"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
@@ -161,13 +161,14 @@ export default function ProfileSetup() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                                <Label htmlFor="confirmPassword" className="text-slate-900 dark:text-white font-medium">Confirm Password</Label>
                                 <div className="relative group">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                     <Input
                                         id="confirmPassword"
                                         type="password"
-                                        className="pl-10 h-11"
+                                        placeholder="Confirm your password"
+                                        className="pl-10 h-11 bg-white text-slate-900 border-slate-300 focus:border-blue-500 focus:ring-blue-500 dark:bg-slate-950 dark:text-white dark:border-slate-700"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         required
@@ -176,7 +177,7 @@ export default function ProfileSetup() {
                             </div>
                             <Button
                                 type="submit"
-                                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white shadow-lg mt-4"
+                                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white shadow-lg mt-4 font-semibold"
                                 disabled={actionLoading}
                             >
                                 {actionLoading ? <Loader2 className="animate-spin" /> : 'Create Profile'}
