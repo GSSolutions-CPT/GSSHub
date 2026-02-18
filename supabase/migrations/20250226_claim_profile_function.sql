@@ -3,6 +3,7 @@ CREATE OR REPLACE FUNCTION claim_client_profile(p_client_id UUID)
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER -- Runs with admin privileges to bypass RLS
+SET search_path = public
 AS $$
 BEGIN
   -- Only allow if the profile is currently unclaimed
