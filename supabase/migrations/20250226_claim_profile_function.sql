@@ -1,3 +1,4 @@
+
 -- Secure function to link a user to their client profile
 CREATE OR REPLACE FUNCTION claim_client_profile(p_client_id UUID)
 RETURNS VOID
