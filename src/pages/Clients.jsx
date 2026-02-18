@@ -55,14 +55,18 @@ export default function Clients() {
 
   /* 2. UPDATE handleDelete to "Soft Delete" (Archive) */
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to archive this client? Their financial history will be preserved but hidden.')) return
+    if (!confirm('Are you sure you want to archive this client? Their financial history will be preserved but hidden from this list.')) return
 
     const toastId = toast.loading('Archiving client...')
 
     try {
       // Instead of DELETE, we UPDATE metadata
       const clientToArchive = clients.find(c => c.id === id)
-      const newMetadata = { ...clientToArchive.metadata, status: 'archived' }
+      const newMetadata = {
+        ...clientToArchive.metadata,
+        status: 'archived',
+        archived_at: new Date().toISOString()
+      }
 
       const { error } = await supabase
         .from('clients')
