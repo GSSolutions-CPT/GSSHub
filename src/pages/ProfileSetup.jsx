@@ -89,7 +89,11 @@ export default function ProfileSetup() {
             }
 
             setSuccess(true)
-            setTimeout(() => navigate('/'), 2000) // Fix: Navigate to root (which is /portal via basename)
+            setTimeout(() => {
+                // FIX: Force hard redirect with client param to ensure RootRedirect sends them to the Client Portal
+                const origin = window.location.origin
+                window.location.href = `${origin}/portal/?client=${client.id}`
+            }, 2000)
         } catch (err) {
             setError(err.message || 'Failed to create profile')
         } finally {
