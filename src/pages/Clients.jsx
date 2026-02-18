@@ -32,12 +32,13 @@ export default function Clients() {
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .not('metadata->>status', 'eq', 'archived') // Server-side filter
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      setClients(data || [])
+      // Filter out archived clients client-side to handle null metadata safely
+      const activeClients = (data || []).filter(client => client.metadata?.status !== 'archived')
+      setClients(activeClients)
     } catch (error) {
       console.error('Error fetching clients:', error)
     }
