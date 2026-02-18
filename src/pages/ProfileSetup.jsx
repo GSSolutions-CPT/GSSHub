@@ -60,7 +60,7 @@ export default function ProfileSetup() {
         setActionLoading(true)
         try {
             // 1. Sign up the user
-            const { data: authData, error: signUpError } = await supabase.auth.signUp({
+            const { error: signUpError } = await supabase.auth.signUp({
                 email: client.email,
                 password: password,
                 options: {
@@ -74,19 +74,11 @@ export default function ProfileSetup() {
 
             if (signUpError) throw signUpError
 
-            // 2. Update the client record with the auth_user_id
-            // We use the supabase client directly. Since the user might not be "logged in" with 
-            // the right permissions yet, we might need a service role or a specific RLS setup.
-            // But for now, we'll try to update it.
-            const { error: updateError } = await supabase
-                .from('clients')
-                .update({ auth_user_id: authData.user.id })
-                .eq('id', client.id)
-
-            if (updateError) {
-                console.error('Error linking client to auth user:', updateError)
-                // Note: user is created but link failed. We might need a trigger on Supabase side for robustness.
-            }
+            // 2. Securely link the client profile using RPC
+            const { error: linkError } = await supabase.rpc('claim_client_profile', {
+                p_client_id: client.id
+            })
+            if (linkError) throw linkError
 
             setSuccess(true)
             setTimeout(() => {
