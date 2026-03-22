@@ -19,7 +19,7 @@ export default function Settings() {
   const [exporting, setExporting] = useState(false)
   const { theme, setTheme } = useTheme()
   const { currency, updateCurrency } = useCurrency()
-  const { settings, updateSetting } = useSettings()
+  const { settings, updateSetting, saveAllSettings } = useSettings()
   const [users, setUsers] = useState([])
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
   const [newUser, setNewUser] = useState({ email: '', role: 'technician', password: '' })
@@ -236,6 +236,9 @@ export default function Settings() {
           </h1>
           <p className="text-muted-foreground mt-1 text-lg">Manage organization details, team access, and system preferences</p>
         </div>
+        <Button onClick={saveAllSettings} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg px-8 py-5 text-md rounded-xl transition-all duration-300">
+          Save Settings
+        </Button>
       </div>
 
       <Tabs defaultValue="organization" className="space-y-8">

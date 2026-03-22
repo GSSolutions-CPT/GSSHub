@@ -6,7 +6,8 @@ import { hexToHsl } from '@/lib/utils'
 const SettingsContext = createContext({
     settings: {},
     loading: true,
-    updateSetting: async () => { }
+    updateSetting: () => { },
+    saveAllSettings: async () => { }
 })
 
 export function SettingsProvider({ children }) {
@@ -67,27 +68,33 @@ export function SettingsProvider({ children }) {
         }
     }
 
-    const updateSetting = async (key, value) => {
-        try {
-            // Optimistic update
-            setSettings(prev => ({ ...prev, [key]: value }))
-            localStorage.setItem(key, value)
+    const updateSetting = (key, value) => {
+        setSettings(prev => ({ ...prev, [key]: value }))
+        localStorage.setItem(key, value)
+    }
 
-            // Upsert to Supabase
+    const saveAllSettings = async () => {
+        const toastId = toast.loading('Saving settings...')
+        try {
+            const updates = Object.keys(settings).map(key => ({
+                key,
+                value: settings[key]
+            }))
+            
             const { error } = await supabase
                 .from('settings')
-                .upsert({ key, value }, { onConflict: 'key' })
+                .upsert(updates, { onConflict: 'key' })
 
             if (error) throw error
-            // toast.success('Setting saved') 
+            toast.success('Settings saved successfully!', { id: toastId })
         } catch (error) {
-            console.error('Error updating setting:', error)
-            toast.error('Failed to save settings')
+            console.error('Error saving settings:', error)
+            toast.error('Failed to save settings', { id: toastId })
         }
     }
 
     return (
-        <SettingsContext.Provider value={{ settings, loading, updateSetting }}>
+        <SettingsContext.Provider value={{ settings, loading, updateSetting, saveAllSettings }}>
             {children}
         </SettingsContext.Provider>
     )
