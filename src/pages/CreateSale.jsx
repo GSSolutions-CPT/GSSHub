@@ -498,7 +498,7 @@ export default function CreateSale() {
                             />
                           </div>
                           <Input
-                            className="flex-1 bg-white dark:bg-slate-950"
+                            className="flex-1 bg-white text-slate-900 dark:text-slate-100 dark:bg-slate-950"
                             placeholder="Item description..."
                             value={item.description}
                             onChange={(e) => updateLineItem(index, 'description', e.target.value)}
@@ -513,7 +513,7 @@ export default function CreateSale() {
                         <Input
                           type="number"
                           min="1"
-                          className="bg-white dark:bg-slate-950"
+                          className="bg-white text-slate-900 dark:text-slate-100 dark:bg-slate-950"
                           value={item.quantity}
                           onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
                         />
@@ -525,7 +525,7 @@ export default function CreateSale() {
                           <Input
                             type="number"
                             step="0.01"
-                            className="pl-7 bg-white dark:bg-slate-950"
+                            className="pl-7 bg-white text-slate-900 dark:text-slate-100 dark:bg-slate-950"
                             value={item.unit_price}
                             onChange={(e) => updateLineItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
                           />

@@ -346,7 +346,7 @@ export default function Financials() {
                 type="date"
                 value={dateRange.start}
                 onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                className="bg-white dark:bg-slate-950"
+                className="bg-white text-slate-900 dark:text-slate-100 dark:bg-slate-950"
               />
             </div>
             <div className="flex-1 w-full space-y-2">
@@ -356,7 +356,7 @@ export default function Financials() {
                 type="date"
                 value={dateRange.end}
                 onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                className="bg-white dark:bg-slate-950"
+                className="bg-white text-slate-900 dark:text-slate-100 dark:bg-slate-950"
               />
             </div>
             <Button onClick={fetchInvoices} className="w-full sm:w-auto bg-slate-900 dark:bg-slate-100 dark:text-slate-900">Apply Filter</Button>

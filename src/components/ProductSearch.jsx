@@ -42,7 +42,7 @@ export function ProductSearch({ products = [], value, onSelect }) {
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-full justify-between bg-white dark:bg-slate-950 font-normal px-3"
+                    className="w-full justify-between bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-normal px-3"
                 >
                     {value === "custom"
                         ? "Custom Item"

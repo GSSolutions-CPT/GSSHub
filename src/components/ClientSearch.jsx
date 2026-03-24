@@ -28,7 +28,7 @@ export function ClientSearch({ clients = [], value, onSelect, onAddNew }) {
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-full justify-between bg-slate-50 dark:bg-slate-950 font-normal h-11 border-slate-200 dark:border-slate-800"
+                    className="w-full justify-between bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-normal h-11 border-slate-200 dark:border-slate-800"
                 >
                     {selectedClient ? (
                         <span className="flex flex-col items-start text-left truncate">
